@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE = 'https://doctorcloud.digital/api/mobile';
+const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
 
 // ── Token storage ─────────────────────────────────────────
 const TOKEN_KEY = 'mc_jwt_token';
