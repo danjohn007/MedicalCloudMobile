@@ -34,11 +34,19 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "50396784-e9c3-4808-a918-2bd9901b4ad3"
+      }
+    },
+    "owner": "webmasterid"
   }
 }
