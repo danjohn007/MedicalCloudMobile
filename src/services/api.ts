@@ -1,30 +1,28 @@
-import * as SecureStore from 'expo-secure-store';
+// ── Storage ──────────────────────────────────────────────
+import { setSecure, getSecure, removeSecure } from '@/services/storage';
 
-const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
-
-// ── Token storage ─────────────────────────────────────────
 const TOKEN_KEY = 'mc_jwt_token';
 const USER_KEY  = 'mc_user';
 
 export async function saveToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await setSecure(TOKEN_KEY, token);
 }
 
 export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return getSecure(TOKEN_KEY);
 }
 
 export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(USER_KEY);
+  await removeSecure(TOKEN_KEY);
+  await removeSecure(USER_KEY);
 }
 
 export async function saveUser(user: AuthUser): Promise<void> {
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  await setSecure(USER_KEY, JSON.stringify(user));
 }
 
 export async function getSavedUser(): Promise<AuthUser | null> {
-  const raw = await SecureStore.getItemAsync(USER_KEY);
+  const raw = await getSecure(USER_KEY);
   return raw ? JSON.parse(raw) : null;
 }
 
@@ -75,6 +73,8 @@ export interface Message {
   unread: number;
   updated_at: string;
 }
+
+const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
 
 // ── Core fetch ────────────────────────────────────────────
 async function request<T>(
