@@ -10,7 +10,13 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="doctores" />
+        <Stack.Screen name="doctores/[id]" />
+        <Stack.Screen name="doctores/[id]/agendar" />
+        <Stack.Screen name="doctores/[id]/confirmar" />
+        <Stack.Screen name="doctores/[id]/pago" />
         <Stack.Screen name="confirmacion" />
+        <Stack.Screen name="chat/[id]" />
+        <Stack.Screen name="videoconsulta/[id]" />
       </Stack>
     </>
   );
