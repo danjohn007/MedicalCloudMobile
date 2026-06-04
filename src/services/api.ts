@@ -48,6 +48,7 @@ export interface Doctor {
   bio?: string;
   subspecialty?: string;
   telemedicine_fee?: number;
+  home_visit_fee?: number;
   address?: string;
   duration_minutes?: number;
 }
@@ -74,6 +75,42 @@ export interface Message {
   updated_at: string;
 }
 
+export interface ClinicalNote {
+  id: number;
+  appointment_id: number | null;
+  subjective: string | null;
+  objective: string | null;
+  assessment: string | null;
+  plan: string | null;
+  diagnosis_text: string | null;
+  diagnosis_cie10: string | null;
+  doctor_name: string;
+  created_at: string;
+  signed_at: string | null;
+}
+
+export interface ProfileData extends AuthUser {
+  phone?: string;
+  birth_date?: string;
+  gender?: string;
+  blood_type?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  occupation?: string;
+  height_cm?: number;
+  weight_kg?: number;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+}
+
+export interface ExpedienteData {
+  profile: Record<string, any> | null;
+  record: Record<string, any> | null;
+  consultations: ClinicalNote[];
+  documents: any[];
+}
+
 const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
 
 // ── Core fetch ────────────────────────────────────────────
@@ -93,7 +130,16 @@ async function request<T>(
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const json = await res.json();
+  const text = await res.text();
+
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `El servidor no respondió con JSON. Status: ${res.status}`
+    );
+  }
 
   if (!res.ok) {
     throw new Error(json.error ?? `HTTP ${res.status}`);
@@ -197,7 +243,7 @@ export async function sendMessage(conversationId: number, message: string) {
 
 // ── Perfil ────────────────────────────────────────────────
 export async function getProfile() {
-  return request<AuthUser & { birth_date?: string; gender?: string; blood_type?: string; city?: string }>('/profile');
+  return request<ProfileData>('/profile');
 }
 
 export async function updateProfile(data: Partial<{
@@ -208,9 +254,46 @@ export async function updateProfile(data: Partial<{
   blood_type: string;
   address: string;
   city: string;
+  state: string;
+  occupation: string;
+  height_cm: number;
+  weight_kg: number;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
 }>) {
   return request<{ message: string }>('/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+}
+
+// ── QR / Check-in / Checkout ────────────────────────────
+export async function getAppointmentQr(id: number) {
+  return request<{ data: {
+    id: number;
+    checkin_code: string | null;
+    checkin_expires: string | null;
+    checked_in: boolean;
+    checkout_code: string | null;
+    checkout_expires: string | null;
+  } }>(`/appointments/${id}/qr`);
+}
+
+export async function checkinAppointment(id: number, code: string) {
+  return request<{ message: string; in_consultation: boolean }>(
+    `/appointments/${id}/checkin`,
+    { method: 'POST', body: JSON.stringify({ code }) },
+  );
+}
+
+export async function checkoutAppointment(id: number) {
+  return request<{ data: { checkout_code: string; expires_at: string } }>(
+    `/appointments/${id}/checkout`,
+    { method: 'POST' },
+  );
+}
+
+// ── Expediente (historial médico) ─────────────────────────
+export async function getExpediente() {
+  return request<ExpedienteData>('/expediente');
 }

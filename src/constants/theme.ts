@@ -1,5 +1,3 @@
-import '@/global.css';
-
 import { Platform } from 'react-native';
 
 // ── Medical Cloud Brand Colors ────────────────────────────

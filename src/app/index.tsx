@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
+import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -37,11 +38,9 @@ export default function SplashScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Logo + Brand */}
+      {/* Brand */}
       <View style={styles.brand}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoEmoji}>DC</Text>
-        </View>
+        <Logo variant="icon-color" width={96} style={styles.logo} />
         <Text style={styles.appName}>
           <Text style={styles.appNameBold}>Doctor</Text>
           {' '}Cloud
@@ -49,10 +48,10 @@ export default function SplashScreen() {
         <Text style={styles.tagline}>Tu salud, nuestra prioridad</Text>
       </View>
 
-      {/* Illustration placeholder */}
+      {/* Illustration */}
       <View style={styles.illustration}>
         <View style={styles.illustrationCircle}>
-          <Text style={styles.illustrationEmoji}>+</Text>
+          <Icon name="shield-check" size={100} color={MC.primary} />
         </View>
       </View>
 
@@ -95,17 +94,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: MC.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  logoEmoji: {
-    fontSize: 40,
+  logo: {
+    marginBottom: 12,
   },
   appName: {
     fontSize: 32,
@@ -133,9 +123,6 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  illustrationEmoji: {
-    fontSize: 100,
   },
   actions: {
     width: '100%',

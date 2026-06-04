@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const WEEKDAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export default function AgendarScreen() {
   const router = useRouter();
@@ -29,6 +29,7 @@ export default function AgendarScreen() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [slots, setSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [errorSlots, setErrorSlots] = useState("");
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
@@ -51,10 +52,12 @@ export default function AgendarScreen() {
     setSelectedDate(dateStr);
     setSelectedTime(null);
     setLoadingSlots(true);
+    setErrorSlots("");
     try {
       const res = await api.getDoctorAvailability(doctorId, dateStr);
       setSlots(res.slots ?? []);
-    } catch {
+    } catch (e: any) {
+      setErrorSlots(e.message ?? "Error al cargar disponibilidad");
       setSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -90,8 +93,8 @@ export default function AgendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+          <Icon name="arrow-left" size={24} color={MC.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Agendar cita</Text>
         <View style={{ width: 36 }} />
@@ -100,20 +103,18 @@ export default function AgendarScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* ── Calendar ──────────────────────────────── */}
         <View style={styles.calendar}>
-          {/* Month navigation */}
           <View style={styles.monthNav}>
-            <Pressable onPress={prevMonth} style={styles.monthBtn}>
-              <Text style={styles.monthArrow}>〈</Text>
+            <Pressable onPress={prevMonth} hitSlop={10} style={styles.monthBtn}>
+              <Icon name="caret-left" size={20} color={MC.primary} />
             </Pressable>
             <Text style={styles.monthTitle}>
               {MONTHS[currentMonth]} {currentYear}
             </Text>
-            <Pressable onPress={nextMonth} style={styles.monthBtn}>
-              <Text style={styles.monthArrow}>〉</Text>
+            <Pressable onPress={nextMonth} hitSlop={10} style={styles.monthBtn}>
+              <Icon name="caret-right" size={20} color={MC.primary} />
             </Pressable>
           </View>
 
-          {/* Weekday headers */}
           <View style={styles.weekdayRow}>
             {WEEKDAYS.map((d) => (
               <View key={d} style={styles.weekdayCell}>
@@ -122,13 +123,10 @@ export default function AgendarScreen() {
             ))}
           </View>
 
-          {/* Days grid */}
           <View style={styles.daysGrid}>
-            {/* Empty cells before first day */}
             {Array.from({ length: firstDayOfWeek }, (_, i) => (
               <View key={`empty-${i}`} style={styles.dayCell} />
             ))}
-            {/* Day cells */}
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1;
               const dateStr = formatDate(day);
@@ -138,10 +136,7 @@ export default function AgendarScreen() {
               return (
                 <Pressable
                   key={day}
-                  style={[
-                    styles.dayCell,
-                    selected && styles.daySelected,
-                  ]}
+                  style={[styles.dayCell, selected && styles.daySelected]}
                   onPress={() => !disabled && handleSelectDate(day)}
                   disabled={disabled}
                 >
@@ -160,9 +155,14 @@ export default function AgendarScreen() {
 
         {/* ── Time Slots ────────────────────────────── */}
         <View style={styles.slotsSection}>
-          <Text style={styles.slotsTitle}>Horas disponibles</Text>
+          <View style={styles.slotsHeader}>
+            <Icon name="clock" size={20} color={MC.textPrimary} />
+            <Text style={styles.slotsTitle}>Horas disponibles</Text>
+          </View>
           {!selectedDate ? (
             <Text style={styles.slotsHint}>Selecciona una fecha para ver los horarios</Text>
+          ) : errorSlots ? (
+            <Text style={styles.slotsHint}>{errorSlots}</Text>
           ) : loadingSlots ? (
             <ActivityIndicator color={MC.primary} style={{ marginTop: 20 }} />
           ) : slots.length === 0 ? (
@@ -172,16 +172,10 @@ export default function AgendarScreen() {
               {slots.map((time) => (
                 <Pressable
                   key={time}
-                  style={[
-                    styles.slotChip,
-                    selectedTime === time && styles.slotChipSelected,
-                  ]}
+                  style={[styles.slotChip, selectedTime === time && styles.slotChipSelected]}
                   onPress={() => setSelectedTime(time)}
                 >
-                  <Text style={[
-                    styles.slotText,
-                    selectedTime === time && styles.slotTextSelected,
-                  ]}>
+                  <Text style={[styles.slotText, selectedTime === time && styles.slotTextSelected]}>
                     {time}
                   </Text>
                 </Pressable>
@@ -193,14 +187,12 @@ export default function AgendarScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ── Footer ─────────────────────────────────── */}
       <View style={styles.footer}>
         <Pressable
           style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
           disabled={!canContinue}
           onPress={() => {
             if (canContinue) {
-              // @ts-ignore
               router.push(`/doctores/${doctorId}/confirmar?date=${selectedDate}&time=${selectedTime}` as any);
             }
           }}
@@ -218,14 +210,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  backIcon: { fontSize: 22, color: MC.textPrimary },
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: MC.textPrimary },
-  
-  // Calendar
+
   calendar: { marginHorizontal: 20, marginTop: 12, maxWidth: 500, alignSelf: 'center', width: '100%' },
   monthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   monthBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
-  monthArrow: { fontSize: 18, color: MC.primary, fontWeight: '700' },
   monthTitle: { fontSize: 17, fontWeight: '600', color: MC.textPrimary },
   weekdayRow: { flexDirection: 'row', marginBottom: 8 },
   weekdayCell: { flex: 1, alignItems: 'center', paddingVertical: 6 },
@@ -236,25 +225,17 @@ const styles = StyleSheet.create({
   dayText: { fontSize: 15, color: MC.textPrimary, fontWeight: '500' },
   dayTextSelected: { color: MC.white, fontWeight: '700' },
   dayTextDisabled: { color: MC.border },
-  
-  // Slots
+
   slotsSection: { marginHorizontal: 20, marginTop: 24 },
-  slotsTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary, marginBottom: 12 },
+  slotsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  slotsTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary },
   slotsHint: { fontSize: 14, color: MC.textSecondary, textAlign: 'center', marginTop: 12 },
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  slotChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: MC.border,
-    backgroundColor: MC.background,
-  },
+  slotChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: MC.border, backgroundColor: MC.background },
   slotChipSelected: { backgroundColor: MC.primary, borderColor: MC.primary },
   slotText: { fontSize: 14, color: MC.textSecondary, fontWeight: '500' },
   slotTextSelected: { color: MC.white, fontWeight: '600' },
-  
-  // Footer
+
   footer: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: MC.border, backgroundColor: MC.background },
   continueBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   continueBtnDisabled: { opacity: 0.4 },

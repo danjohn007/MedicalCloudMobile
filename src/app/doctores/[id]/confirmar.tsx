@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
 
@@ -20,15 +21,18 @@ export default function ConfirmarScreen() {
 
   const [doctor, setDoctor] = useState<api.Doctor | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [appointmentType, setAppointmentType] = useState<'presencial' | 'videoconsulta' | 'domicilio'>('presencial');
   const [notes, setNotes] = useState('');
+  const [showNotes, setShowNotes] = useState(false);
 
   useEffect(() => {
     if (!doctorId) return;
     setLoading(true);
+    setError("");
     api.getDoctorProfile(doctorId)
       .then((res) => setDoctor(res.data))
-      .catch(() => {})
+      .catch((e) => setError(e.message ?? "Error al cargar información del doctor"))
       .finally(() => setLoading(false));
   }, [doctorId]);
 
@@ -59,8 +63,8 @@ export default function ConfirmarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+          <Icon name="arrow-left" size={24} color={MC.textPrimary} />
         </Pressable>
         <Text style={styles.title}>Confirmar cita</Text>
         <View style={{ width: 36 }} />
@@ -70,7 +74,7 @@ export default function ConfirmarScreen() {
         {/* ── Doctor Card ───────────────────────────── */}
         <View style={styles.doctorCard}>
           <View style={styles.doctorPhoto}>
-            <Text style={{ fontSize: 40 }}>👩‍⚕️</Text>
+            <Icon name="user" size={32} color={MC.primary} />
           </View>
           <View>
             <Text style={styles.doctorName}>{doctor?.name ?? 'Doctor'}</Text>
@@ -83,23 +87,43 @@ export default function ConfirmarScreen() {
         {/* ── Details ────────────────────────────────── */}
         <View style={styles.detailsSection}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Fecha</Text>
-            <Text style={styles.detailValue}>{date ? formatDateDisplay(date) : '—'}</Text>
+            <View style={styles.detailIconWrap}>
+              <Icon name="calendar" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailLabel}>Fecha</Text>
+              <Text style={styles.detailValue}>{date ? formatDateDisplay(date) : '—'}</Text>
+            </View>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Hora</Text>
-            <Text style={styles.detailValue}>{time ? formatTimeDisplay(time) : '—'}</Text>
+            <View style={styles.detailIconWrap}>
+              <Icon name="clock" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailLabel}>Hora</Text>
+              <Text style={styles.detailValue}>{time ? formatTimeDisplay(time) : '—'}</Text>
+            </View>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Tipo de consulta</Text>
-            <Text style={styles.detailValue}>
-              {appointmentType === 'presencial' ? 'Presencial' : appointmentType === 'videoconsulta' ? 'Videoconsulta' : 'A domicilio'}
-            </Text>
+            <View style={styles.detailIconWrap}>
+              <Icon name="stethoscope" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailLabel}>Tipo de consulta</Text>
+              <Text style={styles.detailValue}>
+                {appointmentType === 'presencial' ? 'Presencial' : appointmentType === 'videoconsulta' ? 'Videoconsulta' : 'A domicilio'}
+              </Text>
+            </View>
           </View>
           {doctor?.address && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Ubicación</Text>
-              <Text style={[styles.detailValue, { flex: 1, textAlign: 'right' }]}>{doctor.address}</Text>
+              <View style={styles.detailIconWrap}>
+                <Icon name="map-pin" size={18} color={MC.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Ubicación</Text>
+                <Text style={styles.detailValue}>{doctor.address}</Text>
+              </View>
             </View>
           )}
         </View>
@@ -108,7 +132,10 @@ export default function ConfirmarScreen() {
 
         {/* ── Payment Summary ────────────────────────── */}
         <View style={styles.paymentSection}>
-          <Text style={styles.paymentTitle}>Resumen de pago</Text>
+          <View style={styles.paymentHeader}>
+            <Icon name="credit-card" size={20} color={MC.textPrimary} />
+            <Text style={styles.paymentTitle}>Resumen de pago</Text>
+          </View>
           <View style={styles.paymentRow}>
             <Text style={styles.paymentLabel}>Consulta</Text>
             <Text style={styles.paymentAmount}>${fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</Text>
@@ -123,15 +150,12 @@ export default function ConfirmarScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ── Footer ─────────────────────────────────── */}
       <View style={styles.footer}>
         <Pressable
           style={styles.confirmBtn}
-          onPress={() => {
-            // @ts-ignore
-            router.push(`/doctores/${doctorId}/pago?date=${date}&time=${time}&type=${appointmentType}&fee=${fee}` as any);
-          }}
+          onPress={() => router.push(`/doctores/${doctorId}/pago?date=${date}&time=${time}&type=${appointmentType}&fee=${fee}` as any)}
         >
+          <Icon name="check-circle" size={18} color={MC.white} style={{ marginRight: 8 }} />
           <Text style={styles.confirmBtnText}>Confirmar y pagar</Text>
         </Pressable>
       </View>
@@ -144,34 +168,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  backIcon: { fontSize: 22, color: MC.textPrimary },
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: MC.textPrimary },
-  
-  // Doctor card
+
   doctorCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 },
   doctorPhoto: { width: 64, height: 64, borderRadius: 32, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center' },
   doctorName: { fontSize: 16, fontWeight: '600', color: MC.textPrimary },
   doctorSpecialty: { fontSize: 13, color: MC.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: MC.border, marginHorizontal: 20 },
-  
-  // Details
+
   detailsSection: { paddingHorizontal: 20, paddingVertical: 16, gap: 14 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  detailLabel: { fontSize: 14, color: MC.textSecondary, flex: 1 },
-  detailValue: { fontSize: 14, color: MC.textPrimary, fontWeight: '500', maxWidth: '60%' },
-  
-  // Payment
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  detailIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: MC.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  detailLabel: { fontSize: 12, color: MC.textMuted, marginBottom: 2 },
+  detailValue: { fontSize: 14, color: MC.textPrimary, fontWeight: '500' },
+
   paymentSection: { paddingHorizontal: 20, paddingVertical: 16 },
-  paymentTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary, marginBottom: 12 },
+  paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  paymentTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary },
   paymentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   paymentLabel: { fontSize: 14, color: MC.textSecondary },
   paymentAmount: { fontSize: 14, color: MC.textPrimary, fontWeight: '500' },
   paymentDivider: { height: 1, backgroundColor: MC.border, marginVertical: 8 },
   totalLabel: { fontSize: 16, fontWeight: '700', color: MC.textPrimary },
   totalAmount: { fontSize: 16, fontWeight: '700', color: MC.primary },
-  
-  // Footer
+
   footer: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: MC.border, backgroundColor: MC.background },
-  confirmBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  confirmBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   confirmBtnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
 });

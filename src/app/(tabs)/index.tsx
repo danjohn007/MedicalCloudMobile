@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,18 +11,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon, IconName } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
 
-// ── Popular specialties (static list like the mockup) ─────
-const POPULAR_SPECIALTIES = [
-  { name: 'Medicina general', icon: 'M' },
-  { name: 'Pediatria',        icon: 'P' },
-  { name: 'Ginecologia',      icon: 'G' },
-  { name: 'Dermatologia',     icon: 'D' },
-  { name: 'Psicologia',       icon: 'Ps' },
-  { name: 'Traumatologia',    icon: 'T' },
+// ── Popular specialties with their Phosphor icon name ──────────
+const POPULAR_SPECIALTIES: { name: string; icon: IconName }[] = [
+  { name: 'Medicina General', icon: 'stethoscope' },
+  { name: 'Cardiología',      icon: 'heart' },
+  { name: 'Dermatología',     icon: 'first-aid' },
+  { name: 'Neurología',       icon: 'brain' },
+  { name: 'Pediatria',        icon: 'baby' },
+  { name: 'Ginecología',      icon: 'gender-female' },
 ];
 
 // ── Doctor Card (horizontal scroll) ──────────────────────
@@ -32,27 +32,35 @@ function DoctorCardSmall({ doctor, onPress }: { doctor: api.Doctor; onPress: () 
     <Pressable style={styles.doctorCard} onPress={onPress}>
       {/* Photo */}
       <View style={styles.doctorPhoto}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: MC.primary }}>{doctor.name.charAt(0)}</Text>
+        {doctor.photo ? (
+          <Icon name="user" size={26} color={MC.primary} />
+        ) : (
+          <Text style={{ fontSize: 20, fontWeight: '700', color: MC.primary }}>{doctor.name.charAt(0)}</Text>
+        )}
       </View>
 
       {/* Info */}
       <View style={styles.doctorCardBody}>
         <View style={styles.doctorNameRow}>
           <Text style={styles.doctorName} numberOfLines={1}>{doctor.name}</Text>
-          {doctor.is_verified && <Text style={styles.verifiedBadge}>✓</Text>}
+          {doctor.is_verified && (
+            <Icon name="check-circle" size={16} color={MC.primary} />
+          )}
         </View>
         <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
 
         <View style={styles.doctorMeta}>
-          <Text style={styles.starText}>* {doctor.rating.toFixed(1)}</Text>
+          <Icon name="star" size={12} color={MC.star} filled />
+          <Text style={styles.metaText}>{doctor.rating.toFixed(1)}</Text>
           <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.cityText}>{doctor.city}</Text>
+          <Icon name="map-pin" size={12} color={MC.textMuted} />
+          <Text style={styles.metaText}>{doctor.city}</Text>
         </View>
       </View>
 
       {/* Favorite */}
-      <Pressable style={styles.favoriteBtn}>
-        <Text style={{ fontSize: 18, color: MC.textMuted }}>{'<'}</Text>
+      <Pressable style={styles.favoriteBtn} hitSlop={10}>
+        <Icon name="heart" size={20} color={MC.textMuted} />
       </Pressable>
     </Pressable>
   );
@@ -61,10 +69,12 @@ function DoctorCardSmall({ doctor, onPress }: { doctor: api.Doctor; onPress: () 
 // ── Specialty Chip ────────────────────────────────────────
 function SpecialtyChip({
   name, icon, onPress,
-}: { name: string; icon: string; onPress: () => void }) {
+}: { name: string; icon: IconName; onPress: () => void }) {
   return (
     <Pressable style={styles.chip} onPress={onPress}>
-      <Text style={styles.chipIcon}>{icon}</Text>
+      <View style={styles.chipIconWrap}>
+        <Icon name={icon} size={26} color={MC.primary} />
+      </View>
       <Text style={styles.chipName} numberOfLines={2}>{name}</Text>
     </Pressable>
   );
@@ -78,24 +88,27 @@ export default function HomeScreen() {
   const [search,           setSearch]           = useState('');
   const [doctors,          setDoctors]          = useState<api.Doctor[]>([]);
   const [loadingDoctors,   setLoadingDoctors]   = useState(true);
+  const [errorDoctors,     setErrorDoctors]     = useState('');
 
   const firstName = user?.name?.split(' ')[0] ?? 'usuario';
 
   useEffect(() => {
+    setLoadingDoctors(true);
+    setErrorDoctors('');
     api.getDoctors({ page: 1 })
       .then((res) => setDoctors(res.data.slice(0, 6)))
-      .catch(() => {})
+      .catch((e) => setErrorDoctors(e.message ?? 'Error al cargar doctores'))
       .finally(() => setLoadingDoctors(false));
   }, []);
 
   const handleSearch = () => {
     if (search.trim()) {
-      router.push({ pathname: '/doctores', params: { search: search.trim() } });
+      router.push(`/doctores?search=${encodeURIComponent(search.trim())}` as any);
     }
   };
 
   const goToSpecialty = (specialty: string) => {
-    router.push({ pathname: '/doctores', params: { specialty } });
+    router.push(`/doctores?specialty=${encodeURIComponent(specialty)}` as any);
   };
 
   return (
@@ -104,11 +117,11 @@ export default function HomeScreen() {
 
         {/* ── Header ─────────────────────────────────────── */}
         <View style={styles.header}>
-          <Pressable style={styles.menuBtn}>
-            <Text style={styles.menuIcon}>|||</Text>
+          <Pressable style={styles.menuBtn} hitSlop={10}>
+            <Icon name="list" size={24} color={MC.textPrimary} />
           </Pressable>
-          <Pressable style={styles.notifBtn}>
-            <Text style={styles.notifIcon}>!</Text>
+          <Pressable style={styles.notifBtn} hitSlop={10}>
+            <Icon name="bell" size={24} color={MC.textPrimary} />
           </Pressable>
         </View>
 
@@ -120,6 +133,7 @@ export default function HomeScreen() {
 
         {/* ── Search Bar ─────────────────────────────────── */}
         <View style={styles.searchContainer}>
+          <Icon name="magnifying-glass" size={20} color={MC.textMuted} style={{ marginLeft: 14 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar especialidad, médico..."
@@ -129,7 +143,7 @@ export default function HomeScreen() {
             onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
-          <Pressable style={styles.searchBtn} onPress={handleSearch}>
+          <Pressable style={styles.searchBtn} onPress={handleSearch} hitSlop={8}>
             <Text style={{ fontSize: 16, color: MC.primary, fontWeight: '600' }}>Ir</Text>
           </Pressable>
         </View>
@@ -166,6 +180,8 @@ export default function HomeScreen() {
 
           {loadingDoctors ? (
             <ActivityIndicator color={MC.primary} style={{ marginTop: 20 }} />
+          ) : errorDoctors ? (
+            <Text style={styles.emptyText}>{errorDoctors}</Text>
           ) : doctors.length === 0 ? (
             <Text style={styles.emptyText}>No hay doctores disponibles.</Text>
           ) : (
@@ -174,7 +190,7 @@ export default function HomeScreen() {
                 <DoctorCardSmall
                   key={doc.id}
                   doctor={doc}
-                  onPress={() => router.push({ pathname: `/doctores/${doc.id}`, params: {} })}
+                  onPress={() => router.push(`/doctores/${doc.id}` as any)}
                 />
               ))}
             </View>
@@ -200,9 +216,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   menuBtn: { padding: 4 },
-  menuIcon: { fontSize: 22, color: MC.textPrimary },
   notifBtn: { padding: 4 },
-  notifIcon: { fontSize: 22 },
 
   // Greeting
   greeting: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
@@ -232,7 +246,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 13,
     fontSize: 15,
     color: MC.textPrimary,
@@ -268,7 +282,7 @@ const styles = StyleSheet.create({
     width: '30%',
     backgroundColor: MC.background,
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
@@ -279,7 +293,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  chipIcon: { fontSize: 16, marginBottom: 6, fontWeight: '700', color: MC.primary },
+  chipIconWrap: { marginBottom: 6 },
   chipName: {
     fontSize: 11,
     color: MC.textPrimary,
@@ -314,15 +328,6 @@ const styles = StyleSheet.create({
     color: MC.textPrimary,
     flex: 1,
   },
-  verifiedBadge: {
-    fontSize: 12,
-    color: MC.white,
-    backgroundColor: MC.primary,
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    overflow: 'hidden',
-  },
   doctorSpecialty: {
     fontSize: 13,
     color: MC.textSecondary,
@@ -334,9 +339,8 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 4,
   },
-  starText: { fontSize: 12, color: MC.textSecondary },
+  metaText: { fontSize: 12, color: MC.textSecondary },
   metaDot: { fontSize: 12, color: MC.textMuted },
-  cityText: { fontSize: 12, color: MC.textSecondary },
   favoriteBtn: { padding: 8 },
 
   emptyText: { color: MC.textMuted, fontSize: 14, textAlign: 'center', marginTop: 16 },

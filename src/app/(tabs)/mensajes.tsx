@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
 
@@ -10,11 +11,14 @@ export default function MensajesScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState<api.Message[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     api.getMessages()
       .then((res) => setMessages(res.data))
-      .catch(() => {})
+      .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -22,36 +26,52 @@ export default function MensajesScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
-        <Pressable style={styles.newBtn}>
-          <Text style={styles.newIcon}>+</Text>
+        <Pressable style={styles.newBtn} hitSlop={10}>
+          <Icon name="plus" size={22} color={MC.primary} />
         </Pressable>
       </View>
 
       <View style={styles.searchWrap}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar mensajes..."
-          placeholderTextColor={MC.textMuted}
-        />
+        <View style={styles.searchInputWrap}>
+          <Icon name="magnifying-glass" size={18} color={MC.textMuted} style={{ marginLeft: 12 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar mensajes..."
+            placeholderTextColor={MC.textMuted}
+          />
+        </View>
       </View>
 
-      {loading ? (
-        <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
-      ) : messages.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>M</Text>
-          <Text style={styles.emptyText}>No tienes mensajes</Text>
-        </View>
-      ) : (
-        <ScrollView>
+       {loading ? (
+         <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
+       ) : error ? (
+         <View style={styles.empty}>
+           <View style={styles.emptyIconCircle}>
+             <Icon name="warning" size={56} color={MC.error} />
+           </View>
+           <Text style={styles.emptyText}>{error}</Text>
+         </View>
+       ) : messages.length === 0 ? (
+         <View style={styles.empty}>
+           <View style={styles.emptyIconCircle}>
+             <Icon name="chat-circle" size={56} color={MC.textMuted} />
+           </View>
+           <Text style={styles.emptyText}>No tienes mensajes</Text>
+         </View>
+       ) : (
+         <ScrollView>
           {messages.map((m) => (
             <Pressable
               key={m.id}
               style={styles.row}
-              onPress={() => router.push({ pathname: `/chat/${m.id}` })}
+              onPress={() => router.push(`/chat/${m.id}` as any)}
             >
               <View style={styles.avatar}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#208AEF' }}>{m.doctor_name?.charAt(0) || 'D'}</Text>
+                {m.doctor_photo ? (
+                  <Icon name="user" size={22} color={MC.primary} />
+                ) : (
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: MC.primary }}>{m.doctor_name?.charAt(0) || 'D'}</Text>
+                )}
               </View>
               <View style={styles.rowBody}>
                 <Text style={[styles.name, m.unread > 0 && styles.nameBold]}>
@@ -84,11 +104,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
   title: { fontSize: 22, fontWeight: '700', color: MC.textPrimary },
   newBtn: { padding: 4 },
-  newIcon: { fontSize: 22 },
   searchWrap: { paddingHorizontal: 20, marginBottom: 8 },
-  searchInput: { backgroundColor: MC.surface, borderRadius: 12, borderWidth: 1, borderColor: MC.border, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: MC.textPrimary },
+  searchInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: MC.surface, borderRadius: 12, borderWidth: 1, borderColor: MC.border },
+  searchInput: { flex: 1, paddingHorizontal: 10, paddingVertical: 11, fontSize: 15, color: MC.textPrimary },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyIcon: { fontSize: 48 },
+  emptyIconCircle: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: MC.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyText: { fontSize: 16, color: MC.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: MC.border },
   avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

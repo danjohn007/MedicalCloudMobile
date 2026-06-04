@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 
 export default function ConfirmacionScreen() {
@@ -27,11 +28,7 @@ export default function ConfirmacionScreen() {
       <View style={styles.content}>
         {/* Success icon */}
         <View style={styles.successCircle}>
-          <Text style={styles.successIcon}>✓</Text>
-        </View>
-        <View style={styles.sparkles}>
-          <Text style={styles.sparkleLeft}>*</Text>
-          <Text style={styles.sparkleRight}>*</Text>
+          <Icon name="check" size={42} color={MC.white} />
         </View>
 
         <Text style={styles.title}>Cita confirmada</Text>
@@ -42,31 +39,47 @@ export default function ConfirmacionScreen() {
         {/* Summary card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Fecha</Text>
-            <Text style={styles.summaryValue}>{date ? formatDateDisplay(date) : '—'}</Text>
+            <View style={styles.summaryIconWrap}>
+              <Icon name="calendar" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.summaryLabel}>Fecha</Text>
+              <Text style={styles.summaryValue}>{date ? formatDateDisplay(date) : '—'}</Text>
+            </View>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Hora</Text>
-            <Text style={styles.summaryValue}>{time ? formatTimeDisplay(time) : '—'}</Text>
+            <View style={styles.summaryIconWrap}>
+              <Icon name="clock" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.summaryLabel}>Hora</Text>
+              <Text style={styles.summaryValue}>{time ? formatTimeDisplay(time) : '—'}</Text>
+            </View>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total</Text>
-            <Text style={styles.summaryValueBold}>${parseFloat(fee ?? '0').toFixed(2)}</Text>
+            <View style={styles.summaryIconWrap}>
+              <Icon name="currency-dollar" size={18} color={MC.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.summaryLabel}>Total</Text>
+              <Text style={styles.summaryValueBold}>${parseFloat(fee ?? '0').toFixed(2)}</Text>
+            </View>
           </View>
         </View>
       </View>
 
-      {/* Actions */}
       <View style={styles.actions}>
         <Pressable
           style={styles.primaryBtn}
           onPress={() => router.replace('/(tabs)/citas')}
         >
+          <Icon name="calendar" size={18} color={MC.white} style={{ marginRight: 8 }} />
           <Text style={styles.primaryBtnText}>Ver mis citas</Text>
         </Pressable>
-        <Pressable style={styles.secondaryBtn}>
+        <Pressable style={styles.secondaryBtn} onPress={() => {/* TODO: add to calendar */}}>
+          <Icon name="plus" size={16} color={MC.primary} style={{ marginRight: 6 }} />
           <Text style={styles.secondaryBtnText}>Agregar al calendario</Text>
         </Pressable>
       </View>
@@ -78,39 +91,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
   successCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96, height: 96, borderRadius: 48,
     backgroundColor: MC.success,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
     marginBottom: 20,
-    zIndex: 1,
   },
-  successIcon: { color: MC.white, fontSize: 36, fontWeight: '700' },
-  sparkles: { position: 'absolute', top: '32%', left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 40 },
-  sparkleLeft: { fontSize: 24, opacity: 0.6 },
-  sparkleRight: { fontSize: 24, opacity: 0.6 },
   title: { fontSize: 26, fontWeight: '700', color: MC.textPrimary, textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 14, color: MC.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 28, paddingHorizontal: 16 },
-  
+
   summaryCard: {
-    width: '100%',
-    backgroundColor: MC.surface,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: MC.border,
+    width: '100%', backgroundColor: MC.surface, borderRadius: 16,
+    padding: 20, borderWidth: 1, borderColor: MC.border,
   },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-  summaryLabel: { fontSize: 14, color: MC.textSecondary },
-  summaryValue: { fontSize: 14, color: MC.textPrimary, fontWeight: '500', flex: 1, textAlign: 'right' },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  summaryIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: MC.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  summaryLabel: { fontSize: 12, color: MC.textMuted, marginBottom: 2 },
+  summaryValue: { fontSize: 14, color: MC.textPrimary, fontWeight: '500' },
   summaryValueBold: { fontSize: 16, color: MC.primary, fontWeight: '700' },
-  summaryDivider: { height: 1, backgroundColor: MC.border },
-  
+  summaryDivider: { height: 1, backgroundColor: MC.border, marginVertical: 4 },
+
   actions: { paddingHorizontal: 32, paddingVertical: 24, gap: 12 },
-  primaryBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  primaryBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   primaryBtnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
-  secondaryBtn: { alignItems: 'center', paddingVertical: 10 },
+  secondaryBtn: { alignItems: 'center', paddingVertical: 10, flexDirection: 'row', justifyContent: 'center' },
   secondaryBtnText: { color: MC.primary, fontSize: 15, fontWeight: '500' },
 });

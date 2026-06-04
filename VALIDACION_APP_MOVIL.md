@@ -1,4 +1,3 @@
-# Doctor Cloud — App Móvil (React Native + Expo)
 
 ## Resumen ejecutivo
 - **Stack:** Expo SDK 54, React 19.1, React Native 0.81, expo-router
@@ -172,7 +171,3 @@ git pull origin feature/dashboard-redesign
 | Calendario responsive (móvil + iPad) | ✅ |
 | QR y videollamada con placeholders legibles | ✅ |
 | Nombre "Doctor Cloud" en splash y metadata | ✅ |
-| Mismo usuario paciente (web ↔ móvil) | ✅ |
-| API backend corregida (tablas y columnas reales) | ✅ Pendiente deploy |
-| JWT secret configurable en `Config.php` | ⚠️ Pendiente agregar constante |
-| Pagos y videollamada reales | ⏳ Placeholders listos |

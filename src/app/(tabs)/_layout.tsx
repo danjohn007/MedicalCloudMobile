@@ -1,13 +1,23 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
 
+import { Icon, IconName } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+interface TabIconProps {
+  name: IconName;
+  focused: boolean;
+  badge?: number;
+}
+
+function TabIcon({ name, focused, badge }: TabIconProps) {
+  const color = focused ? MC.primary : MC.textMuted;
   return (
-    <Text style={{ fontSize: focused ? 20 : 18, fontWeight: focused ? '700' : '400', opacity: focused ? 1 : 0.6, color: focused ? '#208AEF' : '#999' }}>
-      {label}
-    </Text>
+    <Icon
+      name={name}
+      size={focused ? 26 : 24}
+      color={color}
+      strokeWidth={focused ? 2 : 1.5}
+    />
   );
 }
 
@@ -36,28 +46,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ focused }) => <TabIcon label="I" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="house" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="citas"
         options={{
           title: 'Citas',
-          tabBarIcon: ({ focused }) => <TabIcon label="C" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="calendar" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="mensajes"
         options={{
           title: 'Mensajes',
-          tabBarIcon: ({ focused }) => <TabIcon label="M" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="chat-circle" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabIcon label="P" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="user" focused={focused} />,
         }}
       />
     </Tabs>

@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
 
 export default function CitasScreen() {
+  const router = useRouter();
   const [tab,          setTab]    = useState<'upcoming' | 'past'>('upcoming');
   const [appointments, setAppts]  = useState<api.Appointment[]>([]);
   const [loading,      setLoading] = useState(true);
+  const [error,        setError]   = useState('');
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     api.getAppointments(tab)
       .then((res) => setAppts(res.data))
-      .catch(() => {})
+      .catch((e) => setError(e.message ?? 'Error al cargar citas'))
       .finally(() => setLoading(false));
   }, [tab]);
 
@@ -40,28 +45,43 @@ export default function CitasScreen() {
       {/* Content */}
       {loading ? (
         <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
+      ) : error ? (
+        <View style={styles.empty}>
+          <View style={styles.emptyIconCircle}>
+            <Icon name="warning" size={48} color={MC.error} />
+          </View>
+          <Text style={styles.emptyText}>{error}</Text>
+        </View>
       ) : appointments.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>| |</Text>
+          <View style={styles.emptyIconCircle}>
+            <Icon name="calendar" size={48} color={MC.textMuted} />
+          </View>
           <Text style={styles.emptyText}>No tienes citas {tab === 'upcoming' ? 'proximas' : 'pasadas'}</Text>
         </View>
       ) : (
         <ScrollView>
           {appointments.map((a) => (
-            <View key={a.id} style={styles.card}>
+            <View key={a.id} style={styles.cardWrap}>
+              <Pressable style={styles.card} onPress={() => {}}>
               <View style={styles.cardPhoto}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#208AEF' }}>{a.doctor_name?.charAt(0) || 'D'}</Text>
+                {a.doctor_photo ? (
+                  <Icon name="user" size={22} color={MC.primary} />
+                ) : (
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: MC.primary }}>{a.doctor_name?.charAt(0) || 'D'}</Text>
+                )}
               </View>
               <View style={styles.cardBody}>
                 <Text style={styles.cardDoctor}>{a.doctor_name}</Text>
                 <Text style={styles.cardSpecialty}>{a.specialty}</Text>
                 <View style={styles.cardMeta}>
+                  <Icon name="clock" size={12} color={MC.textMuted} />
                   <Text style={styles.cardMetaText}>
                     {new Date(a.scheduled_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <Text style={styles.dot}>·</Text>
                   <Text style={styles.cardMetaText}>{a.type}</Text>
-                  {a.location ? <><Text style={styles.dot}>·</Text><Text style={styles.cardMetaText}>{a.location}</Text></> : null}
+                  {a.location ? <><Text style={styles.dot}>·</Text><Icon name="map-pin" size={12} color={MC.textMuted} /><Text style={styles.cardMetaText}>{a.location}</Text></> : null}
                 </View>
               </View>
               <View style={styles.cardDate}>
@@ -72,6 +92,13 @@ export default function CitasScreen() {
                   {new Date(a.scheduled_at).toLocaleString('es-MX', { month: 'short' }).toUpperCase()}
                 </Text>
               </View>
+            </Pressable>
+            {tab === 'upcoming' && a.status !== 'cancelled' && (
+              <Pressable style={styles.checkinBtn} onPress={() => router.push(`/patient/checkin?id=${a.id}`)}>
+                <Icon name="share-network" size={14} color={MC.primary} />
+                <Text style={styles.checkinBtnText}>Check-in</Text>
+              </Pressable>
+            )}
             </View>
           ))}
         </ScrollView>
@@ -90,14 +117,27 @@ const styles = StyleSheet.create({
   tabActive: { color: MC.primary, fontWeight: '600' },
   tabUnderline: { position: 'absolute', bottom: 0, left: '15%', right: '15%', height: 2, backgroundColor: MC.primary, borderRadius: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyIcon: { fontSize: 48 },
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: MC.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyText: { fontSize: 16, color: MC.textSecondary },
-  card: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: MC.border },
+  cardWrap: { marginBottom: 8, paddingHorizontal: 16 },
+  checkinBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: MC.primaryLight, paddingVertical: 10, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
+  },
+  checkinBtnText: { fontSize: 13, fontWeight: '600', color: MC.primary },
+  card: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: MC.border, borderTopLeftRadius: 12, borderTopRightRadius: 12, borderWidth: 1, borderColor: MC.border },
   cardPhoto: { width: 50, height: 50, borderRadius: 25, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   cardBody: { flex: 1 },
   cardDoctor: { fontSize: 15, fontWeight: '600', color: MC.textPrimary },
   cardSpecialty: { fontSize: 13, color: MC.textSecondary, marginTop: 2 },
-  cardMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
   cardMetaText: { fontSize: 12, color: MC.textMuted },
   dot: { fontSize: 12, color: MC.textMuted },
   cardDate: { alignItems: 'center', marginLeft: 8 },
