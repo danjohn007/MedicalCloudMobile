@@ -293,6 +293,13 @@ export async function checkoutAppointment(id: number) {
   );
 }
 
+export async function updateExpediente(data: Record<string, any>) {
+  return request<{ message: string }>('/expediente', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 // ── Expediente (historial médico) ─────────────────────────
 export async function getExpediente() {
   return request<ExpedienteData>('/expediente');
