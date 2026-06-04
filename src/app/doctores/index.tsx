@@ -24,7 +24,7 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.photo}>
-        <Text style={{ fontSize: 34 }}>👩‍⚕️</Text>
+        <Text style={{ fontSize: 22, fontWeight: '700', color: '#208AEF' }}>{doctor.name?.charAt(0) || 'D'}</Text>
       </View>
       <View style={styles.cardBody}>
         <View style={styles.nameRow}>
@@ -37,9 +37,9 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
         </View>
         <Text style={styles.specialty}>{doctor.specialty}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.rating}>⭐ {doctor.rating.toFixed(1)}</Text>
+          <Text style={styles.rating}>* {doctor.rating.toFixed(1)}</Text>
           <Text style={styles.dot}>·</Text>
-          <Text style={styles.city}>📍 {doctor.city}</Text>
+          <Text style={styles.city}>{doctor.city}</Text>
         </View>
         <Text style={styles.fee}>
           Consulta desde ${doctor.consultation_fee?.toLocaleString('es-MX') ?? '–'}
@@ -107,7 +107,7 @@ export default function DoctoresScreen() {
 
       {/* Search bar */}
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Text style={styles.searchIcon}>Q</Text>
         <TextInput
           style={styles.searchInput}
           value={search}
@@ -119,7 +119,7 @@ export default function DoctoresScreen() {
         />
         {search.length > 0 && (
           <Pressable onPress={() => { setSearch(''); fetchDoctors(1, '', selSpec); }}>
-            <Text style={styles.clearIcon}>✕</Text>
+            <Text style={styles.clearIcon}>X</Text>
           </Pressable>
         )}
       </View>
@@ -166,8 +166,8 @@ export default function DoctoresScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={styles.emptyText}>No se encontraron médicos</Text>
+              <Text style={styles.emptyIcon}>?</Text>
+              <Text style={styles.emptyText}>No se encontraron medicos</Text>
             </View>
           }
         />

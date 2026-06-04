@@ -59,14 +59,14 @@ export default function DoctorProfileScreen() {
             <Text style={styles.backIcon}>←</Text>
           </Pressable>
           <Pressable style={styles.shareBtn}>
-            <Text style={styles.shareIcon}>📤</Text>
+            <Text style={styles.shareIcon}>{'<'}</Text>
           </Pressable>
         </View>
 
         {/* ── Hero Image ─────────────────────────────── */}
         <View style={styles.heroContainer}>
           <View style={styles.heroImage}>
-            <Text style={styles.heroEmoji}>👩‍⚕️</Text>
+            <Text style={styles.heroEmoji}>{doctor.name?.charAt(0) || 'D'}</Text>
           </View>
         </View>
 
@@ -84,7 +84,7 @@ export default function DoctorProfileScreen() {
 
           {/* Rating */}
           <View style={styles.ratingRow}>
-            <Text style={styles.starIcon}>⭐</Text>
+            <Text style={styles.starIcon}>*</Text>
             <Text style={styles.ratingText}>{doctor.rating.toFixed(1)}</Text>
             <Text style={styles.reviewCount}>({doctor.reviews_count} opiniones)</Text>
           </View>
@@ -92,19 +92,19 @@ export default function DoctorProfileScreen() {
           {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statIcon}>📅</Text>
+              <Text style={styles.statIcon}>E</Text>
               <Text style={styles.statValue}>8 años</Text>
               <Text style={styles.statLabel}>Experiencia</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statIcon}>📍</Text>
+              <Text style={styles.statIcon}>U</Text>
               <Text style={styles.statValue}>{doctor.city || 'N/A'}</Text>
               <Text style={styles.statLabel}>Ubicación</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statIcon}>🌐</Text>
+              <Text style={styles.statIcon}>Id</Text>
               <Text style={styles.statValue}>2</Text>
               <Text style={styles.statLabel}>Idiomas</Text>
             </View>
@@ -159,7 +159,7 @@ export default function DoctorProfileScreen() {
       {/* ── Footer ───────────────────────────────────── */}
       <View style={styles.footer}>
         <Pressable style={styles.favoriteBtn}>
-          <Text style={styles.favoriteIcon}>♡</Text>
+          <Text style={styles.favoriteIcon}>{'<'}</Text>
         </Pressable>
         <Pressable
           style={styles.bookBtn}
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroEmoji: { fontSize: 72 },
+  heroEmoji: { fontSize: 80, fontWeight: '700', color: MC.primary },
   
   // Info section
   infoSection: { paddingHorizontal: 20 },

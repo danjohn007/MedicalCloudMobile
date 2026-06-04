@@ -20,7 +20,7 @@ import { useAuthStore } from '@/stores/authStore';
 interface ChatMessage {
   id: number;
   sender_id: number;
-  body: string;
+  message: string;
   is_read: number;
   created_at: string;
 }
@@ -85,7 +85,7 @@ export default function ChatScreen() {
       <View style={[styles.msgRow, isMine && styles.msgRowMine]}>
         <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
           <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
-            {item.body}
+            {item.message}
           </Text>
           <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>
             {formatTime(item.created_at)}
@@ -109,7 +109,7 @@ export default function ChatScreen() {
           </Pressable>
           <View style={styles.headerInfo}>
             <View style={styles.avatarSmall}>
-              <Text style={{ fontSize: 20 }}>👩‍⚕️</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: MC.primary }}>D</Text>
             </View>
             <Text style={styles.headerTitle}>Doctor/a</Text>
           </View>
@@ -156,7 +156,7 @@ export default function ChatScreen() {
             {sending ? (
               <ActivityIndicator size="small" color={MC.white} />
             ) : (
-              <Text style={styles.sendIcon}>➤</Text>
+              <Text style={styles.sendIcon}>{'>'}</Text>
             )}
           </Pressable>
         </View>

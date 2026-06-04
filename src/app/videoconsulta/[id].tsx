@@ -18,24 +18,29 @@ export default function VideoconsultaScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Main video (doctor) — placeholder */}
+      {/* Main video (doctor) - placeholder */}
       <View style={styles.mainVideo}>
-        <Text style={styles.mainVideoEmoji}>👩‍⚕️</Text>
-        <Text style={styles.mainVideoLabel}>Dra. Mariana López</Text>
+        <View style={styles.mainVideoAvatar}>
+          <Text style={styles.mainVideoAvatarText}>DR</Text>
+        </View>
+        <Text style={styles.mainVideoLabel}>Doctor/a</Text>
+        <Text style={styles.mainVideoSubLabel}>En espera de conexion</Text>
       </View>
 
       {/* PiP (patient self-view) */}
       <View style={styles.pipView}>
-        <Text style={styles.pipEmoji}>👤</Text>
+        <View style={styles.pipAvatar}>
+          <Text style={styles.pipAvatarText}>TU</Text>
+        </View>
       </View>
 
       {/* Top controls */}
       <SafeAreaView style={styles.topControls} edges={['top']}>
         <Pressable style={styles.topBtn} onPress={() => router.back()}>
-          <Text style={styles.topBtnText}>←</Text>
+          <Text style={styles.topBtnText}>X</Text>
         </Pressable>
         <Pressable style={styles.topBtn}>
-          <Text style={styles.topBtnText}>🔄</Text>
+          <Text style={styles.topBtnText}>o</Text>
         </Pressable>
       </SafeAreaView>
 
@@ -47,7 +52,7 @@ export default function VideoconsultaScreen() {
             style={[styles.controlBtn, isMuted && styles.controlBtnOff]}
             onPress={() => setIsMuted(!isMuted)}
           >
-            <Text style={styles.controlIcon}>{isMuted ? '🔇' : '🎤'}</Text>
+            <Text style={styles.controlIcon}>{isMuted ? 'X' : 'MIC'}</Text>
           </Pressable>
 
           {/* Camera */}
@@ -55,12 +60,12 @@ export default function VideoconsultaScreen() {
             style={[styles.controlBtn, isCameraOff && styles.controlBtnOff]}
             onPress={() => setIsCameraOff(!isCameraOff)}
           >
-            <Text style={styles.controlIcon}>{isCameraOff ? '📷' : '📹'}</Text>
+            <Text style={styles.controlIcon}>{isCameraOff ? 'X' : 'CAM'}</Text>
           </Pressable>
 
           {/* Hang up */}
           <Pressable style={styles.hangUpBtn} onPress={handleHangUp}>
-            <Text style={styles.hangUpIcon}>📞</Text>
+            <Text style={styles.hangUpIcon}>END</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -70,12 +75,14 @@ export default function VideoconsultaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A1A2E' },
-  
+
   // Main video
   mainVideo: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2D2D44' },
-  mainVideoEmoji: { fontSize: 80, marginBottom: 12 },
-  mainVideoLabel: { fontSize: 18, color: MC.white, fontWeight: '600' },
-  
+  mainVideoAvatar: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#208AEF', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  mainVideoAvatarText: { fontSize: 40, color: '#FFFFFF', fontWeight: '700' },
+  mainVideoLabel: { fontSize: 20, color: MC.white, fontWeight: '600' },
+  mainVideoSubLabel: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+
   // PiP
   pipView: {
     position: 'absolute',
@@ -90,8 +97,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  pipEmoji: { fontSize: 36 },
-  
+  pipAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center' },
+  pipAvatarText: { fontSize: 18, color: '#FFFFFF', fontWeight: '700' },
+
   // Top controls
   topControls: {
     position: 'absolute',
@@ -104,8 +112,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   topBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  topBtnText: { color: MC.white, fontSize: 18 },
-  
+  topBtnText: { color: MC.white, fontSize: 18, fontWeight: '700' },
+
   // Bottom controls
   bottomControls: {
     position: 'absolute',
@@ -123,22 +131,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   controlBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   controlBtnOff: { backgroundColor: 'rgba(239,68,68,0.5)' },
-  controlIcon: { fontSize: 22 },
+  controlIcon: { fontSize: 14, color: MC.white, fontWeight: '700' },
   hangUpBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: MC.error,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  hangUpIcon: { fontSize: 24, transform: [{ rotate: '135deg' }] },
+  hangUpIcon: { fontSize: 13, color: MC.white, fontWeight: '700' },
 });

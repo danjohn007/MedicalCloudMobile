@@ -40,10 +40,10 @@ export default function SplashScreen() {
       {/* Logo + Brand */}
       <View style={styles.brand}>
         <View style={styles.logoCircle}>
-          <Text style={styles.logoEmoji}>🏥</Text>
+          <Text style={styles.logoEmoji}>DC</Text>
         </View>
         <Text style={styles.appName}>
-          <Text style={styles.appNameBold}>Medical</Text>
+          <Text style={styles.appNameBold}>Doctor</Text>
           {' '}Cloud
         </Text>
         <Text style={styles.tagline}>Tu salud, nuestra prioridad</Text>
@@ -52,7 +52,7 @@ export default function SplashScreen() {
       {/* Illustration placeholder */}
       <View style={styles.illustration}>
         <View style={styles.illustrationCircle}>
-          <Text style={styles.illustrationEmoji}>👩‍⚕️</Text>
+          <Text style={styles.illustrationEmoji}>+</Text>
         </View>
       </View>
 

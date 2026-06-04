@@ -23,7 +23,7 @@ export default function MensajesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
         <Pressable style={styles.newBtn}>
-          <Text style={styles.newIcon}>✏️</Text>
+          <Text style={styles.newIcon}>+</Text>
         </Pressable>
       </View>
 
@@ -39,7 +39,7 @@ export default function MensajesScreen() {
         <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
       ) : messages.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>💬</Text>
+          <Text style={styles.emptyIcon}>M</Text>
           <Text style={styles.emptyText}>No tienes mensajes</Text>
         </View>
       ) : (
@@ -51,7 +51,7 @@ export default function MensajesScreen() {
               onPress={() => router.push({ pathname: `/chat/${m.id}` })}
             >
               <View style={styles.avatar}>
-                <Text style={{ fontSize: 24 }}>👩‍⚕️</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#208AEF' }}>{m.doctor_name?.charAt(0) || 'D'}</Text>
               </View>
               <View style={styles.rowBody}>
                 <Text style={[styles.name, m.unread > 0 && styles.nameBold]}>

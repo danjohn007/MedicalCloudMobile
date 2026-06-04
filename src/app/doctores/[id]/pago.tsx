@@ -99,10 +99,10 @@ export default function PagoScreen() {
           <View style={styles.cardVisual}>
             <View style={styles.cardTop}>
               <Text style={styles.cardBrand}>VISA</Text>
-              <Text style={styles.cardChip}>◉</Text>
+              <Text style={styles.cardChip}>o</Text>
             </View>
             <Text style={styles.cardNumber}>
-              ★★★★  ★★★★  ★★★★  {cardNumber.replace(/\D/g, '').slice(-4).padStart(4, '•')}
+              *  *  *  {cardNumber.replace(/\D/g, '').slice(-4).padStart(4, '*')}
             </Text>
             <View style={styles.cardBottom}>
               <Text style={styles.cardExpiryLabel}>Vence</Text>

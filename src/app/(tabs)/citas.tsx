@@ -42,15 +42,15 @@ export default function CitasScreen() {
         <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
       ) : appointments.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📅</Text>
-          <Text style={styles.emptyText}>No tienes citas {tab === 'upcoming' ? 'próximas' : 'pasadas'}</Text>
+          <Text style={styles.emptyIcon}>| |</Text>
+          <Text style={styles.emptyText}>No tienes citas {tab === 'upcoming' ? 'proximas' : 'pasadas'}</Text>
         </View>
       ) : (
         <ScrollView>
           {appointments.map((a) => (
             <View key={a.id} style={styles.card}>
               <View style={styles.cardPhoto}>
-                <Text style={{ fontSize: 26 }}>👩‍⚕️</Text>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#208AEF' }}>{a.doctor_name?.charAt(0) || 'D'}</Text>
               </View>
               <View style={styles.cardBody}>
                 <Text style={styles.cardDoctor}>{a.doctor_name}</Text>

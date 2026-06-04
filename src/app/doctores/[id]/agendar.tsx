@@ -15,6 +15,7 @@ import * as api from '@/services/api';
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const WEEKDAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export default function AgendarScreen() {
   const router = useRouter();
@@ -221,16 +222,16 @@ const styles = StyleSheet.create({
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: MC.textPrimary },
   
   // Calendar
-  calendar: { marginHorizontal: 20, marginTop: 12 },
+  calendar: { marginHorizontal: 20, marginTop: 12, maxWidth: 500, alignSelf: 'center', width: '100%' },
   monthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  monthBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  monthArrow: { fontSize: 18, color: MC.primary, fontWeight: '600' },
+  monthBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
+  monthArrow: { fontSize: 18, color: MC.primary, fontWeight: '700' },
   monthTitle: { fontSize: 17, fontWeight: '600', color: MC.textPrimary },
   weekdayRow: { flexDirection: 'row', marginBottom: 8 },
   weekdayCell: { flex: 1, alignItems: 'center', paddingVertical: 6 },
   weekdayText: { fontSize: 12, color: MC.textMuted, fontWeight: '500' },
   daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', padding: 2 },
+  dayCell: { width: '14.2857%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', padding: 4 },
   daySelected: { backgroundColor: MC.primary, borderRadius: 24 },
   dayText: { fontSize: 15, color: MC.textPrimary, fontWeight: '500' },
   dayTextSelected: { color: MC.white, fontWeight: '700' },

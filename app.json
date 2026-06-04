@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "MedicalCloudMobile",
-    "slug": "MedicalCloudMobile",
+    "name": "Doctor Cloud",
+    "slug": "DoctorCloud",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "medicalcloudmobile",
+    "scheme": "doctorcloud",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.webmasterid.MedicalCloudMobile",
+      "bundleIdentifier": "com.doctorcloud.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

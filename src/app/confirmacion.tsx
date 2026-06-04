@@ -30,11 +30,11 @@ export default function ConfirmacionScreen() {
           <Text style={styles.successIcon}>✓</Text>
         </View>
         <View style={styles.sparkles}>
-          <Text style={styles.sparkleLeft}>✨</Text>
-          <Text style={styles.sparkleRight}>✨</Text>
+          <Text style={styles.sparkleLeft}>*</Text>
+          <Text style={styles.sparkleRight}>*</Text>
         </View>
 
-        <Text style={styles.title}>¡Cita confirmada!</Text>
+        <Text style={styles.title}>Cita confirmada</Text>
         <Text style={styles.subtitle}>
           Hemos enviado los detalles de tu cita a tu correo y a tu teléfono.
         </Text>

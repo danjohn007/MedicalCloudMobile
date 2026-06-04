@@ -3,10 +3,10 @@ import { Text } from 'react-native';
 
 import { MC } from '@/constants/theme';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: focused ? 22 : 20, opacity: focused ? 1 : 0.6 }}>
-      {emoji}
+    <Text style={{ fontSize: focused ? 20 : 18, fontWeight: focused ? '700' : '400', opacity: focused ? 1 : 0.6, color: focused ? '#208AEF' : '#999' }}>
+      {label}
     </Text>
   );
 }
@@ -36,28 +36,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="I" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="citas"
         options={{
           title: 'Citas',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="C" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="mensajes"
         options={{
           title: 'Mensajes',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="M" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon label="P" focused={focused} />,
         }}
       />
     </Tabs>

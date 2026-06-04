@@ -6,11 +6,11 @@ import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 
 const MENU_ITEMS = [
-  { icon: '👤', label: 'Datos personales',  route: '/perfil/datos'    },
-  { icon: '💳', label: 'Métodos de pago',   route: '/perfil/pagos'    },
-  { icon: '📍', label: 'Direcciones',        route: '/perfil/direcciones' },
-  { icon: '🔔', label: 'Notificaciones',     route: '/perfil/notificaciones' },
-  { icon: '❓', label: 'Ayuda y soporte',    route: '/perfil/soporte'  },
+  { icon: '>', label: 'Datos personales',  route: '/perfil/datos'    },
+  { icon: '>', label: 'Metodos de pago',   route: '/perfil/pagos'    },
+  { icon: '>', label: 'Direcciones',        route: '/perfil/direcciones' },
+  { icon: '>', label: 'Notificaciones',     route: '/perfil/notificaciones' },
+  { icon: '>', label: 'Ayuda y soporte',    route: '/perfil/soporte'  },
 ];
 
 export default function PerfilScreen() {
@@ -28,14 +28,14 @@ export default function PerfilScreen() {
         {/* Settings button */}
         <View style={styles.header}>
           <Pressable style={styles.settingsBtn}>
-            <Text style={styles.settingsIcon}>⚙️</Text>
+            <Text style={styles.settingsIcon}>*</Text>
           </Pressable>
         </View>
 
         {/* Avatar + Name */}
         <View style={styles.profile}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarEmoji}>👤</Text>
+            <Text style={styles.avatarEmoji}>{user?.name?.charAt(0) || 'U'}</Text>
           </View>
           <Text style={styles.name}>{user?.name ?? 'Usuario'}</Text>
           <Pressable>
@@ -59,8 +59,8 @@ export default function PerfilScreen() {
 
           {/* Logout */}
           <Pressable style={styles.menuItem} onPress={handleLogout}>
-            <Text style={styles.menuIcon}>🚪</Text>
-            <Text style={[styles.menuLabel, styles.menuLabelDanger]}>Cerrar sesión</Text>
+            <Text style={styles.menuIcon}>X</Text>
+            <Text style={[styles.menuLabel, styles.menuLabelDanger]}>Cerrar sesion</Text>
             <Text style={styles.menuArrow}>›</Text>
           </Pressable>
         </View>

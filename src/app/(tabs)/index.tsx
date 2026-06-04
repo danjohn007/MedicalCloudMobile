@@ -18,12 +18,12 @@ import { useAuthStore } from '@/stores/authStore';
 
 // ── Popular specialties (static list like the mockup) ─────
 const POPULAR_SPECIALTIES = [
-  { name: 'Medicina general', icon: '🩺' },
-  { name: 'Pediatría',        icon: '👶' },
-  { name: 'Ginecología',      icon: '🌸' },
-  { name: 'Dermatología',     icon: '🔬' },
-  { name: 'Psicología',       icon: '🧠' },
-  { name: 'Traumatología',    icon: '🦴' },
+  { name: 'Medicina general', icon: 'M' },
+  { name: 'Pediatria',        icon: 'P' },
+  { name: 'Ginecologia',      icon: 'G' },
+  { name: 'Dermatologia',     icon: 'D' },
+  { name: 'Psicologia',       icon: 'Ps' },
+  { name: 'Traumatologia',    icon: 'T' },
 ];
 
 // ── Doctor Card (horizontal scroll) ──────────────────────
@@ -32,7 +32,7 @@ function DoctorCardSmall({ doctor, onPress }: { doctor: api.Doctor; onPress: () 
     <Pressable style={styles.doctorCard} onPress={onPress}>
       {/* Photo */}
       <View style={styles.doctorPhoto}>
-        <Text style={{ fontSize: 32 }}>👩‍⚕️</Text>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: MC.primary }}>{doctor.name.charAt(0)}</Text>
       </View>
 
       {/* Info */}
@@ -44,15 +44,15 @@ function DoctorCardSmall({ doctor, onPress }: { doctor: api.Doctor; onPress: () 
         <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
 
         <View style={styles.doctorMeta}>
-          <Text style={styles.starText}>⭐ {doctor.rating.toFixed(1)}</Text>
+          <Text style={styles.starText}>* {doctor.rating.toFixed(1)}</Text>
           <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.cityText}>📍 {doctor.city}</Text>
+          <Text style={styles.cityText}>{doctor.city}</Text>
         </View>
       </View>
 
       {/* Favorite */}
       <Pressable style={styles.favoriteBtn}>
-        <Text style={{ fontSize: 18, color: MC.textMuted }}>♡</Text>
+        <Text style={{ fontSize: 18, color: MC.textMuted }}>{'<'}</Text>
       </Pressable>
     </Pressable>
   );
@@ -105,10 +105,10 @@ export default function HomeScreen() {
         {/* ── Header ─────────────────────────────────────── */}
         <View style={styles.header}>
           <Pressable style={styles.menuBtn}>
-            <Text style={styles.menuIcon}>☰</Text>
+            <Text style={styles.menuIcon}>|||</Text>
           </Pressable>
           <Pressable style={styles.notifBtn}>
-            <Text style={styles.notifIcon}>🔔</Text>
+            <Text style={styles.notifIcon}>!</Text>
           </Pressable>
         </View>
 
@@ -130,7 +130,7 @@ export default function HomeScreen() {
             returnKeyType="search"
           />
           <Pressable style={styles.searchBtn} onPress={handleSearch}>
-            <Text style={{ fontSize: 18 }}>🔍</Text>
+            <Text style={{ fontSize: 16, color: MC.primary, fontWeight: '600' }}>Ir</Text>
           </Pressable>
         </View>
 
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  chipIcon: { fontSize: 26, marginBottom: 6 },
+  chipIcon: { fontSize: 16, marginBottom: 6, fontWeight: '700', color: MC.primary },
   chipName: {
     fontSize: 11,
     color: MC.textPrimary,
