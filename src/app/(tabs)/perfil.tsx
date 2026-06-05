@@ -40,7 +40,7 @@ export default function PerfilScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/');
+    router.replace('/(auth)/login');
   };
 
   const renderMenuItem = (item: MenuItem, isLast = false) => (
