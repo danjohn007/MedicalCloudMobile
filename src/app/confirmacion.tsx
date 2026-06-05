@@ -7,7 +7,12 @@ import { MC } from '@/constants/theme';
 
 export default function ConfirmacionScreen() {
   const router = useRouter();
-  const { date, time, fee } = useLocalSearchParams<{ date: string; time: string; fee: string }>();
+  const { date, time, fee, status, appointmentId } = useLocalSearchParams<{
+    date: string; time: string; fee: string; status: string; appointmentId: string;
+  }>();
+
+  const isConfirmed = status === 'confirmed';
+  const isPending = status === 'pending_payment';
 
   const formatDateDisplay = (dateStr: string) => {
     const d = new Date(dateStr + 'T12:00:00');
@@ -26,14 +31,18 @@ export default function ConfirmacionScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        {/* Success icon */}
-        <View style={styles.successCircle}>
-          <Icon name="check" size={42} color={MC.white} />
+        {/* Status icon */}
+        <View style={[styles.statusCircle, isConfirmed ? styles.statusCircleConfirmed : styles.statusCirclePending]}>
+          <Icon name={isConfirmed ? 'check' : 'clock'} size={42} color={MC.white} />
         </View>
 
-        <Text style={styles.title}>Cita confirmada</Text>
+        <Text style={styles.title}>
+          {isConfirmed ? 'Cita confirmada' : 'Cita registrada'}
+        </Text>
         <Text style={styles.subtitle}>
-          Hemos enviado los detalles de tu cita a tu correo y a tu teléfono.
+          {isConfirmed
+            ? 'Hemos enviado los detalles de tu cita a tu correo y a tu teléfono.'
+            : 'Tu cita está pendiente de pago. Tienes 2 horas para completar el pago desde la sección de Citas.'}
         </Text>
 
         {/* Summary card */}
@@ -67,6 +76,21 @@ export default function ConfirmacionScreen() {
               <Text style={styles.summaryValueBold}>${parseFloat(fee ?? '0').toFixed(2)}</Text>
             </View>
           </View>
+
+          {isPending && (
+            <>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryIconWrap}>
+                  <Icon name="warning" size={18} color="#F59E0B" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.summaryLabel}>Estado de pago</Text>
+                  <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>Pendiente — Plazo: 2 horas</Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -78,9 +102,14 @@ export default function ConfirmacionScreen() {
           <Icon name="calendar" size={18} color={MC.white} style={{ marginRight: 8 }} />
           <Text style={styles.primaryBtnText}>Ver mis citas</Text>
         </Pressable>
-        <Pressable style={styles.secondaryBtn} onPress={() => {/* TODO: add to calendar */}}>
-          <Icon name="plus" size={16} color={MC.primary} style={{ marginRight: 6 }} />
-          <Text style={styles.secondaryBtnText}>Agregar al calendario</Text>
+        {!isConfirmed && (
+          <Text style={styles.pendingNote}>
+            Puedes pagar desde la sección de Citas → seleccionar la cita → "Pagar ahora"
+          </Text>
+        )}
+        <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
+          <Icon name="arrow-left" size={16} color={MC.primary} style={{ marginRight: 6 }} />
+          <Text style={styles.secondaryBtnText}>Volver al inicio</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -90,12 +119,13 @@ export default function ConfirmacionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
-  successCircle: {
+  statusCircle: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: MC.success,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 20,
   },
+  statusCircleConfirmed: { backgroundColor: MC.success },
+  statusCirclePending: { backgroundColor: '#F59E0B' },
   title: { fontSize: 26, fontWeight: '700', color: MC.textPrimary, textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 14, color: MC.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 28, paddingHorizontal: 16 },
 
@@ -117,6 +147,7 @@ const styles = StyleSheet.create({
   actions: { paddingHorizontal: 32, paddingVertical: 24, gap: 12 },
   primaryBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   primaryBtnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
+  pendingNote: { fontSize: 12, color: MC.textMuted, textAlign: 'center', lineHeight: 18 },
   secondaryBtn: { alignItems: 'center', paddingVertical: 10, flexDirection: 'row', justifyContent: 'center' },
   secondaryBtnText: { color: MC.primary, fontSize: 15, fontWeight: '500' },
 });

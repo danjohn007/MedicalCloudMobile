@@ -25,7 +25,8 @@ export default function PagoScreen() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'idle' | 'creating' | 'paying' | 'done'>('idle');
+  const [step, setStep] = useState<'idle' | 'creating' | 'paying' | 'checking'>('idle');
+  const [createdApptId, setCreatedApptId] = useState<number | null>(null);
 
   const handlePay = async () => {
     setLoading(true);
@@ -41,25 +42,42 @@ export default function PagoScreen() {
         type: (type as any) ?? 'presencial',
       });
 
+      const apptId = apptResult.id;
+      setCreatedApptId(apptId);
+
       if (apptResult.status === 'confirmed' || apptResult.fee <= 0) {
         // Free appointment — go straight to confirmation
-        setStep('done');
-        router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}` as any);
+        router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any);
         return;
       }
 
       // 2. Create PayPal order
       setStep('paying');
-      const payResult = await api.createAppointmentPayment(apptResult.id);
+      const payResult = await api.createAppointmentPayment(apptId);
 
       // 3. Open PayPal in browser
-      const result = await WebBrowser.openBrowserAsync(payResult.approve_url);
+      await WebBrowser.openBrowserAsync(payResult.approve_url);
 
-      // 4. After browser closes, check if payment completed
-      // The capture happens server-side via the redirect URL
-      // Navigate to confirmation regardless — the cron will handle expiry
-      setStep('done');
-      router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}` as any);
+      // 4. After browser closes, check the real appointment status
+      setStep('checking');
+      try {
+        // The capture happens server-side via the redirect URL
+        // We check the status by getting the appointment detail
+        const detail = await request<{ data: { status: string; payment_status: string } }>(
+          `/appointments/${apptId}`, {}, true,
+        );
+
+        if (detail.data.status === 'confirmed') {
+          // Payment was completed
+          router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any);
+        } else {
+          // Payment NOT completed — show pending status
+          router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any);
+        }
+      } catch {
+        // If we can't check status, assume pending
+        router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any);
+      }
 
     } catch (e: any) {
       setError(e.message ?? 'Error al procesar el pago.');
@@ -140,6 +158,13 @@ export default function PagoScreen() {
           </View>
         )}
 
+        {step === 'checking' && (
+          <View style={styles.statusBox}>
+            <ActivityIndicator color={MC.primary} size="small" />
+            <Text style={styles.statusText}>Verificando pago...</Text>
+          </View>
+        )}
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -162,6 +187,23 @@ export default function PagoScreen() {
       </View>
     </SafeAreaView>
   );
+}
+
+// Helper to make authenticated requests (same as api.ts)
+async function request<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> ?? {}),
+  };
+  if (authenticated) {
+    const { getToken } = await import('@/services/api');
+    const token = await getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(`https://doctorcloud.digital/app/api/mobile${path}`, { ...options, headers });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+  return json as T;
 }
 
 const styles = StyleSheet.create({
