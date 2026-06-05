@@ -22,13 +22,42 @@ export default function PagoScreen() {
   }>();
   const doctorId = parseInt(id ?? '0', 10);
   const fee = parseFloat(feeParam ?? '0');
+  const appointmentType = (type as any) ?? 'presencial';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'idle' | 'creating' | 'paying' | 'checking'>('idle');
-  const [createdApptId, setCreatedApptId] = useState<number | null>(null);
 
-  const handlePay = async () => {
+  // ── Opción 1: Crear cita sin pagar (pendiente de pago) ──────
+  const handleCreateOnly = async () => {
+    setLoading(true);
+    setError('');
+    setStep('creating');
+
+    try {
+      const apptResult = await api.createAppointment({
+        doctor_id: doctorId,
+        date: date ?? '',
+        time: time ?? '',
+        type: appointmentType,
+      });
+
+      const apptId = apptResult.id;
+      const apptStatus = apptResult.status; // 'pending_payment' or 'confirmed'
+
+      router.replace(
+        `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=${apptStatus}&appointmentId=${apptId}` as any
+      );
+    } catch (e: any) {
+      setError(e.message ?? 'Error al crear la cita.');
+    } finally {
+      setLoading(false);
+      setStep('idle');
+    }
+  };
+
+  // ── Opción 2: Crear cita y pagar con PayPal ────────────────
+  const handlePayNow = async () => {
     setLoading(true);
     setError('');
     setStep('creating');
@@ -39,14 +68,12 @@ export default function PagoScreen() {
         doctor_id: doctorId,
         date: date ?? '',
         time: time ?? '',
-        type: (type as any) ?? 'presencial',
+        type: appointmentType,
       });
 
       const apptId = apptResult.id;
-      setCreatedApptId(apptId);
 
       if (apptResult.status === 'confirmed' || apptResult.fee <= 0) {
-        // Free appointment — go straight to confirmation
         router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any);
         return;
       }
@@ -61,21 +88,16 @@ export default function PagoScreen() {
       // 4. After browser closes, check the real appointment status
       setStep('checking');
       try {
-        // The capture happens server-side via the redirect URL
-        // We check the status by getting the appointment detail
         const detail = await request<{ data: { status: string; payment_status: string } }>(
           `/appointments/${apptId}`, {}, true,
         );
 
         if (detail.data.status === 'confirmed') {
-          // Payment was completed
           router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any);
         } else {
-          // Payment NOT completed — show pending status
           router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any);
         }
       } catch {
-        // If we can't check status, assume pending
         router.replace(`/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any);
       }
 
@@ -98,7 +120,7 @@ export default function PagoScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── PayPal Info ───────────────────────────── */}
+        {/* ── PayPal Card ───────────────────────────── */}
         <View style={styles.paypalCard}>
           <View style={styles.paypalHeader}>
             <Icon name="credit-card" size={28} color={MC.white} />
@@ -112,7 +134,7 @@ export default function PagoScreen() {
           </Text>
         </View>
 
-        {/* ── Payment Summary ────────────────────────── */}
+        {/* ── Summary ────────────────────────── */}
         <View style={styles.summarySection}>
           <Text style={styles.summaryTitle}>Resumen de pago</Text>
           <View style={styles.summaryRow}>
@@ -126,13 +148,13 @@ export default function PagoScreen() {
           </View>
         </View>
 
-        {/* ── Deadline Warning ───────────────────────── */}
+        {/* ── Warning ───────────────────────── */}
         <View style={styles.warningBox}>
           <Icon name="warning" size={18} color="#D97706" />
           <View style={{ flex: 1 }}>
             <Text style={styles.warningTitle}>Plazo de pago: 2 horas</Text>
             <Text style={styles.warningText}>
-              Tienes 2 horas para completar el pago. Si no pagas, la cita será cancelada automáticamente y el horario se liberará.
+              Si eliges pagar después, la cita quedará pendiente. Tienes 2 horas para completar el pago, si no se cancelará automáticamente.
             </Text>
           </View>
         </View>
@@ -144,41 +166,40 @@ export default function PagoScreen() {
           </View>
         ) : null}
 
-        {step === 'creating' && (
+        {step !== 'idle' && (
           <View style={styles.statusBox}>
             <ActivityIndicator color={MC.primary} size="small" />
-            <Text style={styles.statusText}>Creando tu cita...</Text>
+            <Text style={styles.statusText}>
+              {step === 'creating' ? 'Creando tu cita...' : step === 'paying' ? 'Abriendo PayPal...' : 'Verificando pago...'}
+            </Text>
           </View>
         )}
 
-        {step === 'paying' && (
-          <View style={styles.statusBox}>
-            <ActivityIndicator color={MC.primary} size="small" />
-            <Text style={styles.statusText}>Abriendo PayPal...</Text>
-          </View>
-        )}
-
-        {step === 'checking' && (
-          <View style={styles.statusBox}>
-            <ActivityIndicator color={MC.primary} size="small" />
-            <Text style={styles.statusText}>Verificando pago...</Text>
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
 
       <View style={styles.footer}>
+        {/* Botón: No pagar ahora */}
+        <Pressable
+          style={[styles.secondaryBtn, loading && { opacity: 0.5 }]}
+          onPress={handleCreateOnly}
+          disabled={loading}
+        >
+          <Icon name="clock" size={18} color={MC.textSecondary} style={{ marginRight: 8 }} />
+          <Text style={styles.secondaryBtnText}>No pagar ahora — quedará pendiente</Text>
+        </Pressable>
+
+        {/* Botón: Pagar ahora con PayPal */}
         <Pressable
           style={[styles.payBtn, loading && { opacity: 0.6 }]}
-          onPress={handlePay}
+          onPress={handlePayNow}
           disabled={loading}
         >
           {loading
             ? <ActivityIndicator color={MC.white} />
             : (
               <View style={styles.payBtnContent}>
-                <Icon name="shield-check" size={18} color={MC.white} style={{ marginRight: 8 }} />
+                <Icon name="credit-card" size={18} color={MC.white} style={{ marginRight: 8 }} />
                 <Text style={styles.payBtnText}>Pagar con PayPal — ${fee.toFixed(2)}</Text>
               </View>
             )
@@ -189,7 +210,7 @@ export default function PagoScreen() {
   );
 }
 
-// Helper to make authenticated requests (same as api.ts)
+// Helper to make authenticated requests
 async function request<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -253,7 +274,18 @@ const styles = StyleSheet.create({
   },
   statusText: { color: MC.textPrimary, fontSize: 14, fontWeight: '500' },
 
-  footer: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: MC.border, backgroundColor: MC.background },
+  footer: {
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: MC.border,
+    backgroundColor: MC.background,
+    gap: 10,
+  },
+  secondaryBtn: {
+    borderRadius: 14, paddingVertical: 14,
+    alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
+    borderWidth: 1, borderColor: MC.border,
+  },
+  secondaryBtnText: { color: MC.textSecondary, fontSize: 15, fontWeight: '500' },
   payBtn: { backgroundColor: '#003087', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   payBtnContent: { flexDirection: 'row', alignItems: 'center' },
   payBtnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
