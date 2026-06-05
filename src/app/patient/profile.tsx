@@ -85,9 +85,12 @@ export default function PatientProfileScreen() {
         blood_type: bloodType || undefined,
         height_cm: heightCm ? Number(heightCm) : undefined,
         weight_kg: weightKg ? Number(weightKg) : undefined,
+        occupation: occupation || undefined,
         address: address || undefined,
         city: city || undefined,
         state: stateProv || undefined,
+        emergency_contact_name: emergencyName || undefined,
+        emergency_contact_phone: emergencyPhone || undefined,
       });
       setSuccess("Perfil actualizado correctamente.");
       setTimeout(() => setSuccess(""), 3000);

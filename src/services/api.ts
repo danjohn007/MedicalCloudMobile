@@ -304,3 +304,11 @@ export async function updateExpediente(data: Record<string, any>) {
 export async function getExpediente() {
   return request<ExpedienteData>('/expediente');
 }
+
+// ── PayPal Appointment Payment ────────────────────────────
+export async function createAppointmentPayment(appointmentId: number) {
+  return request<{ approve_url: string; order_id: string }>(
+    `/appointments/${appointmentId}/pay`,
+    { method: 'POST' },
+  );
+}
