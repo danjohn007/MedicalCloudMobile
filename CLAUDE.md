@@ -172,6 +172,30 @@ src/app/
 9. **Expediente médico** completo y editable (guardado vía API)
 10. **Check-in/Checkout QR** para citas presenciales
 
+## 🐛 Bugs Fijos Recientes
+
+### Disponibilidad de doctores (solo mostraba 1 hora)
+**Archivo:** `app/controllers/MobileApiController.php` — método `doctorAvailability()`
+
+**Problema original:** El endpoint tomaba el `start_time` del schedule como un slot único en vez de generar todos los slots del día.
+
+**Solución:** Ahora genera slots iterando desde `start_time` hasta `end_time` usando `slot_duration_minutes` de la configuración del doctor, respetando descansos (`break_start`/`break_end`) y excluyendo citas ya agendadas.
+
+**Flujo corregido:**
+1. Obtiene el schedule del día (`schedule_json` de `doctor_profiles`)
+2. Extrae `start_time`, `end_time`, `slot_duration_minutes`, `break_start`, `break_end`
+3. Genera slots cada `duration` minutos desde `start` hasta `end`
+4. Omite slots que caigan dentro del descanso (break)
+5. Excluye slots ya agendados (status NO en `cancelled/rejected/missed/no_show`)
+6. Para hoy, también excluye slots pasados (hora actual + duración mínima)
+
+### Duración de cita hardcodeada a 45 min
+**Problema:** `createAppointment()` siempre usaba `45 * 60` segundos para `end_at`.
+
+**Solución:** Ahora usa `duration_minutes` del perfil del doctor (con fallback a 30).
+
+---
+
 ## ⚠️ Pendiente / Por mejorar
 
 1. **Notificaciones push** (Firebase Cloud Messaging)
