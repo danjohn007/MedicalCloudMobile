@@ -34,9 +34,24 @@ const TYPE_META: Record<string, { label: string; bg: string; fg: string; icon: a
   presencial:    { label: 'Presencial',    bg: 'rgba(27,168,160,0.10)', fg: '#0E7C75', icon: 'buildings' },
   videoconsulta: { label: 'Videoconsulta', bg: 'rgba(139,92,246,0.10)', fg: '#5B21B6', icon: 'video-camera' },
   domicilio:     { label: 'A domicilio',   bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', icon: 'house' },
+  presential:    { label: 'Presencial',    bg: 'rgba(27,168,160,0.10)', fg: '#0E7C75', icon: 'buildings' },
+  virtual:       { label: 'Videoconsulta', bg: 'rgba(139,92,246,0.10)', fg: '#5B21B6', icon: 'video-camera' },
+  home_visit:    { label: 'A domicilio',   bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', icon: 'house' },
 };
 const normStatus = (s: string): StatusKey => (s in STATUS_META ? (s as StatusKey) : 'pending');
-const normType   = (t: string) => (t in TYPE_META ? t : 'presencial');
+const normType = (t: string) => {
+  const raw = String(t || '').toLowerCase();
+  const aliases: Record<string, string> = {
+    presencial: 'presencial',
+    presential: 'presential',
+    videoconsulta: 'videoconsulta',
+    virtual: 'virtual',
+    domicilio: 'domicilio',
+    home_visit: 'home_visit',
+  };
+  const normalized = aliases[raw] ?? raw;
+  return normalized in TYPE_META ? normalized : 'presential';
+};
 
 type FilterKey = 'all' | 'pending' | 'confirmed' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show' | 'missed';
 const FILTERS: { key: FilterKey; label: string; color: string }[] = [
@@ -61,6 +76,16 @@ const formatTime12 = (t: string) => {
   const h12 = hour % 12 || 12;
   return `${h12}:${m} ${ampm}`;
 };
+
+const extractReason = (appt: api.Appointment) => {
+  if (appt.reason && appt.reason.trim()) return appt.reason.trim();
+  if (!appt.notes) return '—';
+  const note = appt.notes.trim();
+  const m = note.match(/Motivo:\s*([^\n]+)/i);
+  if (m?.[1]?.trim()) return m[1].trim();
+  return note || '—';
+};
+
 const groupByDay = (items: api.Appointment[]) => {
   const map: Record<string, api.Appointment[]> = {};
   items.forEach((a) => {
@@ -146,7 +171,15 @@ export default function CitasScreen() {
 
   const handleCheckin = (a: api.Appointment) => router.push(`/patient/checkin?id=${a.id}`);
   const handleMessage = () => router.push('/(tabs)/mensajes' as any);
-  const handleVideo = (id: number) => router.push(`/videoconsulta/${id}` as any);
+  const handleVideo = (appt: api.Appointment) => {
+    const qs = new URLSearchParams({
+      scheduled_at: appt.scheduled_at,
+      status: appt.status,
+      doctor_name: appt.doctor_name ?? '',
+      duration: String(appt.duration_minutes ?? ''),
+    }).toString();
+    router.push(`/videoconsulta/${appt.id}?${qs}` as any);
+  };
 
   return (
     <SafeAreaView style={s.ct} edges={['top']}>
@@ -316,7 +349,7 @@ function AppointmentDetail(props: {
   onPay: (a: api.Appointment) => void;
   onCheckin: (a: api.Appointment) => void;
   onMessage: () => void;
-  onVideo: (id: number) => void;
+  onVideo: (appt: api.Appointment) => void;
   busy: boolean;
 }) {
   const { appt, visible, onClose, onCancel, onPay, onCheckin, onMessage, onVideo, busy } = props;
@@ -326,14 +359,15 @@ function AppointmentDetail(props: {
   const sm = STATUS_META[status];
   const tm = TYPE_META[type];
   const isUnpaid = appt.fee > 0 && status === 'pending_payment';
-  const isPresential = type === 'presencial';
-  const isVirtual = type === 'videoconsulta';
+  const isPresential = type === 'presencial' || type === 'presential';
+  const isVirtual = type === 'videoconsulta' || type === 'virtual';
   const dt = new Date(appt.scheduled_at);
   const dateLong = dt.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const timeLong = formatTime12(dt.toTimeString().slice(0, 5));
   const canCancel = !['cancelled', 'completed', 'in_consultation', 'no_show', 'missed'].includes(status);
   const mapsQuery = appt.location ? encodeURIComponent(appt.location) : null;
   const mapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : null;
+  const reason = extractReason(appt);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -365,6 +399,8 @@ function AppointmentDetail(props: {
             label="Fecha y hora" value={`${dateLong} - ${timeLong}`} />
           <InfoRow icon="user" iconColor="#8B5CF6" iconBg="rgba(139,92,246,0.10)"
             label="Doctor" value={`Dr. ${appt.doctor_name}`} subtitle={appt.specialty} />
+          <InfoRow icon="clipboard-text" iconColor="#10B981" iconBg="rgba(16,185,129,0.10)"
+            label="Motivo" value={reason} />
           {appt.location ? (
             <Pressable onPress={() => mapsUrl && Linking.openURL(mapsUrl)}>
               <InfoRow icon="map-pin" iconColor="#F97316" iconBg="rgba(249,115,22,0.10)"
@@ -402,10 +438,10 @@ function AppointmentDetail(props: {
                 <Text style={s.actionSecondaryText}>QR Check-in</Text>
               </Pressable>
             )}
-            {isVirtual && status === 'confirmed' && (
-              <Pressable style={s.actionPrimary} onPress={() => onVideo(appt.id)}>
+            {isVirtual && ['confirmed', 'in_consultation'].includes(status) && (
+              <Pressable style={s.actionPrimary} onPress={() => onVideo(appt)}>
                 <Icon name="video-camera" size={18} color={MC.white} />
-                <Text style={s.actionPrimaryText}>Videollamada</Text>
+                <Text style={s.actionPrimaryText}>Unirse a video</Text>
               </Pressable>
             )}
             {canCancel && (

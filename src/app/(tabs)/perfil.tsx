@@ -34,6 +34,8 @@ export default function PerfilScreen() {
   const menuItems: MenuItem[] = [
     { icon: 'user-circle',  label: 'Editar mi perfil',   action: () => router.push('/patient/profile') },
     { icon: 'first-aid',    label: 'Expediente médico',  action: () => router.push('/patient/expediente') },
+    { icon: 'list',         label: 'Mis documentos',     action: () => router.push('/patient/documentos') },
+    { icon: 'wallet',       label: 'Historial financiero', action: () => router.push('/patient/finanzas') },
     { icon: 'bell',         label: 'Notificaciones',      action: () => {} },
     { icon: 'info',         label: 'Ayuda y soporte',     action: () => {} },
   ];

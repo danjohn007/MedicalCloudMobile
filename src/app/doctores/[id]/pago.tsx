@@ -17,12 +17,14 @@ import * as api from '@/services/api';
 
 export default function PagoScreen() {
   const router = useRouter();
-  const { id, date, time, type, fee: feeParam } = useLocalSearchParams<{
-    id: string; date: string; time: string; type: string; fee: string;
+  const { id, date, time, type, fee: feeParam, reason: reasonParam, notes: notesParam } = useLocalSearchParams<{
+    id: string; date: string; time: string; type: string; fee: string; reason: string; notes: string;
   }>();
   const doctorId = parseInt(id ?? '0', 10);
   const fee = parseFloat(feeParam ?? '0');
   const appointmentType = (type as any) ?? 'presencial';
+  const reason = decodeURIComponent(reasonParam ?? '');
+  const notes = decodeURIComponent(notesParam ?? '');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,6 +42,8 @@ export default function PagoScreen() {
         date: date ?? '',
         time: time ?? '',
         type: appointmentType,
+        reason: reason.trim() || undefined,
+        notes: notes.trim() || undefined,
       });
 
       const apptId = apptResult.id;
@@ -69,6 +73,8 @@ export default function PagoScreen() {
         date: date ?? '',
         time: time ?? '',
         type: appointmentType,
+        reason: reason.trim() || undefined,
+        notes: notes.trim() || undefined,
       });
 
       const apptId = apptResult.id;

@@ -57,13 +57,29 @@ export interface Appointment {
   id: number;
   doctor_id: number;
   scheduled_at: string;
-  type: string;
+  end_at?: string;
+  type: 'presencial' | 'videoconsulta' | 'domicilio' | 'presential' | 'virtual' | 'home_visit' | string;
   status: string;
   fee: number;
   doctor_name: string;
   specialty: string;
   doctor_photo: string | null;
   location: string;
+  payment_status?: string;
+  reason?: string | null;
+  notes?: string | null;
+  duration_minutes?: number;
+  room_name?: string | null;
+  meeting_url?: string | null;
+  jitsi_room?: string | null;
+  jitsi_url?: string | null;
+}
+
+export interface AppointmentDetail {
+  data: Appointment & {
+    date?: string;
+    time?: string;
+  };
 }
 
 export interface Message {
@@ -112,6 +128,39 @@ export interface ExpedienteData {
   documents: any[];
 }
 
+export interface PatientDocument {
+  id: number;
+  document_type: string;
+  title: string;
+  file_path: string;
+  file_url: string | null;
+  file_mime: string | null;
+  file_size_kb: number;
+  notes: string | null;
+  created_at?: string;
+  uploader_name?: string | null;
+}
+
+export interface FinancialPayment {
+  id: number;
+  appointment_id: number | null;
+  doctor_name: string | null;
+  amount: number;
+  currency: string;
+  method: string | null;
+  status: string | null;
+  paypal_order_id: string | null;
+  created_at: string | null;
+}
+
+export interface FinancialHistory {
+  summary: {
+    this_month: number;
+    this_year: number;
+  };
+  payments: FinancialPayment[];
+}
+
 const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
 
 // ── Core fetch ────────────────────────────────────────────
@@ -120,8 +169,9 @@ async function request<T>(
   options: RequestInit = {},
   authenticated = true,
 ): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string> ?? {}),
   };
 
@@ -209,11 +259,16 @@ export async function getAppointments(status: 'upcoming' | 'past' = 'upcoming') 
   return request<{ data: Appointment[] }>(`/appointments?status=${status}`);
 }
 
+export async function getAppointmentDetail(id: number) {
+  return request<AppointmentDetail>(`/appointments/${id}`);
+}
+
 export async function createAppointment(data: {
   doctor_id: number;
   date: string;
   time: string;
   type: 'presencial' | 'videoconsulta' | 'domicilio';
+  reason?: string;
   notes?: string;
 }) {
   return request<{ id: number; status: string; fee: number }>(
@@ -268,6 +323,24 @@ export async function updateProfile(data: Partial<{
   });
 }
 
+export async function uploadAvatar(input: { uri: string; name: string; type: string }) {
+  const form = new FormData();
+  form.append('avatar', {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as any);
+
+  return request<{ success: boolean; url: string }>('/avatar', {
+    method: 'POST',
+    body: form,
+  });
+}
+
+export async function removeAvatar() {
+  return request<{ success: boolean }>('/avatar/remove', { method: 'POST' });
+}
+
 // ── QR / Check-in / Checkout ────────────────────────────
 export async function getAppointmentQr(id: number) {
   return request<{ data: {
@@ -304,6 +377,42 @@ export async function updateExpediente(data: Record<string, any>) {
 // ── Expediente (historial médico) ─────────────────────────
 export async function getExpediente() {
   return request<ExpedienteData>('/expediente');
+}
+
+export async function getDocuments() {
+  return request<{ data: PatientDocument[] }>('/documents');
+}
+
+export async function uploadDocument(input: {
+  uri: string;
+  name: string;
+  type: string;
+  title?: string;
+  document_type?: string;
+  notes?: string;
+}) {
+  const form = new FormData();
+  form.append('document_file', {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as any);
+  if (input.title) form.append('title', input.title);
+  if (input.document_type) form.append('document_type', input.document_type);
+  if (input.notes) form.append('notes', input.notes);
+
+  return request<{ id: number; document: PatientDocument }>(
+    '/documents/upload',
+    { method: 'POST', body: form },
+  );
+}
+
+export async function deleteDocument(id: number) {
+  return request<{ message: string }>(`/documents/${id}/delete`, { method: 'POST' });
+}
+
+export async function getFinancialHistory() {
+  return request<FinancialHistory>('/financial-history');
 }
 
 // ── PayPal Appointment Payment ────────────────────────────

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,8 +24,8 @@ export default function ConfirmarScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [appointmentType, setAppointmentType] = useState<'presencial' | 'videoconsulta' | 'domicilio'>('presencial');
+  const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
-  const [showNotes, setShowNotes] = useState(false);
 
   useEffect(() => {
     if (!doctorId) return;
@@ -50,7 +51,21 @@ export default function ConfirmarScreen() {
     return `${h12}:${m} ${ampm}`;
   };
 
-  const fee = doctor?.consultation_fee ?? 0;
+  const getFeeForType = (type: 'presencial' | 'videoconsulta' | 'domicilio') => {
+    if (!doctor) return 0;
+    if (type === 'videoconsulta') return doctor.telemedicine_fee ?? doctor.consultation_fee ?? 0;
+    if (type === 'domicilio') return doctor.home_visit_fee ?? doctor.consultation_fee ?? 0;
+    return doctor.consultation_fee ?? 0;
+  };
+
+  const availableTypes: Array<{ key: 'presencial' | 'videoconsulta' | 'domicilio'; label: string }> = [
+    { key: 'presencial', label: 'Presencial' },
+    ...(doctor?.telemedicine_fee ? [{ key: 'videoconsulta' as const, label: 'Videoconsulta' }] : []),
+    ...(doctor?.home_visit_fee ? [{ key: 'domicilio' as const, label: 'A domicilio' }] : []),
+  ];
+
+  const fee = getFeeForType(appointmentType);
+  const canContinue = !!date && !!time && reason.trim().length >= 5;
 
   if (loading) {
     return (
@@ -130,6 +145,49 @@ export default function ConfirmarScreen() {
 
         <View style={styles.divider} />
 
+        {/* ── Form ───────────────────────────────────── */}
+        <View style={styles.formSection}>
+          <Text style={styles.formLabel}>Modalidad</Text>
+          <View style={styles.typeRow}>
+            {availableTypes.map((opt) => {
+              const active = appointmentType === opt.key;
+              return (
+                <Pressable
+                  key={opt.key}
+                  style={[styles.typeChip, active && styles.typeChipActive]}
+                  onPress={() => setAppointmentType(opt.key)}
+                >
+                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.formLabel}>Motivo de consulta *</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            multiline
+            value={reason}
+            onChangeText={setReason}
+            placeholder="Describe brevemente el motivo de tu consulta"
+            placeholderTextColor={MC.textMuted}
+            textAlignVertical="top"
+          />
+
+          <Text style={styles.formLabel}>Notas adicionales (opcional)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            multiline
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Algo más que deba saber el doctor"
+            placeholderTextColor={MC.textMuted}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.divider} />
+
         {/* ── Payment Summary ────────────────────────── */}
         <View style={styles.paymentSection}>
           <View style={styles.paymentHeader}>
@@ -152,11 +210,18 @@ export default function ConfirmarScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={styles.confirmBtn}
-          onPress={() => router.push(`/doctores/${doctorId}/pago?date=${date}&time=${time}&type=${appointmentType}&fee=${fee}` as any)}
+          style={[styles.confirmBtn, !canContinue && styles.confirmBtnDisabled]}
+          disabled={!canContinue}
+          onPress={() => {
+            const reasonParam = encodeURIComponent(reason.trim());
+            const notesParam = encodeURIComponent(notes.trim());
+            router.push(
+              `/doctores/${doctorId}/pago?date=${date}&time=${time}&type=${appointmentType}&fee=${fee}&reason=${reasonParam}&notes=${notesParam}` as any
+            );
+          }}
         >
           <Icon name="check-circle" size={18} color={MC.white} style={{ marginRight: 8 }} />
-          <Text style={styles.confirmBtnText}>Confirmar y pagar</Text>
+          <Text style={styles.confirmBtnText}>Continuar a pago</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -186,6 +251,32 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 12, color: MC.textMuted, marginBottom: 2 },
   detailValue: { fontSize: 14, color: MC.textPrimary, fontWeight: '500' },
 
+  formSection: { paddingHorizontal: 20, paddingVertical: 16 },
+  formLabel: { fontSize: 13, fontWeight: '700', color: MC.textSecondary, marginBottom: 8, marginTop: 8 },
+  typeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 8 },
+  typeChip: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: MC.surface,
+  },
+  typeChipActive: { borderColor: MC.primary, backgroundColor: MC.primaryLight },
+  typeChipText: { fontSize: 13, color: MC.textSecondary, fontWeight: '600' },
+  typeChipTextActive: { color: MC.primary, fontWeight: '700' },
+  input: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 12,
+    backgroundColor: MC.surface,
+    color: MC.textPrimary,
+    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textArea: { minHeight: 96, marginBottom: 8 },
+
   paymentSection: { paddingHorizontal: 20, paddingVertical: 16 },
   paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   paymentTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary },
@@ -198,5 +289,6 @@ const styles = StyleSheet.create({
 
   footer: { paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: MC.border, backgroundColor: MC.background },
   confirmBtn: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  confirmBtnDisabled: { opacity: 0.45 },
   confirmBtnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
 });

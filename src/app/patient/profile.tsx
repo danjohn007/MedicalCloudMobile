@@ -3,9 +3,11 @@ import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -26,6 +28,7 @@ export default function PatientProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -49,6 +52,7 @@ export default function PatientProfileScreen() {
       setLoading(true);
       const p = await api.getProfile();
       setName(p.name ?? "");
+      setAvatarUrl(p.avatar_url ?? null);
       setPhone(p.phone ?? "");
       setBirthDate(p.birth_date ?? "");
       setGender(p.gender ?? "");
@@ -101,6 +105,60 @@ export default function PatientProfileScreen() {
     }
   };
 
+  const pickAvatar = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitas habilitar acceso a fotos para cambiar avatar."
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const img = result.assets[0];
+      const ext = (img.uri.split(".").pop() || "jpg").toLowerCase();
+      const name = `avatar_${Date.now()}.${ext}`;
+      const type = img.mimeType || `image/${ext === "jpg" ? "jpeg" : ext}`;
+
+      const up = await api.uploadAvatar({ uri: img.uri, name, type });
+      setAvatarUrl(up.url);
+      setSuccess("Avatar actualizado correctamente.");
+      setTimeout(() => setSuccess(""), 2500);
+    } catch (e: any) {
+      setError(e.message ?? "No se pudo actualizar el avatar");
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    Alert.alert("Quitar avatar", "¿Deseas eliminar tu foto de perfil?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.removeAvatar();
+            setAvatarUrl(null);
+            setSuccess("Avatar eliminado.");
+            setTimeout(() => setSuccess(""), 2500);
+          } catch (e: any) {
+            setError(e.message ?? "No se pudo eliminar el avatar");
+          }
+        },
+      },
+    ]);
+  };
+
   const imc = (() => {
     const h = parseFloat(heightCm),
       w = parseFloat(weightKg);
@@ -141,11 +199,27 @@ export default function PatientProfileScreen() {
         <ScrollView style={s.scroll} contentContainerStyle={s.scrollCt}>
           <View style={s.avatarSection}>
             <View style={s.avatar}>
-              <Text style={s.avatarTxt}>
-                {name.charAt(0).toUpperCase() || "?"}
-              </Text>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={s.avatarImg} />
+              ) : (
+                <Text style={s.avatarTxt}>
+                  {name.charAt(0).toUpperCase() || "?"}
+                </Text>
+              )}
             </View>
             <Text style={s.profileName}>{name || "Sin nombre"}</Text>
+            <View style={s.avatarActions}>
+              <Pressable style={s.avatarBtn} onPress={pickAvatar}>
+                <Icon name="plus" size={14} color={MC.white} />
+                <Text style={s.avatarBtnTxt}>Cambiar foto</Text>
+              </Pressable>
+              {avatarUrl ? (
+                <Pressable style={s.avatarDelBtn} onPress={handleRemoveAvatar}>
+                  <Icon name="x" size={14} color={MC.error} />
+                  <Text style={s.avatarDelTxt}>Quitar</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
           {error ? (
             <View style={s.errBox}>
@@ -161,7 +235,7 @@ export default function PatientProfileScreen() {
           ) : null}
 
           <Card
-            icon="person"
+            icon="user"
             title="Datos Personales"
             sub="Nombre, nacimiento, género y contacto"
           >
@@ -465,7 +539,35 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   avatarTxt: { fontSize: 34, fontWeight: "700", color: MC.white },
+  avatarImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 40,
+  },
   profileName: { fontSize: 20, fontWeight: "700", color: MC.textPrimary },
+  avatarActions: { flexDirection: "row", gap: 10, marginTop: 10 },
+  avatarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: MC.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  avatarBtnTxt: { color: MC.white, fontSize: 12, fontWeight: "700" },
+  avatarDelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FEE2E2",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  avatarDelTxt: { color: MC.error, fontSize: 12, fontWeight: "700" },
   errBox: {
     flexDirection: "row",
     alignItems: "center",
