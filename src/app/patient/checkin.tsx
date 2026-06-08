@@ -106,19 +106,21 @@ export default function CheckinScreen() {
           </>
         ) : (
           <>
-            {/* QR-style code display */}
-            <View style={s.qrCard}>
-              <Icon name="share-network" size={64} color={MC.primary} />
-              <Text style={s.qrTitle}>Tu código de check-in</Text>
-              {code ? (
-                <>
-                  <Text style={s.qrCode}>{code}</Text>
-                  <Text style={s.qrHint}>Muestra este código al doctor para registrarte.</Text>
-                </>
-              ) : (
-                <Text style={s.qrHint}>El código estará disponible 2 horas antes de tu cita.</Text>
-              )}
+          {/* QR-style code display */}
+          <View style={s.qrCard}>
+            <View style={s.qrBox}>
+              <Text style={s.qrCodeDisplay}>{code || '------'}</Text>
             </View>
+            <Text style={s.qrTitle}>Tu código de check-in</Text>
+            {code ? (
+              <>
+              <Text style={s.qrSubtitle}>Muestra este código al doctor o escríbelo manualmente</Text>
+              <Text style={s.qrCode}>{code}</Text>
+              </>
+            ) : (
+              <Text style={s.qrSubtitle}>El código estará disponible 2 horas antes de tu cita.</Text>
+            )}
+          </View>
 
             {/* Manual entry */}
             <View style={s.manualCard}>
@@ -160,8 +162,11 @@ const s = StyleSheet.create({
 
   // QR Card
   qrCard: { alignItems: "center", padding: 32, backgroundColor: MC.background, borderRadius: 20, borderWidth: 1, borderColor: MC.border, marginBottom: 16 },
+  qrBox: { backgroundColor: MC.primaryLight, borderRadius: 16, paddingHorizontal: 24, paddingVertical: 16, marginBottom: 12, borderWidth: 2, borderColor: MC.primary, borderStyle: 'dashed' },
+  qrCodeDisplay: { fontSize: 42, fontWeight: "900", color: MC.primary, letterSpacing: 12, textAlign: 'center' },
   qrTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary, marginTop: 16, marginBottom: 8 },
-  qrCode: { fontSize: 36, fontWeight: "800", color: MC.primary, letterSpacing: 8, marginBottom: 8 },
+  qrSubtitle: { fontSize: 13, color: MC.textSecondary, textAlign: "center", marginBottom: 8 },
+  qrCode: { fontSize: 18, fontWeight: "600", color: MC.textMuted, letterSpacing: 4, marginBottom: 8 },
   qrHint: { fontSize: 13, color: MC.textSecondary, textAlign: "center" },
 
   // Manual entry
