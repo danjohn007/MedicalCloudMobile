@@ -125,6 +125,8 @@ export interface ExpedienteData {
   profile: Record<string, any> | null;
   record: Record<string, any> | null;
   consultations: ClinicalNote[];
+  history?: any[];
+  prescriptions?: any[];
   documents: any[];
 }
 

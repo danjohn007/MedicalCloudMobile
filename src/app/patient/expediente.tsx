@@ -14,6 +14,8 @@ export default function ExpedienteScreen() {
   const [success, setSuccess] = useState("");
   const [record, setRecord] = useState<Record<string, any>>({});
   const [consultations, setConsultations] = useState<any[]>([]);
+  const [historyEntries, setHistoryEntries] = useState<any[]>([]);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -24,6 +26,8 @@ export default function ExpedienteScreen() {
       const result = await api.getExpediente();
       setRecord(result.record ?? {});
       setConsultations(result.consultations ?? []);
+      setHistoryEntries(result.history ?? []);
+      setPrescriptions(result.prescriptions ?? []);
     } catch (e: any) {
       setError(e.message ?? "Error al cargar expediente");
     } finally { setLoading(false); }
@@ -243,6 +247,35 @@ export default function ExpedienteScreen() {
                 <Text style={s.consultDoc}>Dr(a). {c.doctor_name}</Text>
               </View>
             )) : <Text style={s.emptyText}>Aún no tienes consultas registradas.</Text>}
+          </Card>
+
+          {/* Entradas de historial clinico */}
+          <Card icon="list" title="Historial Clínico" subtitle="Eventos y diagnósticos históricos">
+            {historyEntries.length > 0 ? historyEntries.map((h: any, i: number) => (
+              <View key={h.id ?? i} style={s.consultCard}>
+                <View style={s.consultHdr}>
+                  <Text style={s.consultDate}>{(h.entry_date ?? h.date_recorded ?? '').slice(0, 10)}</Text>
+                  <Text style={s.consultStatus}>{h.category ?? 'registro'}</Text>
+                </View>
+                {h.description ? <Text style={s.consultText}>{h.description}</Text> : null}
+                <Text style={s.consultDoc}>Dr(a). {h.doctor_name ?? '—'}</Text>
+              </View>
+            )) : <Text style={s.emptyText}>No hay entradas de historial clínico.</Text>}
+          </Card>
+
+          {/* Recetas */}
+          <Card icon="pill" title="Recetas" subtitle="Recetas médicas emitidas por tus doctores">
+            {prescriptions.length > 0 ? prescriptions.map((p: any, i: number) => (
+              <View key={p.id ?? i} style={s.consultCard}>
+                <View style={s.consultHdr}>
+                  <Text style={s.consultDate}>{(p.issued_date ?? p.created_at ?? '').slice(0, 10)}</Text>
+                  <Text style={s.consultStatus}>{p.status ?? 'active'}</Text>
+                </View>
+                {p.diagnosis ? <Text style={s.consultDiag}>{p.diagnosis}</Text> : null}
+                {p.medications ? <Text style={s.consultText}>{p.medications}</Text> : null}
+                <Text style={s.consultDoc}>Dr(a). {p.doctor_name ?? '—'}</Text>
+              </View>
+            )) : <Text style={s.emptyText}>No hay recetas registradas.</Text>}
           </Card>
 
           {/* Save */}
