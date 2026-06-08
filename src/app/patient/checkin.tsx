@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import QRCode from "react-native-qrcode-svg";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
@@ -108,14 +109,19 @@ export default function CheckinScreen() {
           <>
           {/* QR-style code display */}
           <View style={s.qrCard}>
-            <View style={s.qrBox}>
-              <Text style={s.qrCodeDisplay}>{code || '------'}</Text>
-            </View>
+            {code ? (
+              <View style={s.qrCodeWrap}>
+                <QRCode value={code} size={220} color={MC.primary} />
+              </View>
+            ) : (
+              <View style={s.qrBox}>
+                <Text style={s.qrCodeDisplay}>------</Text>
+              </View>
+            )}
             <Text style={s.qrTitle}>Tu código de check-in</Text>
             {code ? (
               <>
-              <Text style={s.qrSubtitle}>Muestra este código al doctor o escríbelo manualmente</Text>
-              <Text style={s.qrCode}>{code}</Text>
+              <Text style={s.qrSubtitle}>Escanea este código QR o ingresa manualmente: {code}</Text>
               </>
             ) : (
               <Text style={s.qrSubtitle}>El código estará disponible 2 horas antes de tu cita.</Text>
@@ -163,6 +169,7 @@ const s = StyleSheet.create({
   // QR Card
   qrCard: { alignItems: "center", padding: 32, backgroundColor: MC.background, borderRadius: 20, borderWidth: 1, borderColor: MC.border, marginBottom: 16 },
   qrBox: { backgroundColor: MC.primaryLight, borderRadius: 16, paddingHorizontal: 24, paddingVertical: 16, marginBottom: 12, borderWidth: 2, borderColor: MC.primary, borderStyle: 'dashed' },
+  qrCodeWrap: { marginBottom: 12, padding: 12, backgroundColor: "#FFFFFF", borderRadius: 12, borderWidth: 1, borderColor: MC.border },
   qrCodeDisplay: { fontSize: 42, fontWeight: "900", color: MC.primary, letterSpacing: 12, textAlign: 'center' },
   qrTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary, marginTop: 16, marginBottom: 8 },
   qrSubtitle: { fontSize: 13, color: MC.textSecondary, textAlign: "center", marginBottom: 8 },
