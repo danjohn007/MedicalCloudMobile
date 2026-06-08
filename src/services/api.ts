@@ -55,6 +55,7 @@ export interface Doctor {
 
 export interface Appointment {
   id: number;
+  doctor_id: number;
   scheduled_at: string;
   type: string;
   status: string;

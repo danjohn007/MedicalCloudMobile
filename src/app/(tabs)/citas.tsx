@@ -73,22 +73,24 @@ const groupByDay = (items: api.Appointment[]) => {
 // ════════════════════════════════════════════════════════════
 export default function CitasScreen() {
   const router = useRouter();
-  const [filter, setFilter] = useState<FilterKey>('all');
-  const [items, setItems] = useState<api.Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tab, setTab]           = useState<'upcoming' | 'past'>('upcoming');
+  const [filter, setFilter]     = useState<FilterKey>('all');
+  const [items, setItems]       = useState<api.Appointment[]>([]);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
   const [selected, setSelected] = useState<api.Appointment | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy]         = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   const load = useCallback(async () => {
     try {
       setError('');
-      const res = await api.getAppointments('upcoming');
+      const res = await api.getAppointments(tab);
       setItems(res.data);
     } catch (e: any) { setError(e.message ?? 'Error al cargar citas'); }
     finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  }, [tab]);
   useEffect(() => { load(); }, [load]);
 
   const counts: Record<FilterKey, number> = {
@@ -139,10 +141,14 @@ export default function CitasScreen() {
   };
 
   const handleCheckin = (a: api.Appointment) => router.push(`/patient/checkin?id=${a.id}`);
-  const handleMessage = (a: api.Appointment) => router.push(`/chat/${a.id}` as any);
+  const handleMessage = (a: api.Appointment) => {
+    // Go to mensajes tab instead of attempting chat-thread lookup
+    router.push('/(tabs)/mensajes' as any);
+  };
 
   return (
     <SafeAreaView style={s.ct} edges={['top']}>
+      {/* Header with add button */}
       <View style={s.hdr}>
         <Text style={s.hdrTitle}>Mis Citas</Text>
         <Pressable onPress={() => router.push('/doctores' as any)} style={s.hdrAdd}>
@@ -151,11 +157,28 @@ export default function CitasScreen() {
         </Pressable>
       </View>
 
+      {/* Tabs: Proximas / Pasadas */}
+      <View style={s.tabRow}>
+        <Pressable style={[s.tabBtn, tab === 'upcoming' && s.tabActive]}
+          onPress={() => setTab('upcoming')}>
+          <Text style={[s.tabText, tab === 'upcoming' && s.tabTextActive]}>Proximas</Text>
+          {tab === 'upcoming' && <View style={s.tabLine} />}
+        </Pressable>
+        <Pressable style={[s.tabBtn, tab === 'past' && s.tabActive]}
+          onPress={() => setTab('past')}>
+          <Text style={[s.tabText, tab === 'past' && s.tabTextActive]}>Pasadas</Text>
+          {tab === 'past' && <View style={s.tabLine} />}
+        </Pressable>
+      </View>
+
+      {/* Stats chips - siempre visibles */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statRow}>
-        <StatChip label="Próximas"    value={counts.all}             color={MC.primary} icon="calendar" />
-        {counts.confirmed > 0       && <StatChip label="Confirmadas" value={counts.confirmed}       color="#10B981" icon="check-circle" />}
-        {counts.pending > 0         && <StatChip label="Pendientes"  value={counts.pending}         color="#F59E0B" icon="clock" />}
-        {counts.in_consultation > 0 && <StatChip label="En consulta" value={counts.in_consultation} color="#0EA5E9" icon="stethoscope" />}
+        <StatChip label={tab === 'upcoming' ? 'Proximas' : 'Total'} value={counts.all} color={MC.primary} icon="calendar" />
+        {tab === 'upcoming' && counts.confirmed > 0 && <StatChip label="Confirmadas" value={counts.confirmed} color="#10B981" icon="check-circle" />}
+        {tab === 'upcoming' && counts.pending > 0 && <StatChip label="Pendientes" value={counts.pending} color="#F59E0B" icon="clock" />}
+        {tab === 'upcoming' && counts.in_consultation > 0 && <StatChip label="En consulta" value={counts.in_consultation} color="#0EA5E9" icon="stethoscope" />}
+        {tab === 'past' && counts.completed > 0 && <StatChip label="Completadas" value={counts.completed} color="#6366F1" icon="check-circle" />}
+        {tab === 'past' && counts.cancelled > 0 && <StatChip label="Canceladas" value={counts.cancelled} color="#EF4444" icon="x" />}
       </ScrollView>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll} style={s.filterRow}>
@@ -416,6 +439,13 @@ const s = StyleSheet.create({
   hdrTitle: { fontSize: 26, fontWeight: '800', color: MC.textPrimary, letterSpacing: -0.5 },
   hdrAdd: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MC.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   hdrAddText: { color: MC.white, fontSize: 14, fontWeight: '600' },
+
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: MC.border, marginBottom: 4 },
+  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: MC.primary },
+  tabText: { fontSize: 14, fontWeight: '600', color: MC.textMuted },
+  tabTextActive: { color: MC.primary, fontWeight: '700' },
+  tabLine: { position: 'absolute', bottom: -1, left: '20%', right: '20%', height: 2, backgroundColor: MC.primary, borderRadius: 1 },
 
   statRow: { paddingHorizontal: 16, gap: 10, paddingBottom: 8 },
   statChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, backgroundColor: MC.surface },
