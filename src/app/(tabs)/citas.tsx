@@ -21,14 +21,14 @@ import * as api from '@/services/api';
 
 type StatusKey = 'pending' | 'pending_payment' | 'confirmed' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show' | 'missed';
 const STATUS_META: Record<StatusKey, { label: string; bg: string; fg: string; dot: string }> = {
-  pending:         { label: 'Pendiente',     bg: 'rgba(245,158,11,0.10)', fg: '#92400E', dot: '#F59E0B' },
+  pending:         { label: 'Pendiente',      bg: 'rgba(245,158,11,0.10)', fg: '#92400E', dot: '#F59E0B' },
   pending_payment: { label: 'Pago pendiente', bg: 'rgba(245,158,11,0.12)', fg: '#92400E', dot: '#F59E0B' },
-  confirmed:       { label: 'Confirmada',   bg: 'rgba(16,185,129,0.10)', fg: '#065F46', dot: '#10B981' },
-  in_consultation: { label: 'En consulta',  bg: 'rgba(14,165,233,0.10)', fg: '#075985', dot: '#0EA5E9' },
-  completed:       { label: 'Completada',   bg: 'rgba(99,102,241,0.10)', fg: '#3730A3', dot: '#6366F1' },
-  cancelled:       { label: 'Cancelada',    bg: 'rgba(239,68,68,0.10)',  fg: '#991B1B', dot: '#EF4444' },
-  no_show:         { label: 'No asistió',   bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', dot: '#F97316' },
-  missed:          { label: 'No atendida',  bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', dot: '#F97316' },
+  confirmed:       { label: 'Confirmada',    bg: 'rgba(16,185,129,0.10)', fg: '#065F46', dot: '#10B981' },
+  in_consultation: { label: 'En consulta',   bg: 'rgba(14,165,233,0.10)', fg: '#075985', dot: '#0EA5E9' },
+  completed:       { label: 'Completada',    bg: 'rgba(99,102,241,0.10)', fg: '#3730A3', dot: '#6366F1' },
+  cancelled:       { label: 'Cancelada',     bg: 'rgba(239,68,68,0.10)',  fg: '#991B1B', dot: '#EF4444' },
+  no_show:         { label: 'No asistio',    bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', dot: '#F97316' },
+  missed:          { label: 'No atendida',   bg: 'rgba(249,115,22,0.10)', fg: '#9A3412', dot: '#F97316' },
 };
 const TYPE_META: Record<string, { label: string; bg: string; fg: string; icon: any }> = {
   presencial:    { label: 'Presencial',    bg: 'rgba(27,168,160,0.10)', fg: '#0E7C75', icon: 'buildings' },
@@ -38,7 +38,7 @@ const TYPE_META: Record<string, { label: string; bg: string; fg: string; icon: a
 const normStatus = (s: string): StatusKey => (s in STATUS_META ? (s as StatusKey) : 'pending');
 const normType   = (t: string) => (t in TYPE_META ? t : 'presencial');
 
-type FilterKey = 'all' | 'pending' | 'confirmed' | 'in_consultation' | 'completed' | 'cancelled';
+type FilterKey = 'all' | 'pending' | 'confirmed' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show' | 'missed';
 const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: 'all', label: 'Todas', color: MC.primary },
   { key: 'pending', label: 'Pendiente', color: '#F59E0B' },
@@ -46,6 +46,8 @@ const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: 'in_consultation', label: 'En consulta', color: '#0EA5E9' },
   { key: 'completed', label: 'Completada', color: '#6366F1' },
   { key: 'cancelled', label: 'Cancelada', color: '#EF4444' },
+  { key: 'no_show', label: 'No asistio', color: '#F97316' },
+  { key: 'missed', label: 'No atendida', color: '#F97316' },
 ];
 
 const fmtDayHeader = (dayKey: string) => {
@@ -68,9 +70,6 @@ const groupByDay = (items: api.Appointment[]) => {
   return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
 };
 
-// ════════════════════════════════════════════════════════════
-// MAIN SCREEN
-// ════════════════════════════════════════════════════════════
 export default function CitasScreen() {
   const router = useRouter();
   const [tab, setTab]           = useState<'upcoming' | 'past'>('upcoming');
@@ -100,12 +99,17 @@ export default function CitasScreen() {
     in_consultation: items.filter((a) => normStatus(a.status) === 'in_consultation').length,
     completed: items.filter((a) => normStatus(a.status) === 'completed').length,
     cancelled: items.filter((a) => normStatus(a.status) === 'cancelled').length,
+    no_show: items.filter((a) => ['no_show', 'missed'].includes(normStatus(a.status))).length,
+    missed: items.filter((a) => normStatus(a.status) === 'missed').length,
   };
+
   const filtered = items.filter((a) => {
     if (filter === 'all') return true;
     if (filter === 'pending') return ['pending', 'pending_payment'].includes(normStatus(a.status));
+    if (filter === 'no_show') return ['no_show', 'missed'].includes(normStatus(a.status));
     return normStatus(a.status) === filter;
   });
+
   const onRefresh = () => { setRefreshing(true); load(); };
 
   const handleCancel = (a: api.Appointment) => {
@@ -113,13 +117,13 @@ export default function CitasScreen() {
     const within24h = ms >= 0 && ms < 24 * 3600 * 1000;
     const isUnpaid = a.fee > 0 && (a as any).payment_status === 'pending';
     if (within24h && !isUnpaid) {
-      Alert.alert('No se puede cancelar', 'Solo puedes cancelar con menos de 24 h de anticipación si aún no has pagado.');
+      Alert.alert('No se puede cancelar', 'Solo puedes cancelar con menos de 24 h de anticipacion si aun no has pagado.');
       return;
     }
-    Alert.alert('Cancelar cita', `¿Cancelar cita con ${a.doctor_name}?`, [
+    Alert.alert('Cancelar cita', `Cancelar cita con ${a.doctor_name}?`, [
       { text: 'No', style: 'cancel' },
       {
-        text: 'Sí, cancelar', style: 'destructive',
+        text: 'Si, cancelar', style: 'destructive',
         onPress: async () => {
           try { setBusy(true); await api.cancelAppointment(a.id); setSelected(null); load(); Alert.alert('Cita cancelada', 'Tu cita ha sido cancelada.'); }
           catch (e: any) { Alert.alert('Error', e.message ?? 'No se pudo cancelar.'); }
@@ -135,20 +139,17 @@ export default function CitasScreen() {
       const { approve_url } = await api.createAppointmentPayment(a.id);
       await WebBrowser.openBrowserAsync(approve_url);
       load();
-      Alert.alert('Verificando pago', 'Si el pago se procesó correctamente, tu cita se confirmará.');
+      Alert.alert('Verificando pago', 'Si el pago se proceso correctamente, tu cita se confirmara.');
     } catch (e: any) { Alert.alert('Error', e.message ?? 'No se pudo iniciar el pago.'); }
     finally { setBusy(false); }
   };
 
   const handleCheckin = (a: api.Appointment) => router.push(`/patient/checkin?id=${a.id}`);
-  const handleMessage = (a: api.Appointment) => {
-    // Go to mensajes tab instead of attempting chat-thread lookup
-    router.push('/(tabs)/mensajes' as any);
-  };
+  const handleMessage = () => router.push('/(tabs)/mensajes' as any);
+  const handleVideo = (id: number) => router.push(`/videoconsulta/${id}` as any);
 
   return (
     <SafeAreaView style={s.ct} edges={['top']}>
-      {/* Header with add button */}
       <View style={s.hdr}>
         <Text style={s.hdrTitle}>Mis Citas</Text>
         <Pressable onPress={() => router.push('/doctores' as any)} style={s.hdrAdd}>
@@ -157,47 +158,49 @@ export default function CitasScreen() {
         </Pressable>
       </View>
 
-      {/* Tabs: Proximas / Pasadas */}
+      {/* Tabs */}
       <View style={s.tabRow}>
-        <Pressable style={[s.tabBtn, tab === 'upcoming' && s.tabActive]}
-          onPress={() => setTab('upcoming')}>
+        <Pressable style={[s.tabBtn, tab === 'upcoming' && s.tabActive]} onPress={() => setTab('upcoming')}>
           <Text style={[s.tabText, tab === 'upcoming' && s.tabTextActive]}>Proximas</Text>
           {tab === 'upcoming' && <View style={s.tabLine} />}
         </Pressable>
-        <Pressable style={[s.tabBtn, tab === 'past' && s.tabActive]}
-          onPress={() => setTab('past')}>
+        <Pressable style={[s.tabBtn, tab === 'past' && s.tabActive]} onPress={() => setTab('past')}>
           <Text style={[s.tabText, tab === 'past' && s.tabTextActive]}>Pasadas</Text>
           {tab === 'past' && <View style={s.tabLine} />}
         </Pressable>
       </View>
 
-      {/* Stats chips - siempre visibles */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statRow}>
-        <StatChip label={tab === 'upcoming' ? 'Proximas' : 'Total'} value={counts.all} color={MC.primary} icon="calendar" />
-        {tab === 'upcoming' && counts.confirmed > 0 && <StatChip label="Confirmadas" value={counts.confirmed} color="#10B981" icon="check-circle" />}
-        {tab === 'upcoming' && counts.pending > 0 && <StatChip label="Pendientes" value={counts.pending} color="#F59E0B" icon="clock" />}
-        {tab === 'upcoming' && counts.in_consultation > 0 && <StatChip label="En consulta" value={counts.in_consultation} color="#0EA5E9" icon="stethoscope" />}
-        {tab === 'past' && counts.completed > 0 && <StatChip label="Completadas" value={counts.completed} color="#6366F1" icon="check-circle" />}
-        {tab === 'past' && counts.cancelled > 0 && <StatChip label="Canceladas" value={counts.cancelled} color="#EF4444" icon="x" />}
-      </ScrollView>
+      {/* Fixed section: stats + filters */}
+      <View style={s.fixedTop}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statRow}>
+          <StatChip label={tab === 'upcoming' ? 'Proximas' : 'Total'} value={counts.all} color={MC.primary} icon="calendar" />
+          {tab === 'upcoming' && counts.confirmed > 0 && <StatChip label="Confirmadas" value={counts.confirmed} color="#10B981" icon="check-circle" />}
+          {tab === 'upcoming' && counts.pending > 0 && <StatChip label="Pendientes" value={counts.pending} color="#F59E0B" icon="clock" />}
+          {tab === 'upcoming' && counts.in_consultation > 0 && <StatChip label="En consulta" value={counts.in_consultation} color="#0EA5E9" icon="stethoscope" />}
+          {tab === 'past' && counts.completed > 0 && <StatChip label="Completadas" value={counts.completed} color="#6366F1" icon="check-circle" />}
+          {tab === 'past' && counts.cancelled > 0 && <StatChip label="Canceladas" value={counts.cancelled} color="#EF4444" icon="x" />}
+          {tab === 'past' && counts.no_show > 0 && <StatChip label="No asistio" value={counts.no_show} color="#F97316" icon="warning" />}
+        </ScrollView>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll} style={s.filterRow}>
-        {FILTERS.map((f) => {
-          const active = filter === f.key;
-          const cnt = counts[f.key];
-          if (f.key !== 'all' && cnt === 0) return null;
-          return (
-            <Pressable key={f.key} onPress={() => setFilter(f.key)}
-              style={[s.filterBadge, active && { backgroundColor: f.color + '18', borderColor: f.color }]}>
-              <View style={[s.filterDot, { backgroundColor: f.color }]} />
-              <Text style={[s.filterText, active && { color: f.color, fontWeight: '700' }]}>
-                {f.label}{cnt > 0 ? ` · ${cnt}` : ''}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+          {FILTERS.map((f) => {
+            const active = filter === f.key;
+            const cnt = counts[f.key];
+            if (f.key !== 'all' && cnt === 0) return null;
+            return (
+              <Pressable key={f.key} onPress={() => setFilter(f.key)}
+                style={[s.filterBadge, active && { backgroundColor: f.color + '18', borderColor: f.color }]}>
+                <View style={[s.filterDot, { backgroundColor: f.color }]} />
+                <Text style={[s.filterText, active && { color: f.color, fontWeight: '700' }]}>
+                  {f.label}{cnt > 0 ? ` (${cnt})` : ''}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
+      {/* Scrollable list */}
       {loading ? (
         <View style={s.center}><ActivityIndicator color={MC.primary} size="large" /></View>
       ) : error ? (
@@ -210,9 +213,9 @@ export default function CitasScreen() {
       ) : filtered.length === 0 ? (
         <View style={s.center}>
           <View style={s.emptyCircle}><Icon name="calendar" size={42} color={MC.textMuted} /></View>
-          <Text style={s.emptyTitle}>{filter === 'all' ? 'No tienes citas próximas' : 'Sin citas en esta categoría'}</Text>
+          <Text style={s.emptyTitle}>{filter === 'all' ? 'No tienes citas proximas' : 'Sin citas en esta categoria'}</Text>
           <Text style={s.emptySub}>{filter === 'all' ? 'Agenda tu primera consulta' : 'Cambia el filtro'}</Text>
-          {filter === 'all' && (
+          {filter === 'all' && tab === 'upcoming' && (
             <Pressable style={s.retryBtn} onPress={() => router.push('/doctores' as any)}>
               <Icon name="magnifying-glass" size={16} color={MC.white} />
               <Text style={s.retryBtnText}>Buscar doctores</Text>
@@ -238,7 +241,7 @@ export default function CitasScreen() {
 
       <AppointmentDetail appt={selected} visible={!!selected} onClose={() => setSelected(null)}
         onCancel={handleCancel} onPay={handlePay} onCheckin={handleCheckin} onMessage={handleMessage}
-        onVideo={(id) => router.push(`/videoconsulta/${id}` as any)} busy={busy} />
+        onVideo={handleVideo} busy={busy} />
     </SafeAreaView>
   );
 }
@@ -312,7 +315,7 @@ function AppointmentDetail(props: {
   onCancel: (a: api.Appointment) => void;
   onPay: (a: api.Appointment) => void;
   onCheckin: (a: api.Appointment) => void;
-  onMessage: (a: api.Appointment) => void;
+  onMessage: () => void;
   onVideo: (id: number) => void;
   busy: boolean;
 }) {
@@ -331,6 +334,7 @@ function AppointmentDetail(props: {
   const canCancel = !['cancelled', 'completed', 'in_consultation', 'no_show', 'missed'].includes(status);
   const mapsQuery = appt.location ? encodeURIComponent(appt.location) : null;
   const mapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : null;
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={s.modalBackdrop} onPress={onClose} />
@@ -358,13 +362,13 @@ function AppointmentDetail(props: {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
           <InfoRow icon="calendar" iconColor={MC.primary} iconBg={MC.primaryLight}
-            label="Fecha y hora" value={`${dateLong} · ${timeLong}`} />
+            label="Fecha y hora" value={`${dateLong} - ${timeLong}`} />
           <InfoRow icon="user" iconColor="#8B5CF6" iconBg="rgba(139,92,246,0.10)"
             label="Doctor" value={`Dr. ${appt.doctor_name}`} subtitle={appt.specialty} />
           {appt.location ? (
             <Pressable onPress={() => mapsUrl && Linking.openURL(mapsUrl)}>
               <InfoRow icon="map-pin" iconColor="#F97316" iconBg="rgba(249,115,22,0.10)"
-                label="Ubicación" value={appt.location} actionLabel="Ver en Google Maps" />
+                label="Ubicacion" value={appt.location} actionLabel="Ver en Google Maps" />
             </Pressable>
           ) : null}
           {appt.fee > 0 ? (
@@ -374,7 +378,10 @@ function AppointmentDetail(props: {
               valueColor={isUnpaid ? '#F59E0B' : MC.textPrimary}
               subtitle={isUnpaid ? 'Pendiente de pago' : 'Pagado'}
               subtitleColor={isUnpaid ? '#F59E0B' : MC.success} />
-          ) : null}
+          ) : (
+            <InfoRow icon="check-circle" iconColor={MC.success} iconBg="rgba(16,185,129,0.10)"
+              label="Costo de consulta" value="Sin costo" />
+          )}
         </ScrollView>
 
         <View style={s.modalActions}>
@@ -385,20 +392,20 @@ function AppointmentDetail(props: {
             </Pressable>
           )}
           <View style={s.modalActionRow}>
-            <Pressable style={s.actionSecondary} onPress={() => onMessage(appt)}>
+            <Pressable style={s.actionSecondary} onPress={onMessage}>
               <Icon name="chat-circle" size={18} color={MC.primary} />
               <Text style={s.actionSecondaryText}>Mensaje</Text>
             </Pressable>
             {isPresential && status === 'confirmed' && (
               <Pressable style={s.actionSecondary} onPress={() => onCheckin(appt)}>
                 <Icon name="share-network" size={18} color={MC.primary} />
-                <Text style={s.actionSecondaryText}>Mi código QR</Text>
+                <Text style={s.actionSecondaryText}>QR Check-in</Text>
               </Pressable>
             )}
             {isVirtual && status === 'confirmed' && (
               <Pressable style={s.actionPrimary} onPress={() => onVideo(appt.id)}>
                 <Icon name="video-camera" size={18} color={MC.white} />
-                <Text style={s.actionPrimaryText}>Unirse a video</Text>
+                <Text style={s.actionPrimaryText}>Videollamada</Text>
               </Pressable>
             )}
             {canCancel && (
@@ -437,25 +444,25 @@ function InfoRow(props: { icon: any; iconColor: string; iconBg: string; label: s
 
 const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: MC.background },
-  hdr: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  hdr: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   hdrTitle: { fontSize: 26, fontWeight: '800', color: MC.textPrimary, letterSpacing: -0.5 },
   hdrAdd: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MC.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   hdrAddText: { color: MC.white, fontSize: 14, fontWeight: '600' },
 
-  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: MC.border, marginBottom: 4 },
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: MC.border },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10 },
   tabActive: { borderBottomWidth: 2, borderBottomColor: MC.primary },
   tabText: { fontSize: 14, fontWeight: '600', color: MC.textMuted },
   tabTextActive: { color: MC.primary, fontWeight: '700' },
   tabLine: { position: 'absolute', bottom: -1, left: '20%', right: '20%', height: 2, backgroundColor: MC.primary, borderRadius: 1 },
 
-  statRow: { paddingHorizontal: 16, gap: 10, paddingBottom: 8 },
+  fixedTop: { borderBottomWidth: 1, borderBottomColor: MC.border, backgroundColor: MC.background },
+  statRow: { paddingHorizontal: 16, gap: 10, paddingVertical: 8 },
   statChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, backgroundColor: MC.surface },
   statValue: { fontSize: 16, fontWeight: '800' },
   statLabel: { fontSize: 12, fontWeight: '600', color: MC.textSecondary },
 
-  filterRow: { flexGrow: 0, marginBottom: 4 },
-  filterScroll: { paddingHorizontal: 16, gap: 8, paddingVertical: 8 },
+  filterScroll: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
   filterBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1.5, borderColor: MC.border, backgroundColor: MC.surface },
   filterDot: { width: 8, height: 8, borderRadius: 4 },
   filterText: { fontSize: 12, fontWeight: '600', color: MC.textSecondary },
@@ -467,11 +474,11 @@ const s = StyleSheet.create({
   retryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MC.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginTop: 12 },
   retryBtnText: { color: MC.white, fontSize: 15, fontWeight: '600' },
 
-  dayHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8, gap: 12 },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 12 },
   dayHeaderText: { fontSize: 12, fontWeight: '700', color: MC.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   dayHeaderLine: { flex: 1, height: 1, backgroundColor: MC.border },
 
-  card: { flexDirection: 'row', backgroundColor: MC.background, marginHorizontal: 16, marginBottom: 10, borderRadius: 14, borderWidth: 1, borderColor: MC.border, overflow: 'hidden' },
+  card: { flexDirection: 'row', backgroundColor: MC.background, marginHorizontal: 16, marginBottom: 8, borderRadius: 14, borderWidth: 1, borderColor: MC.border, overflow: 'hidden' },
   cardDateBlock: { width: 78, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center', paddingVertical: 14 },
   cardDay: { fontSize: 28, fontWeight: '800', color: MC.primary, lineHeight: 30 },
   cardMonth: { fontSize: 11, fontWeight: '700', color: MC.primary, marginTop: 2 },
