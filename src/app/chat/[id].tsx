@@ -38,27 +38,42 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const flatListRef = useRef<FlatList>(null);
+  const shouldAutoScrollRef = useRef(true);
 
-  const fetchMessages = () => {
+  const fetchMessages = (silent = false) => {
     if (!Number.isFinite(conversationId) || conversationId <= 0) {
       setLoading(false);
       setError('Conversacion invalida.');
       return;
     }
-    setLoading(true);
-    setError("");
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     api.getConversation(conversationId)
       .then((res) => {
-        setMessages(res.data ?? []);
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 300);
+        const next = res.data ?? [];
+        setMessages((prev) => {
+          const sameLength = prev.length === next.length;
+          const sameTail = prev[prev.length - 1]?.id === next[next.length - 1]?.id;
+          const sameHead = prev[0]?.id === next[0]?.id;
+          if (sameLength && sameTail && sameHead) return prev;
+          if (silent) shouldAutoScrollRef.current = false;
+          return next;
+        });
+        if (!silent) {
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 250);
+        }
       })
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 10000);
+    fetchMessages(false);
+    const interval = setInterval(() => fetchMessages(true), 10000);
     return () => clearInterval(interval);
   }, [conversationId]);
 
@@ -73,8 +88,9 @@ export default function ChatScreen() {
     setInputText("");
     setError("");
     try {
+      shouldAutoScrollRef.current = true;
       await api.sendMessage(conversationId, text);
-      fetchMessages();
+      fetchMessages(true);
     } catch (e: any) {
       setError(e.message ?? "Error al enviar mensaje");
     } finally {
@@ -146,7 +162,12 @@ export default function ChatScreen() {
             keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
             contentContainerStyle={styles.msgList}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={() => {
+              if (shouldAutoScrollRef.current) {
+                flatListRef.current?.scrollToEnd({ animated: false });
+                shouldAutoScrollRef.current = false;
+              }
+            }}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIconCircle}>

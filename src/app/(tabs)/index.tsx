@@ -22,6 +22,12 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [specialties, setSpecialties] = useState<{ name: string; icon: IconName }[]>([]);
   const [doctors, setDoctors] = useState<api.Doctor[]>([]);
+  const [kpis, setKpis] = useState({
+    upcoming: 0,
+    pendingPayment: 0,
+    completed: 0,
+    unreadMessages: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   const firstName = user?.name?.split(' ')[0] ?? 'Paciente';
@@ -30,12 +36,24 @@ export default function HomeScreen() {
     (async () => {
       try {
         setLoading(true);
-        const [specRes, docRes] = await Promise.all([
+        const [specRes, docRes, upcomingRes, pastRes, msgRes] = await Promise.all([
           api.getSpecialties(),
           api.getDoctors({ page: 1 }),
+          api.getAppointments('upcoming'),
+          api.getAppointments('past'),
+          api.getMessages(),
         ]);
         setSpecialties(specRes.data.map(s => ({ name: s.name, icon: (s.icon as IconName) || 'first-aid' })));
         setDoctors(docRes.data.slice(0, 6));
+        const upcoming = upcomingRes.data ?? [];
+        const past = pastRes.data ?? [];
+        const msgs = msgRes.data ?? [];
+        setKpis({
+          upcoming: upcoming.length,
+          pendingPayment: upcoming.filter((a) => (a.payment_status ?? '') === 'pending').length,
+          completed: past.filter((a) => ['completed'].includes((a.status ?? '').toLowerCase())).length,
+          unreadMessages: msgs.reduce((acc, m) => acc + (m.unread ?? 0), 0),
+        });
       } catch (e) {
         // fail silently — still show UI
       } finally {
@@ -80,6 +98,29 @@ export default function HomeScreen() {
           <Pressable style={s.searchBtn} onPress={handleSearch}>
             <Icon name="magnifying-glass" size={16} color={MC.white} />
           </Pressable>
+        </View>
+
+        {/* KPI Summary */}
+        <View style={s.kpiSection}>
+          <Text style={s.sectionTitle}>Resumen</Text>
+          <View style={s.kpiGrid}>
+            <View style={s.kpiCard}>
+              <Text style={s.kpiValue}>{kpis.upcoming}</Text>
+              <Text style={s.kpiLabel}>Citas próximas</Text>
+            </View>
+            <View style={s.kpiCard}>
+              <Text style={s.kpiValue}>{kpis.pendingPayment}</Text>
+              <Text style={s.kpiLabel}>Pagos pendientes</Text>
+            </View>
+            <View style={s.kpiCard}>
+              <Text style={s.kpiValue}>{kpis.completed}</Text>
+              <Text style={s.kpiLabel}>Completadas</Text>
+            </View>
+            <View style={s.kpiCard}>
+              <Text style={s.kpiValue}>{kpis.unreadMessages}</Text>
+              <Text style={s.kpiLabel}>Mensajes sin leer</Text>
+            </View>
+          </View>
         </View>
 
         {/* Quick Actions */}
@@ -180,6 +221,13 @@ const s = StyleSheet.create({
   searchBox: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 16, backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, paddingLeft: 14 },
   searchInput: { flex: 1, paddingVertical: 14, fontSize: 15, color: MC.textPrimary, marginLeft: 10 },
   searchBtn: { backgroundColor: MC.primary, borderRadius: 10, padding: 8, marginRight: 6 },
+
+  // KPI
+  kpiSection: { marginTop: 20, paddingHorizontal: 20 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
+  kpiCard: { width: '48%', backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, padding: 12 },
+  kpiValue: { fontSize: 24, fontWeight: '800', color: MC.primary },
+  kpiLabel: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
 
   // Quick Actions
   quickSection: { marginTop: 24, paddingHorizontal: 20 },
