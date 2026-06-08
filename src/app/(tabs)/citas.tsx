@@ -237,7 +237,8 @@ export default function CitasScreen() {
       )}
 
       <AppointmentDetail appt={selected} visible={!!selected} onClose={() => setSelected(null)}
-        onCancel={handleCancel} onPay={handlePay} onCheckin={handleCheckin} onMessage={handleMessage} busy={busy} />
+        onCancel={handleCancel} onPay={handlePay} onCheckin={handleCheckin} onMessage={handleMessage}
+        onVideo={(id) => router.push(`/videoconsulta/${id}` as any)} busy={busy} />
     </SafeAreaView>
   );
 }
@@ -312,9 +313,10 @@ function AppointmentDetail(props: {
   onPay: (a: api.Appointment) => void;
   onCheckin: (a: api.Appointment) => void;
   onMessage: (a: api.Appointment) => void;
+  onVideo: (id: number) => void;
   busy: boolean;
 }) {
-  const { appt, visible, onClose, onCancel, onPay, onCheckin, onMessage, busy } = props;
+  const { appt, visible, onClose, onCancel, onPay, onCheckin, onMessage, onVideo, busy } = props;
   if (!appt) return null;
   const status = normStatus(appt.status);
   const type = normType(appt.type);
@@ -394,7 +396,7 @@ function AppointmentDetail(props: {
               </Pressable>
             )}
             {isVirtual && status === 'confirmed' && (
-              <Pressable style={s.actionPrimary} onPress={() => onMessage(appt)}>
+              <Pressable style={s.actionPrimary} onPress={() => onVideo(appt.id)}>
                 <Icon name="video-camera" size={18} color={MC.white} />
                 <Text style={s.actionPrimaryText}>Unirse a video</Text>
               </Pressable>
