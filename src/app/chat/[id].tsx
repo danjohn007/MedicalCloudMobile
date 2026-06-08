@@ -40,7 +40,11 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   const fetchMessages = () => {
-    if (!conversationId) return;
+    if (!Number.isFinite(conversationId) || conversationId <= 0) {
+      setLoading(false);
+      setError('Conversacion invalida.');
+      return;
+    }
     setLoading(true);
     setError("");
     api.getConversation(conversationId)
@@ -61,6 +65,10 @@ export default function ChatScreen() {
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text) return;
+    if (!Number.isFinite(conversationId) || conversationId <= 0) {
+      setError('Conversacion invalida.');
+      return;
+    }
     setSending(true);
     setInputText("");
     setError("");
