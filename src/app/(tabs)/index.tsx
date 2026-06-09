@@ -64,7 +64,7 @@ export default function HomeScreen() {
 
   const handleSearch = () => {
     const q = search.trim();
-    if (q) router.push(`/doctores?search=${encodeURIComponent(q)}`);
+    router.push(`/doctores?search=${encodeURIComponent(q)}`);
   };
 
   const goToSpecialty = (s: string) => router.push(`/doctores?specialty=${encodeURIComponent(s)}`);
@@ -78,8 +78,15 @@ export default function HomeScreen() {
             <Text style={s.greeting}>Hola, {firstName}</Text>
             <Text style={s.subtitle}>Tu salud en buenas manos</Text>
           </View>
-          <Pressable style={s.notifBtn} hitSlop={10}>
-            <Icon name="bell" size={22} color={MC.textPrimary} />
+          <Pressable style={s.notifBtn} hitSlop={10} onPress={() => router.push('/notificaciones')}>
+            <View>
+              <Icon name="bell" size={22} color={MC.textPrimary} />
+              {kpis.unreadMessages > 0 && (
+                <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: MC.error, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: MC.white, fontSize: 10, fontWeight: '700' }}>{kpis.unreadMessages > 9 ? '9+' : kpis.unreadMessages}</Text>
+                </View>
+              )}
+            </View>
           </Pressable>
         </View>
 
@@ -136,26 +143,6 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </View>
-        </View>
-
-        {/* Specialties */}
-        <View style={s.section}>
-          <View style={s.sectionHdr}>
-            <Text style={s.sectionTitle}>Especialidades</Text>
-            <Pressable onPress={() => router.push('/doctores')}>
-              <Text style={s.seeAll}>Ver todas</Text>
-            </Pressable>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.specScroll}>
-            {specialties.map(sp => (
-              <Pressable key={sp.name} style={s.specChip} onPress={() => goToSpecialty(sp.name)}>
-                <View style={s.specIconWrap}>
-                  <Icon name={sp.icon} size={24} color={MC.primary} />
-                </View>
-                <Text style={s.specName} numberOfLines={2}>{sp.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         </View>
 
         {/* Recommended Doctors */}

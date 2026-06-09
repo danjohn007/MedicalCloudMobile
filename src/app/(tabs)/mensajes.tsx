@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
@@ -12,15 +12,29 @@ export default function MensajesScreen() {
   const [messages, setMessages] = useState<api.Message[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Load messages only once on mount
   useEffect(() => {
+    loadMessages();
+  }, []);
+
+  const loadMessages = () => {
     setLoading(true);
     setError("");
     api.getMessages()
-      .then((res) => setMessages(res.data))
+      .then((res) => setMessages(res.data ?? []))
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    api.getMessages()
+      .then((res) => setMessages(res.data ?? []))
+      .catch((e) => setError(e.message ?? ""))
+      .finally(() => setRefreshing(false));
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -42,9 +56,9 @@ export default function MensajesScreen() {
         </View>
       </View>
 
-       {loading ? (
+       {loading && messages.length === 0 ? (
          <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
-       ) : error ? (
+       ) : error && messages.length === 0 ? (
          <View style={styles.empty}>
            <View style={styles.emptyIconCircle}>
              <Icon name="warning" size={56} color={MC.error} />
@@ -59,7 +73,7 @@ export default function MensajesScreen() {
            <Text style={styles.emptyText}>No tienes mensajes</Text>
          </View>
        ) : (
-         <ScrollView>
+         <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[MC.primary]} />}>
           {messages.map((m) => (
             <Pressable
               key={m.id}

@@ -10,12 +10,11 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="doctores" />
+        <Stack.Screen name="notificaciones" />
         <Stack.Screen name="confirmacion" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
-        <Stack.Screen name="patient/profile" options={{ headerShown: false }} />
-        <Stack.Screen name="patient/expediente" options={{ headerShown: false }} />
-        <Stack.Screen name="patient/checkin" options={{ headerShown: false }} />
+        <Stack.Screen name="patient" />
       </Stack>
     </>
   );
