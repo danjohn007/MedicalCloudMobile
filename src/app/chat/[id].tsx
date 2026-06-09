@@ -21,10 +21,54 @@ import { useAuthStore } from "@/stores/authStore";
 
 interface ChatMessage {
   id: number;
-  sender_id: number;
+  sender_id: number | null;
+  sender_name?: string;
   message: string;
+  message_type?: string;
   is_read: number;
   created_at: string;
+}
+
+function formatTime(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    return d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function MessageBubble({ item, isMine }: { item: ChatMessage; isMine: boolean }) {
+  const isSystem = item.message_type === "system" || item.sender_id === null;
+
+  if (isSystem) {
+    return (
+      <View style={styles.systemRow}>
+        <View style={styles.systemBubble}>
+          <Icon name="info" size={12} color={MC.textMuted} />
+          <Text style={styles.systemText}>{item.message}</Text>
+        </View>
+        <Text style={styles.systemTime}>{formatTime(item.created_at)}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.msgRow, isMine && styles.msgRowMine]}>
+      <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther]}>
+        {!isMine && item.sender_name && (
+          <Text style={styles.senderName}>{item.sender_name}</Text>
+        )}
+        <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
+          {item.message}
+        </Text>
+        <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>
+          {formatTime(item.created_at)}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 export default function ChatScreen() {
@@ -45,103 +89,54 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const flatListRef = useRef<FlatList>(null);
-  const shouldAutoScrollRef = useRef(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchMessages = (silent = false) => {
+  const fetchMessages = () => {
     if (!Number.isFinite(conversationId) || conversationId <= 0) {
       setLoading(false);
-      setError("Conversacion invalida.");
       return;
-    }
-    if (!silent) {
-      setLoading(true);
-      setError("");
     }
     api
       .getConversation(conversationId)
       .then((res) => {
         const next = res.data ?? [];
-        setMessages((prev) => {
-          const sameLength = prev.length === next.length;
-          const sameTail =
-            prev[prev.length - 1]?.id === next[next.length - 1]?.id;
-          const sameHead = prev[0]?.id === next[0]?.id;
-          if (sameLength && sameTail && sameHead) return prev;
-          if (silent) shouldAutoScrollRef.current = false;
-          return next;
-        });
-        if (!silent) {
-          setTimeout(
-            () => flatListRef.current?.scrollToEnd({ animated: false }),
-            250,
-          );
-        }
+        // Sort by id ascending to ensure correct order
+        next.sort((a: ChatMessage, b: ChatMessage) => a.id - b.id);
+        setMessages(next);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: false });
+        }, 150);
       })
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
-      .finally(() => {
-        if (!silent) setLoading(false);
-      });
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchMessages(false);
-    const interval = setInterval(() => fetchMessages(true), 10000);
-    return () => clearInterval(interval);
+    fetchMessages();
+    intervalRef.current = setInterval(fetchMessages, 5000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [conversationId]);
 
   const handleSend = async () => {
     const text = inputText.trim();
-    if (!text) return;
-    if (!Number.isFinite(conversationId) || conversationId <= 0) {
-      setError("Conversacion invalida.");
-      return;
-    }
-    setSending(true);
+    if (!text || sending) return;
+    if (!Number.isFinite(conversationId) || conversationId <= 0) return;
+
     setInputText("");
+    setSending(true);
     setError("");
     try {
-      shouldAutoScrollRef.current = true;
       await api.sendMessage(conversationId, text);
-      fetchMessages(true);
+      // Immediate fetch to show the message
+      fetchMessages();
     } catch (e: any) {
       setError(e.message ?? "Error al enviar mensaje");
+      setInputText(text); // restore input on error
     } finally {
       setSending(false);
     }
-  };
-
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    if (isToday) {
-      return d.toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-    return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-  };
-
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isMine = item.sender_id === user?.id;
-    return (
-      <View style={[styles.msgRow, isMine && styles.msgRowMine]}>
-        <View
-          style={[
-            styles.msgBubble,
-            isMine ? styles.msgBubbleMine : styles.msgBubbleOther,
-          ]}
-        >
-          <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
-            {item.message}
-          </Text>
-          <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>
-            {formatTime(item.created_at)}
-          </Text>
-        </View>
-      </View>
-    );
   };
 
   return (
@@ -149,80 +144,71 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
+        {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={10}
-          >
-            <Icon name="arrow-left" size={24} color={MC.textPrimary} />
+          <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+            <Icon name="arrow-left" size={22} color={MC.textPrimary} />
           </Pressable>
           <View style={styles.headerInfo}>
             <View style={styles.avatarSmall}>
               {doctorPhoto ? (
-                <Image
-                  source={{ uri: doctorPhoto }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: doctorPhoto }} style={styles.avatarImage} resizeMode="cover" />
               ) : (
-                <Text style={styles.avatarText}>
-                  {doctorName?.charAt(0) || "D"}
-                </Text>
+                <Text style={styles.avatarText}>{doctorName?.charAt(0) || "D"}</Text>
               )}
             </View>
             <View>
               <Text style={styles.headerTitle}>{doctorName}</Text>
-              <Text style={styles.headerStatus}>Disponible</Text>
+              <Text style={styles.headerStatus}>En línea</Text>
             </View>
           </View>
-          <Pressable hitSlop={10}>
-            <Icon name="phone" size={22} color={MC.primary} />
-          </Pressable>
         </View>
 
+        {/* Error */}
+        {error ? (
+          <View style={styles.errorBar}>
+            <Icon name="warning" size={16} color={MC.error} />
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable onPress={() => { setError(""); fetchMessages(); }}>
+              <Text style={styles.retryText}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* Messages */}
         {loading ? (
-          <ActivityIndicator color={MC.primary} style={{ marginTop: 40 }} />
-        ) : error ? (
-          <View style={styles.empty}>
-            <View style={styles.emptyIconCircle}>
-              <Icon name="warning" size={56} color={MC.error} />
-            </View>
-            <Text style={styles.emptyText}>{error}</Text>
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={MC.primary} size="large" />
           </View>
         ) : (
           <FlatList
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => String(item.id)}
-            renderItem={renderMessage}
+            renderItem={({ item }) => {
+              const isMine = item.sender_id === user?.id && item.message_type !== "system";
+              return <MessageBubble item={item} isMine={isMine} />;
+            }}
             contentContainerStyle={styles.msgList}
             onContentSizeChange={() => {
-              if (shouldAutoScrollRef.current) {
-                flatListRef.current?.scrollToEnd({ animated: false });
-                shouldAutoScrollRef.current = false;
-              }
+              flatListRef.current?.scrollToEnd({ animated: true });
             }}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIconCircle}>
-                  <Icon
-                    name="chat-circle-dots"
-                    size={56}
-                    color={MC.textMuted}
-                  />
+                  <Icon name="chat-circle-dots" size={48} color={MC.textMuted} />
                 </View>
-                <Text style={styles.emptyText}>No hay mensajes aún</Text>
+                <Text style={styles.emptyTitle}>Sin mensajes aún</Text>
                 <Text style={styles.emptySubtext}>
-                  Envía un mensaje para empezar
+                  Escribe un mensaje para comenzar la conversación
                 </Text>
               </View>
             }
           />
         )}
 
+        {/* Input Bar */}
         <View style={styles.inputBar}>
           <View style={styles.inputWrap}>
             <TextInput
@@ -233,14 +219,10 @@ export default function ChatScreen() {
               onChangeText={setInputText}
               multiline
               maxLength={2000}
-              onSubmitEditing={handleSend}
             />
           </View>
           <Pressable
-            style={[
-              styles.sendBtn,
-              (!inputText.trim() || sending) && styles.sendBtnDisabled,
-            ]}
+            style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
             onPress={handleSend}
             disabled={!inputText.trim() || sending}
           >
@@ -265,63 +247,90 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: MC.border,
+    backgroundColor: MC.white,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginHorizontal: 8,
-  },
+  backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
+  headerInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, marginLeft: 4 },
   avatarSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: MC.primaryLight,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
-  avatarImage: { width: "100%", height: "100%", borderRadius: 20 },
-  avatarText: { fontSize: 16, fontWeight: "700", color: MC.primary },
+  avatarImage: { width: 38, height: 38, borderRadius: 19 },
+  avatarText: { fontSize: 15, fontWeight: "700", color: MC.primary },
   headerTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
-  headerStatus: { fontSize: 12, color: MC.primary, marginTop: 2 },
-  msgList: { padding: 16, paddingBottom: 8 },
-  msgRow: { flexDirection: "row", marginBottom: 12 },
+  headerStatus: { fontSize: 11, color: MC.primary, fontWeight: "600", marginTop: 1 },
+
+  errorBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FEF2F2",
+    borderBottomWidth: 1,
+    borderBottomColor: "#FECACA",
+  },
+  errorText: { flex: 1, fontSize: 12, color: MC.error },
+  retryText: { fontSize: 12, fontWeight: "700", color: MC.primary },
+
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  msgList: { padding: 14, paddingBottom: 8, flexGrow: 1 },
+  msgRow: { flexDirection: "row", marginBottom: 8 },
   msgRowMine: { justifyContent: "flex-end" },
   msgBubble: {
     maxWidth: "78%",
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 1,
   },
   msgBubbleMine: { backgroundColor: MC.primary, borderBottomRightRadius: 4 },
-  msgBubbleOther: { backgroundColor: MC.surface, borderBottomLeftRadius: 4 },
-  msgText: { fontSize: 15, color: MC.textPrimary, lineHeight: 20 },
+  msgBubbleOther: { backgroundColor: MC.white, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: MC.border },
+  senderName: { fontSize: 11, fontWeight: "700", color: MC.primary, marginBottom: 4 },
+  msgText: { fontSize: 15, color: MC.textPrimary, lineHeight: 21 },
   msgTextMine: { color: MC.white },
-  msgTime: {
-    fontSize: 11,
-    color: MC.textMuted,
-    marginTop: 4,
-    textAlign: "right",
+  msgTime: { fontSize: 10, color: MC.textMuted, marginTop: 4, textAlign: "right" },
+  msgTimeMine: { color: "rgba(255,255,255,0.65)" },
+
+  systemRow: { alignItems: "center", marginBottom: 12, paddingHorizontal: 20 },
+  systemBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: MC.border,
   },
-  msgTimeMine: { color: "rgba(255,255,255,0.7)" },
-  empty: { alignItems: "center", paddingTop: 60, gap: 8 },
+  systemText: { fontSize: 12, color: MC.textSecondary, textAlign: "center" },
+  systemTime: { fontSize: 10, color: MC.textMuted, marginTop: 4 },
+
+  empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 20, gap: 8 },
   emptyIconCircle: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: MC.surface,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: MC.border,
   },
-  emptyText: { fontSize: 16, color: MC.textSecondary, marginTop: 8 },
-  emptySubtext: { fontSize: 13, color: MC.textMuted },
+  emptyTitle: { fontSize: 17, fontWeight: "700", color: MC.textPrimary, marginTop: 4 },
+  emptySubtext: { fontSize: 13, color: MC.textSecondary, textAlign: "center" },
+
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -329,13 +338,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: MC.border,
-    backgroundColor: MC.background,
+    backgroundColor: MC.white,
     gap: 8,
   },
   inputWrap: {
     flex: 1,
     backgroundColor: MC.surface,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
   },
@@ -347,12 +356,17 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: MC.primary,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: MC.primary,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
   },
-  sendBtnDisabled: { opacity: 0.4 },
+  sendBtnDisabled: { opacity: 0.35, shadowOpacity: 0 },
 });
