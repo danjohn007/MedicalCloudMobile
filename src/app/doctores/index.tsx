@@ -73,7 +73,7 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
         {/* Fees Row - Show all 3 types */}
         <View style={styles.feesContainer}>
           <View style={styles.feeItem}>
-            <Icon name="heartbeat" size={12} color={MC.primary} />
+            <Icon name="stethoscope" size={12} color={MC.primary} />
             <Text style={styles.feeLabel}>Presencial</Text>
             <Text style={styles.feeValue}>${doctor.consultation_fee || '–'}</Text>
           </View>
@@ -86,7 +86,7 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
           )}
           {doctor.home_visit_fee && (
             <View style={styles.feeItem}>
-              <Icon name="house-simple" size={12} color={MC.primary} />
+              <Icon name="house" size={12} color={MC.primary} />
               <Text style={styles.feeLabel}>Domicilio</Text>
               <Text style={styles.feeValue}>${doctor.home_visit_fee}</Text>
             </View>
@@ -179,6 +179,10 @@ export default function DoctoresScreen() {
     if (!loading && hasMore) fetchDoctors(page + 1);
   };
 
+  const resultsLabel = loading && page === 1
+    ? 'Buscando doctores...'
+    : `${doctors.length} doctor${doctors.length === 1 ? '' : 'es'} encontrados`;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -206,6 +210,25 @@ export default function DoctoresScreen() {
         />
         {search.length > 0 && (
           <Pressable onPress={() => { setSearch(''); fetchDoctors(1, '', selSpec); }} hitSlop={8} style={{ paddingRight: 12 }}>
+
+      <View style={styles.searchSummary}>
+        <View style={styles.searchSummaryTop}>
+          <View style={styles.searchSummaryPill}>
+            <Icon name="list" size={14} color={MC.primary} />
+            <Text style={styles.searchSummaryPillText}>{resultsLabel}</Text>
+          </View>
+          <View style={[styles.searchSummaryPill, styles.searchSummaryPillSoft]}>
+            <Icon name="funnel" size={14} color={MC.textSecondary} />
+            <Text style={styles.searchSummaryPillText}>{selSpec === 'Todos' ? 'Todas las especialidades' : selSpec}</Text>
+          </View>
+        </View>
+        <View style={styles.searchSummaryHint}>
+          <Icon name="info" size={14} color={MC.primary} />
+          <Text style={styles.searchSummaryHintText}>
+            Busca por nombre y refina por especialidad para ver perfil, calificación, subespecialidad y tarifas.
+          </Text>
+        </View>
+      </View>
             <Icon name="x" size={18} color={MC.textMuted} />
           </Pressable>
         )}
@@ -273,6 +296,13 @@ const styles = StyleSheet.create({
   title:           { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: MC.textPrimary },
   searchWrap:      { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12, backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, paddingVertical: 10, gap: 8 },
   searchInput:     { flex: 1, fontSize: 15, color: MC.textPrimary },
+  searchSummary:   { marginHorizontal: 16, marginBottom: 14, backgroundColor: MC.surface, borderRadius: 16, borderWidth: 1, borderColor: MC.border, padding: 14, gap: 10 },
+  searchSummaryTop:{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  searchSummaryPill:{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: MC.primaryLight },
+  searchSummaryPillSoft:{ backgroundColor: MC.background },
+  searchSummaryPillText:{ fontSize: 12, fontWeight: '600', color: MC.textPrimary },
+  searchSummaryHint:{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingTop: 2 },
+  searchSummaryHintText:{ flex: 1, fontSize: 12, lineHeight: 16, color: MC.textSecondary },
   chipsRow:        { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   chip:            { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: MC.border, backgroundColor: MC.surface },
   chipActive:      { backgroundColor: MC.primary, borderColor: MC.primary },

@@ -81,6 +81,36 @@ export default function HomeScreen() {
 
   const goToSpecialty = (s: string) => router.push(`/doctores?specialty=${encodeURIComponent(s)}`);
 
+  const alertCards = [
+    {
+      key: 'payments',
+      visible: kpis.pendingPayment > 0,
+      title: 'Pagos pendientes',
+      description: `Tienes ${kpis.pendingPayment} cita${kpis.pendingPayment === 1 ? '' : 's'} por confirmar`,
+      icon: 'currency-dollar' as IconName,
+      route: '/citas',
+      tone: 'danger',
+    },
+    {
+      key: 'messages',
+      visible: kpis.unreadMessages > 0,
+      title: 'Mensajes nuevos',
+      description: `Hay ${kpis.unreadMessages} mensaje${kpis.unreadMessages === 1 ? '' : 's'} sin leer`,
+      icon: 'bell-ringing' as IconName,
+      route: '/mensajes',
+      tone: 'info',
+    },
+    {
+      key: 'upcoming',
+      visible: kpis.upcoming > 0,
+      title: 'Citas próximas',
+      description: `Tienes ${kpis.upcoming} cita${kpis.upcoming === 1 ? '' : 's'} en tu agenda`,
+      icon: 'calendar' as IconName,
+      route: '/citas',
+      tone: 'brand',
+    },
+  ].filter((item) => item.visible);
+
   return (
     <SafeAreaView style={s.ct} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -165,6 +195,27 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Alerts */}
+        {alertCards.length > 0 && (
+          <View style={s.alertSection}>
+            <Text style={s.sectionTitle}>Alertas de hoy</Text>
+            <View style={s.alertList}>
+              {alertCards.map((item) => (
+                <Pressable key={item.key} style={[s.alertCard, item.tone === 'danger' && s.alertCardDanger, item.tone === 'info' && s.alertCardInfo]} onPress={() => router.push(item.route as any)}>
+                  <View style={[s.alertIconWrap, item.tone === 'danger' && s.alertIconDanger, item.tone === 'info' && s.alertIconInfo]}>
+                    <Icon name={item.icon} size={20} color={item.tone === 'danger' ? '#B91C1C' : item.tone === 'info' ? '#0369A1' : MC.primary} />
+                  </View>
+                  <View style={s.alertBody}>
+                    <Text style={s.alertTitle}>{item.title}</Text>
+                    <Text style={s.alertDesc}>{item.description}</Text>
+                  </View>
+                  <Icon name="caret-right" size={16} color={MC.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={s.quickSection}>
           <Text style={s.sectionTitle}>Acceso rápido</Text>
@@ -247,10 +298,23 @@ const s = StyleSheet.create({
   // KPI
   kpiSection: { marginTop: 20, paddingHorizontal: 20 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
-  kpiCard: { width: '48%', backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, padding: 14, activeOpacity: 0.7 },
+  kpiCard: { width: '48%', backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, padding: 14 },
   kpiCardWarning: { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
   kpiValue: { fontSize: 28, fontWeight: '800', color: MC.primary, marginBottom: 2 },
   kpiLabel: { fontSize: 12, color: MC.textSecondary },
+
+  // Alerts
+  alertSection: { marginTop: 24, paddingHorizontal: 20 },
+  alertList: { marginTop: 12, gap: 10 },
+  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: MC.surface, borderRadius: 16, borderWidth: 1, borderColor: MC.border, padding: 14 },
+  alertCardDanger: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  alertCardInfo: { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
+  alertIconWrap: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', backgroundColor: MC.primaryLight },
+  alertIconDanger: { backgroundColor: '#FEE2E2' },
+  alertIconInfo: { backgroundColor: '#DBEAFE' },
+  alertBody: { flex: 1 },
+  alertTitle: { fontSize: 14, fontWeight: '700', color: MC.textPrimary },
+  alertDesc: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
 
   // Quick Actions
   quickSection: { marginTop: 24, paddingHorizontal: 20 },
