@@ -1,8 +1,8 @@
 // ── Storage ──────────────────────────────────────────────
-import { setSecure, getSecure, removeSecure } from '@/services/storage';
+import { getSecure, removeSecure, setSecure } from "@/services/storage";
 
-const TOKEN_KEY = 'mc_jwt_token';
-const USER_KEY  = 'mc_user';
+const TOKEN_KEY = "mc_jwt_token";
+const USER_KEY = "mc_user";
 
 export async function saveToken(token: string): Promise<void> {
   await setSecure(TOKEN_KEY, token);
@@ -58,7 +58,14 @@ export interface Appointment {
   doctor_id: number;
   scheduled_at: string;
   end_at?: string;
-  type: 'presencial' | 'videoconsulta' | 'domicilio' | 'presential' | 'virtual' | 'home_visit' | string;
+  type:
+    | "presencial"
+    | "videoconsulta"
+    | "domicilio"
+    | "presential"
+    | "virtual"
+    | "home_visit"
+    | string;
   status: string;
   fee: number;
   doctor_name: string;
@@ -163,7 +170,7 @@ export interface FinancialHistory {
   payments: FinancialPayment[];
 }
 
-const API_BASE = 'https://doctorcloud.digital/app/api/mobile';
+const API_BASE = "https://doctorcloud.digital/app/api/mobile";
 
 // ── Core fetch ────────────────────────────────────────────
 async function request<T>(
@@ -171,15 +178,16 @@ async function request<T>(
   options: RequestInit = {},
   authenticated = true,
 ): Promise<T> {
-  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-    ...(options.headers as Record<string, string> ?? {}),
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...((options.headers as Record<string, string>) ?? {}),
   };
 
   if (authenticated) {
     const token = await getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
@@ -189,9 +197,7 @@ async function request<T>(
   try {
     json = JSON.parse(text);
   } catch {
-    throw new Error(
-      `El servidor no respondió con JSON. Status: ${res.status}`
-    );
+    throw new Error(`El servidor no respondió con JSON. Status: ${res.status}`);
   }
 
   if (!res.ok) {
@@ -204,23 +210,30 @@ async function request<T>(
 // ── Auth ──────────────────────────────────────────────────
 export async function login(email: string, password: string) {
   return request<{ token: string; user: AuthUser }>(
-    '/auth/login',
-    { method: 'POST', body: JSON.stringify({ email, password }) },
+    "/auth/login",
+    { method: "POST", body: JSON.stringify({ email, password }) },
     false,
   );
 }
 
-export async function register(name: string, email: string, password: string, phone?: string) {
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+  phone?: string,
+) {
   return request<{ token: string; user: AuthUser }>(
-    '/auth/register',
-    { method: 'POST', body: JSON.stringify({ name, email, password, phone }) },
+    "/auth/register",
+    { method: "POST", body: JSON.stringify({ name, email, password, phone }) },
     false,
   );
 }
 
 // ── Especialidades ────────────────────────────────────────
-export async function getSpecialties(): Promise<{ data: { name: string; icon: string }[] }> {
-  return request('/specialties', {}, false);
+export async function getSpecialties(): Promise<{
+  data: { name: string; icon: string }[];
+}> {
+  return request("/specialties", {}, false);
 }
 
 // ── Doctores ─────────────────────────────────────────────
@@ -233,15 +246,16 @@ export async function getDoctors(params: {
   const qs = new URLSearchParams(
     Object.fromEntries(
       Object.entries(params)
-        .filter(([, v]) => v !== undefined && v !== '')
+        .filter(([, v]) => v !== undefined && v !== "")
         .map(([k, v]) => [k, String(v)]),
     ),
   ).toString();
-  return request<{ data: Doctor[]; total: number; page: number; total_pages: number }>(
-    `/doctors${qs ? '?' + qs : ''}`,
-    {},
-    false,
-  );
+  return request<{
+    data: Doctor[];
+    total: number;
+    page: number;
+    total_pages: number;
+  }>(`/doctors${qs ? "?" + qs : ""}`, {}, false);
 }
 
 export async function getDoctorProfile(id: number) {
@@ -257,7 +271,9 @@ export async function getDoctorAvailability(id: number, date: string) {
 }
 
 // ── Citas ─────────────────────────────────────────────────
-export async function getAppointments(status: 'upcoming' | 'past' = 'upcoming') {
+export async function getAppointments(
+  status: "upcoming" | "past" = "upcoming",
+) {
   return request<{ data: Appointment[] }>(`/appointments?status=${status}`);
 }
 
@@ -269,23 +285,25 @@ export async function createAppointment(data: {
   doctor_id: number;
   date: string;
   time: string;
-  type: 'presencial' | 'videoconsulta' | 'domicilio';
+  type: "presencial" | "videoconsulta" | "domicilio";
   reason?: string;
   notes?: string;
 }) {
-  return request<{ id: number; status: string; fee: number }>(
-    '/appointments',
-    { method: 'POST', body: JSON.stringify(data) },
-  );
+  return request<{ id: number; status: string; fee: number }>("/appointments", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function cancelAppointment(id: number) {
-  return request<{ message: string }>(`/appointments/${id}/cancel`, { method: 'POST' });
+  return request<{ message: string }>(`/appointments/${id}/cancel`, {
+    method: "POST",
+  });
 }
 
 // ── Mensajes ──────────────────────────────────────────────
 export async function getMessages() {
-  return request<{ data: Message[] }>('/messages');
+  return request<{ data: Message[] }>("/messages");
 }
 
 export async function getConversation(id: number) {
@@ -294,95 +312,103 @@ export async function getConversation(id: number) {
 
 export async function sendMessage(conversationId: number, message: string) {
   return request<{ id: number }>(`/messages/${conversationId}`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({ message }),
   });
 }
 
 // ── Perfil ────────────────────────────────────────────────
 export async function getProfile() {
-  return request<ProfileData>('/profile');
+  return request<ProfileData>("/profile");
 }
 
-export async function updateProfile(data: Partial<{
-  name: string;
-  phone: string;
-  birth_date: string;
-  gender: string;
-  blood_type: string;
-  address: string;
-  city: string;
-  state: string;
-  occupation: string;
-  height_cm: number;
-  weight_kg: number;
-  emergency_contact_name: string;
-  emergency_contact_phone: string;
-}>) {
-  return request<{ message: string }>('/profile', {
-    method: 'PUT',
+export async function updateProfile(
+  data: Partial<{
+    name: string;
+    phone: string;
+    birth_date: string;
+    gender: string;
+    blood_type: string;
+    address: string;
+    city: string;
+    state: string;
+    occupation: string;
+    height_cm: number;
+    weight_kg: number;
+    emergency_contact_name: string;
+    emergency_contact_phone: string;
+  }>,
+) {
+  return request<{ message: string }>("/profile", {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export async function uploadAvatar(input: { uri: string; name: string; type: string }) {
+export async function uploadAvatar(input: {
+  uri: string;
+  name: string;
+  type: string;
+}) {
   const form = new FormData();
-  form.append('avatar', {
+  form.append("avatar", {
     uri: input.uri,
     name: input.name,
     type: input.type,
   } as any);
 
-  return request<{ success: boolean; url: string }>('/avatar', {
-    method: 'POST',
+  return request<{ success: boolean; url: string }>("/avatar", {
+    method: "POST",
     body: form,
   });
 }
 
 export async function removeAvatar() {
-  return request<{ success: boolean }>('/avatar/remove', { method: 'POST' });
+  return request<{ success: boolean }>("/avatar/remove", { method: "POST" });
 }
 
 // ── QR / Check-in / Checkout ────────────────────────────
 export async function getAppointmentQr(id: number) {
-  return request<{ data: {
-    id: number;
-    checkin_code: string | null;
-    checkin_expires: string | null;
-    checked_in: boolean;
-    checkout_code: string | null;
-    checkout_expires: string | null;
-  } }>(`/appointments/${id}/qr`);
+  return request<{
+    data: {
+      id: number;
+      checkin_code: string | null;
+      checkin_expires: string | null;
+      checked_in: boolean;
+      checkout_code: string | null;
+      checkout_expires: string | null;
+    };
+  }>(`/appointments/${id}/qr`);
 }
 
 export async function checkinAppointment(id: number, code: string) {
   return request<{ message: string; in_consultation: boolean }>(
     `/appointments/${id}/checkin`,
-    { method: 'POST', body: JSON.stringify({ code }) },
+    { method: "POST", body: JSON.stringify({ code }) },
   );
 }
 
 export async function checkoutAppointment(id: number) {
   return request<{ data: { checkout_code: string; expires_at: string } }>(
     `/appointments/${id}/checkout`,
-    { method: 'POST' },
+    { method: "POST" },
   );
 }
 
 export async function updateExpediente(data: Record<string, any>) {
-  return request<{ message: string }>('/expediente', {
-    method: 'PUT',
+  return request<{ message: string }>("/expediente", {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
 // ── Expediente (historial médico) ─────────────────────────
 export async function getExpediente() {
-  return request<ExpedienteData>('/expediente');
+  return request<ExpedienteData>("/expediente");
 }
 
 export async function getDocuments() {
-  return request<{ data: PatientDocument[] }>('/documents');
+  return request<{ data: PatientDocument[] }>("/documents");
 }
 
 export async function uploadDocument(input: {
@@ -394,33 +420,48 @@ export async function uploadDocument(input: {
   notes?: string;
 }) {
   const form = new FormData();
-  form.append('document_file', {
+  form.append("document_file", {
     uri: input.uri,
     name: input.name,
     type: input.type,
   } as any);
-  if (input.title) form.append('title', input.title);
-  if (input.document_type) form.append('document_type', input.document_type);
-  if (input.notes) form.append('notes', input.notes);
+  if (input.title) form.append("title", input.title);
+  if (input.document_type) form.append("document_type", input.document_type);
+  if (input.notes) form.append("notes", input.notes);
 
   return request<{ id: number; document: PatientDocument }>(
-    '/documents/upload',
-    { method: 'POST', body: form },
+    "/documents/upload",
+    { method: "POST", body: form },
   );
 }
 
 export async function deleteDocument(id: number) {
-  return request<{ message: string }>(`/documents/${id}/delete`, { method: 'POST' });
+  return request<{ message: string }>(`/documents/${id}/delete`, {
+    method: "POST",
+  });
 }
 
 export async function getFinancialHistory() {
-  return request<FinancialHistory>('/financial-history');
+  return request<FinancialHistory>("/financial-history");
+}
+
+// ── Dashboard Stats ──────────────────────────────────────
+export async function getDashboardStats() {
+  return request<{
+    data: {
+      upcoming: number;
+      pendingPayment: number;
+      completed: number;
+      unreadMessages: number;
+      totalDoctors: number;
+    };
+  }>("/dashboard/stats");
 }
 
 // ── PayPal Appointment Payment ────────────────────────────
 export async function createAppointmentPayment(appointmentId: number) {
   return request<{ approve_url: string; order_id: string }>(
     `/appointments/${appointmentId}/pay`,
-    { method: 'POST' },
+    { method: "POST" },
   );
 }
