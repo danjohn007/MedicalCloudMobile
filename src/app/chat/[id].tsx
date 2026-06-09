@@ -28,8 +28,9 @@ interface ChatMessage {
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const conversationId = parseInt(id ?? '0', 10);
+  const doctorName = decodeURIComponent(name || 'Doctor/a');
   const { user } = useAuthStore();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -137,12 +138,15 @@ export default function ChatScreen() {
           </Pressable>
           <View style={styles.headerInfo}>
             <View style={styles.avatarSmall}>
-              <Icon name="user" size={20} color={MC.primary} />
+              <Text style={styles.avatarText}>{doctorName?.charAt(0) || 'D'}</Text>
             </View>
-            <Text style={styles.headerTitle}>Doctor/a</Text>
+            <View>
+              <Text style={styles.headerTitle}>{doctorName}</Text>
+              <Text style={styles.headerStatus}>Disponible</Text>
+            </View>
           </View>
           <Pressable hitSlop={10}>
-            <Icon name="dots-three-vertical" size={22} color={MC.textPrimary} />
+            <Icon name="phone" size={22} color={MC.primary} />
           </Pressable>
         </View>
 
@@ -214,9 +218,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: MC.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  avatarSmall: { width: 36, height: 36, borderRadius: 18, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: MC.textPrimary },
+  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 8 },
+  avatarSmall: { width: 40, height: 40, borderRadius: 20, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 16, fontWeight: '700', color: MC.primary },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: MC.textPrimary },
+  headerStatus: { fontSize: 12, color: MC.primary, marginTop: 2 },
   msgList: { padding: 16, paddingBottom: 8 },
   msgRow: { flexDirection: 'row', marginBottom: 12 },
   msgRowMine: { justifyContent: 'flex-end' },

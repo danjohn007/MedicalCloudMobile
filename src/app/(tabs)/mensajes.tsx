@@ -78,7 +78,7 @@ export default function MensajesScreen() {
             <Pressable
               key={m.id}
               style={styles.row}
-              onPress={() => router.push(`/chat/${m.id}` as any)}
+              onPress={() => router.push(`/chat/${m.id}?name=${encodeURIComponent(m.doctor_name)}` as any)}
             >
               <View style={styles.avatar}>
                 {m.doctor_photo ? (
