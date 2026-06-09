@@ -48,13 +48,25 @@ export default function HomeScreen() {
         const upcoming = upcomingRes.data ?? [];
         const past = pastRes.data ?? [];
         const msgs = msgRes.data ?? [];
+        
+        // Better KPI calculation
+        const pendingPayment = upcoming.filter(
+          (a) => a.payment_status && (a.payment_status !== 'paid' && a.payment_status !== 'confirmed')
+        ).length;
+        
+        const unreadCount = msgs.reduce((acc, m) => {
+          const count = typeof m.unread === 'number' ? m.unread : 0;
+          return acc + count;
+        }, 0);
+        
         setKpis({
           upcoming: upcoming.length,
-          pendingPayment: upcoming.filter((a) => (a.payment_status ?? '') === 'pending').length,
-          completed: past.filter((a) => ['completed'].includes((a.status ?? '').toLowerCase())).length,
-          unreadMessages: msgs.reduce((acc, m) => acc + (m.unread ?? 0), 0),
+          pendingPayment,
+          completed: past.filter((a) => ['completed', 'finished'].includes((a.status ?? '').toLowerCase())).length,
+          unreadMessages: unreadCount,
         });
       } catch (e) {
+        console.error('Dashboard load error:', e);
         // fail silently — still show UI
       } finally {
         setLoading(false);
@@ -107,26 +119,49 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* KPI Summary */}
+        {/* KPI Summary with better styling */}
         <View style={s.kpiSection}>
-          <Text style={s.sectionTitle}>Resumen</Text>
+          <Text style={s.sectionTitle}>Tu actividad</Text>
           <View style={s.kpiGrid}>
-            <View style={s.kpiCard}>
-              <Text style={s.kpiValue}>{kpis.upcoming}</Text>
-              <Text style={s.kpiLabel}>Citas próximas</Text>
-            </View>
-            <View style={s.kpiCard}>
-              <Text style={s.kpiValue}>{kpis.pendingPayment}</Text>
-              <Text style={s.kpiLabel}>Pagos pendientes</Text>
-            </View>
-            <View style={s.kpiCard}>
-              <Text style={s.kpiValue}>{kpis.completed}</Text>
-              <Text style={s.kpiLabel}>Completadas</Text>
-            </View>
-            <View style={s.kpiCard}>
-              <Text style={s.kpiValue}>{kpis.unreadMessages}</Text>
-              <Text style={s.kpiLabel}>Mensajes sin leer</Text>
-            </View>
+            <Pressable style={s.kpiCard} onPress={() => router.push('/citas')}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.kpiValue}>{kpis.upcoming}</Text>
+                  <Text style={s.kpiLabel}>Próximas citas</Text>
+                </View>
+                <Icon name="calendar" size={28} color={MC.primaryLight} />
+              </View>
+            </Pressable>
+            
+            <Pressable style={[s.kpiCard, kpis.pendingPayment > 0 && s.kpiCardWarning]} onPress={() => router.push('/citas')}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.kpiValue, kpis.pendingPayment > 0 && { color: '#DC2626' }]}>{kpis.pendingPayment}</Text>
+                  <Text style={s.kpiLabel}>Por pagar</Text>
+                </View>
+                <Icon name="currency-dollar" size={28} color={kpis.pendingPayment > 0 ? '#FCA5A5' : MC.primaryLight} />
+              </View>
+            </Pressable>
+            
+            <Pressable style={s.kpiCard} onPress={() => router.push('/citas')}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.kpiValue}>{kpis.completed}</Text>
+                  <Text style={s.kpiLabel}>Completadas</Text>
+                </View>
+                <Icon name="check-circle" size={28} color={MC.primaryLight} />
+              </View>
+            </Pressable>
+            
+            <Pressable style={s.kpiCard} onPress={() => router.push('/mensajes')}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.kpiValue}>{kpis.unreadMessages}</Text>
+                  <Text style={s.kpiLabel}>Mensajes</Text>
+                </View>
+                <Icon name="chat-circle-dots" size={28} color={MC.primaryLight} />
+              </View>
+            </Pressable>
           </View>
         </View>
 
@@ -212,9 +247,10 @@ const s = StyleSheet.create({
   // KPI
   kpiSection: { marginTop: 20, paddingHorizontal: 20 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
-  kpiCard: { width: '48%', backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, padding: 12 },
-  kpiValue: { fontSize: 24, fontWeight: '800', color: MC.primary },
-  kpiLabel: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
+  kpiCard: { width: '48%', backgroundColor: MC.surface, borderRadius: 14, borderWidth: 1, borderColor: MC.border, padding: 14, activeOpacity: 0.7 },
+  kpiCardWarning: { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
+  kpiValue: { fontSize: 28, fontWeight: '800', color: MC.primary, marginBottom: 2 },
+  kpiLabel: { fontSize: 12, color: MC.textSecondary },
 
   // Quick Actions
   quickSection: { marginTop: 24, paddingHorizontal: 20 },

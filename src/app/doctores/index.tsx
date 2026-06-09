@@ -23,34 +23,83 @@ const DEFAULT_SPECIALTIES = [
 function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => void }) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.photo}>
-        {doctor.photo ? (
-          <Icon name="user" size={28} color={MC.primary} />
-        ) : (
-          <Text style={{ fontSize: 22, fontWeight: '700', color: MC.primary }}>{doctor.name?.charAt(0) || 'D'}</Text>
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.nameRow}>
-          <Text style={styles.doctorName} numberOfLines={1}>{doctor.name}</Text>
-          {doctor.is_verified && (
-            <Icon name="check-circle" size={16} color={MC.primary} />
+      {/* Photo + Verify Badge */}
+      <View style={styles.photoWrap}>
+        <View style={styles.photo}>
+          {doctor.photo ? (
+            <Icon name="user" size={32} color={MC.primary} />
+          ) : (
+            <Text style={{ fontSize: 24, fontWeight: '700', color: MC.primary }}>{doctor.name?.charAt(0) || 'D'}</Text>
           )}
         </View>
+        {doctor.is_verified && (
+          <View style={styles.verifyBadge}>
+            <Icon name="check-circle" size={16} color={MC.white} />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.cardBody}>
+        {/* Name + Specialty + Subspecialty */}
+        <Text style={styles.doctorName} numberOfLines={1}>{doctor.name}</Text>
         <Text style={styles.specialty}>{doctor.specialty}</Text>
+        {doctor.subspecialty && (
+          <Text style={styles.subspecialty}>{doctor.subspecialty}</Text>
+        )}
+
+        {/* Rating + Reviews + Location */}
         <View style={styles.metaRow}>
-          <Icon name="star" size={12} color={MC.star} filled />
-          <Text style={styles.metaText}>{doctor.rating.toFixed(1)}</Text>
+          <Icon name="star" size={13} color={MC.star} filled />
+          <Text style={styles.rating}>{doctor.rating.toFixed(1)}</Text>
+          {doctor.reviews_count > 0 && (
+            <>
+              <Text style={styles.dot}>·</Text>
+              <Text style={styles.reviews}>({doctor.reviews_count})</Text>
+            </>
+          )}
           <Text style={styles.dot}>·</Text>
           <Icon name="map-pin" size={12} color={MC.textMuted} />
-          <Text style={styles.metaText}>{doctor.city}</Text>
+          <Text style={styles.city}>{doctor.city}</Text>
         </View>
-        <View style={styles.feeRow}>
-          <Icon name="currency-dollar" size={13} color={MC.primary} />
-          <Text style={styles.fee}>Consulta desde ${doctor.consultation_fee?.toLocaleString('es-MX') ?? '–'}</Text>
+
+        {/* Address if available */}
+        {doctor.address && (
+          <View style={styles.addressRow}>
+            <Icon name="map-pin" size={11} color={MC.textMuted} />
+            <Text style={styles.addressText} numberOfLines={1}>{doctor.address}</Text>
+          </View>
+        )}
+
+        {/* Fees Row - Show all 3 types */}
+        <View style={styles.feesContainer}>
+          <View style={styles.feeItem}>
+            <Icon name="heartbeat" size={12} color={MC.primary} />
+            <Text style={styles.feeLabel}>Presencial</Text>
+            <Text style={styles.feeValue}>${doctor.consultation_fee || '–'}</Text>
+          </View>
+          {doctor.telemedicine_fee && (
+            <View style={styles.feeItem}>
+              <Icon name="video-camera" size={12} color={MC.primary} />
+              <Text style={styles.feeLabel}>Video</Text>
+              <Text style={styles.feeValue}>${doctor.telemedicine_fee}</Text>
+            </View>
+          )}
+          {doctor.home_visit_fee && (
+            <View style={styles.feeItem}>
+              <Icon name="house-simple" size={12} color={MC.primary} />
+              <Text style={styles.feeLabel}>Domicilio</Text>
+              <Text style={styles.feeValue}>${doctor.home_visit_fee}</Text>
+            </View>
+          )}
         </View>
+
+        {/* Bio if available */}
+        {doctor.bio && (
+          <Text style={styles.bioText} numberOfLines={2}>{doctor.bio}</Text>
+        )}
       </View>
-      <Icon name="caret-right" size={20} color={MC.textMuted} />
+
+      <Icon name="caret-right" size={20} color={MC.textMuted} style={{ marginLeft: 8 }} />
     </Pressable>
   );
 }
@@ -230,17 +279,34 @@ const styles = StyleSheet.create({
   chipText:        { fontSize: 13, color: MC.textSecondary, fontWeight: '500' },
   chipTextActive:  { color: MC.white, fontWeight: '600' },
   list:            { paddingHorizontal: 16, paddingBottom: 20, gap: 12 },
-  card:            { flexDirection: 'row', alignItems: 'center', backgroundColor: MC.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: MC.border },
-  photo:           { width: 64, height: 64, borderRadius: 32, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
-  cardBody:        { flex: 1, marginRight: 8 },
-  nameRow:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  doctorName:      { fontSize: 15, fontWeight: '600', color: MC.textPrimary, flex: 1 },
-  specialty:       { fontSize: 13, color: MC.textSecondary, marginBottom: 4 },
-  metaRow:         { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
-  metaText:        { fontSize: 12, color: MC.textSecondary },
+  
+  // Enhanced Card Styles
+  card:            { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: MC.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: MC.border, gap: 12 },
+  photoWrap:       { position: 'relative', marginRight: 4 },
+  photo:           { width: 72, height: 72, borderRadius: 36, backgroundColor: MC.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  verifyBadge:     { position: 'absolute', bottom: 0, right: 0, backgroundColor: MC.primary, borderRadius: 10, padding: 2, borderWidth: 2, borderColor: MC.surface },
+  
+  cardBody:        { flex: 1 },
+  doctorName:      { fontSize: 16, fontWeight: '700', color: MC.textPrimary, marginBottom: 2 },
+  specialty:       { fontSize: 14, fontWeight: '600', color: MC.primary, marginBottom: 2 },
+  subspecialty:    { fontSize: 12, color: MC.textSecondary, marginBottom: 4, fontStyle: 'italic' },
+  
+  metaRow:         { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6, flexWrap: 'wrap' },
+  rating:          { fontSize: 13, fontWeight: '600', color: MC.textPrimary },
+  reviews:         { fontSize: 12, color: MC.textMuted },
+  city:            { fontSize: 12, color: MC.textSecondary },
   dot:             { fontSize: 12, color: MC.textMuted },
-  feeRow:          { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  fee:             { fontSize: 13, color: MC.primary, fontWeight: '600' },
+  
+  addressRow:      { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  addressText:     { fontSize: 12, color: MC.textMuted, flex: 1 },
+  
+  feesContainer:   { flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' },
+  feeItem:         { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: MC.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  feeLabel:        { fontSize: 11, fontWeight: '600', color: MC.textSecondary },
+  feeValue:        { fontSize: 11, fontWeight: '700', color: MC.primary },
+  
+  bioText:         { fontSize: 12, color: MC.textSecondary, lineHeight: 16 },
+  
   empty:           { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyIconCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: MC.surface, justifyContent: 'center', alignItems: 'center' },
   emptyText:       { fontSize: 16, color: MC.textSecondary },
