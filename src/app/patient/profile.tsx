@@ -1,21 +1,21 @@
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -111,7 +111,7 @@ export default function PatientProfileScreen() {
       if (!perm.granted) {
         Alert.alert(
           "Permiso requerido",
-          "Necesitas habilitar acceso a fotos para cambiar avatar."
+          "Necesitas habilitar acceso a fotos para cambiar avatar.",
         );
         return;
       }

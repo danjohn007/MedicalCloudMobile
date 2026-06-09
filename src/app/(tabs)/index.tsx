@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -16,6 +17,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const GRID_GAP = 10;
+const GRID_PADDING = 14;
+const HALF_CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const MONEY_FORMAT = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -933,11 +939,11 @@ const s = StyleSheet.create({
   kpiGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    paddingHorizontal: 14,
+    gap: GRID_GAP,
+    paddingHorizontal: GRID_PADDING,
   },
   kpiCard: {
-    width: "48.4%",
+    width: HALF_CARD_WIDTH,
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
@@ -1007,7 +1013,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
   },
   quickTile: {
-    width: "48.4%",
+    width: HALF_CARD_WIDTH,
     alignItems: "center",
     borderRadius: 20,
     borderWidth: 1,

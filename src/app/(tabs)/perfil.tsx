@@ -1,12 +1,20 @@
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Icon, IconName } from '@/components/Icon';
-import { MC } from '@/constants/theme';
-import * as api from '@/services/api';
-import { useAuthStore } from '@/stores/authStore';
+import { Icon, IconName } from "@/components/Icon";
+import { MC } from "@/constants/theme";
+import * as api from "@/services/api";
+import { useAuthStore } from "@/stores/authStore";
 
 interface MenuItem {
   icon: IconName;
@@ -15,7 +23,7 @@ interface MenuItem {
 }
 
 export default function PerfilScreen() {
-  const router        = useRouter();
+  const router = useRouter();
   const { user: authUser, logout } = useAuthStore();
 
   const [profile, setProfile] = useState<api.ProfileData | null>(null);
@@ -25,24 +33,41 @@ export default function PerfilScreen() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    api.getProfile()
+    api
+      .getProfile()
       .then(setProfile)
       .catch((e) => setError(e.message ?? "Error al cargar perfil"))
       .finally(() => setLoading(false));
   }, []);
 
   const menuItems: MenuItem[] = [
-    { icon: 'user-circle',  label: 'Editar mi perfil',   action: () => router.push('/patient/profile') },
-    { icon: 'first-aid',    label: 'Expediente médico',  action: () => router.push('/patient/expediente') },
-    { icon: 'list',         label: 'Mis documentos',     action: () => router.push('/patient/documentos') },
-    { icon: 'wallet',       label: 'Historial financiero', action: () => router.push('/patient/finanzas') },
-    { icon: 'bell',         label: 'Notificaciones',      action: () => {} },
-    { icon: 'info',         label: 'Ayuda y soporte',     action: () => {} },
+    {
+      icon: "user-circle",
+      label: "Editar mi perfil",
+      action: () => router.push("/patient/profile"),
+    },
+    {
+      icon: "first-aid",
+      label: "Expediente médico",
+      action: () => router.push("/patient/expediente"),
+    },
+    {
+      icon: "list",
+      label: "Mis documentos",
+      action: () => router.push("/patient/documentos"),
+    },
+    {
+      icon: "wallet",
+      label: "Historial financiero",
+      action: () => router.push("/patient/finanzas"),
+    },
+    { icon: "bell", label: "Notificaciones", action: () => {} },
+    { icon: "info", label: "Ayuda y soporte", action: () => {} },
   ];
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/(auth)/login');
+    router.replace("/(auth)/login");
   };
 
   const renderMenuItem = (item: MenuItem, isLast = false) => (
@@ -59,13 +84,14 @@ export default function PerfilScreen() {
     </Pressable>
   );
 
-  const displayName = profile?.name ?? authUser?.name ?? 'Usuario';
-  const displayEmail = profile?.email ?? authUser?.email ?? '';
-  const displayPhone = profile?.phone ?? '';
-  const displayCity = profile?.city ?? '';
+  const displayName = profile?.name ?? authUser?.name ?? "Usuario";
+  const displayEmail = profile?.email ?? authUser?.email ?? "";
+  const displayPhone = profile?.phone ?? "";
+  const displayCity = profile?.city ?? "";
+  const avatarUrl = (profile?.avatar_url ?? authUser?.avatar_url)?.trim() ?? "";
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView>
         {/* Settings button */}
         <View style={styles.header}>
@@ -77,19 +103,45 @@ export default function PerfilScreen() {
         {/* Avatar + Name + info */}
         <View style={styles.profile}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text>
+            {avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.avatarInitial}>
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            )}
           </View>
           <Text style={styles.name}>{displayName}</Text>
-          {displayEmail ? <Text style={styles.emailSub}>{displayEmail}</Text> : null}
-          {displayPhone ? <Text style={styles.emailSub}>📞 {displayPhone}</Text> : null}
-          {displayCity ? <Text style={styles.emailSub}>📍 {displayCity}</Text> : null}
-          {loading && <ActivityIndicator color={MC.primary} style={{ marginTop: 10 }} />}
-          {error ? <Text style={{ color: MC.error, marginTop: 10, textAlign: 'center' }}>{error}</Text> : null}
+          {displayEmail ? (
+            <Text style={styles.emailSub}>{displayEmail}</Text>
+          ) : null}
+          {displayPhone ? (
+            <Text style={styles.emailSub}>📞 {displayPhone}</Text>
+          ) : null}
+          {displayCity ? (
+            <Text style={styles.emailSub}>📍 {displayCity}</Text>
+          ) : null}
+          {loading && (
+            <ActivityIndicator color={MC.primary} style={{ marginTop: 10 }} />
+          )}
+          {error ? (
+            <Text
+              style={{ color: MC.error, marginTop: 10, textAlign: "center" }}
+            >
+              {error}
+            </Text>
+          ) : null}
         </View>
 
         {/* Menu */}
         <View style={styles.menu}>
-          {menuItems.map((item, i) => renderMenuItem(item, i === menuItems.length - 1))}
+          {menuItems.map((item, i) =>
+            renderMenuItem(item, i === menuItems.length - 1),
+          )}
 
           {/* Logout */}
           <Pressable
@@ -99,7 +151,9 @@ export default function PerfilScreen() {
             <View style={[styles.menuIconWrap, styles.menuIconDanger]}>
               <Icon name="sign-out" size={20} color={MC.error} />
             </View>
-            <Text style={[styles.menuLabel, styles.menuLabelDanger]}>Cerrar sesion</Text>
+            <Text style={[styles.menuLabel, styles.menuLabelDanger]}>
+              Cerrar sesion
+            </Text>
             <Icon name="caret-right" size={18} color={MC.error} />
           </Pressable>
         </View>
@@ -114,25 +168,43 @@ export default function PerfilScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
-  header: { alignItems: 'flex-end', paddingHorizontal: 20, paddingTop: 12 },
+  header: { alignItems: "flex-end", paddingHorizontal: 20, paddingTop: 12 },
   settingsBtn: { padding: 4 },
-  profile: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
+  profile: { alignItems: "center", paddingVertical: 24, paddingHorizontal: 20 },
   avatarCircle: {
     width: 88,
     height: 88,
     borderRadius: 44,
     backgroundColor: MC.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 14,
   },
-  avatarInitial: { fontSize: 38, fontWeight: '700', color: MC.white },
-  name: { fontSize: 22, fontWeight: '700', color: MC.textPrimary, textAlign: 'center' },
-  emailSub: { fontSize: 13, color: MC.textSecondary, marginTop: 3, textAlign: 'center' },
-  menu: { marginHorizontal: 20, borderRadius: 16, overflow: 'hidden', backgroundColor: MC.background, borderWidth: 1, borderColor: MC.border },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 44 },
+  avatarInitial: { fontSize: 38, fontWeight: "700", color: MC.white },
+  name: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: MC.textPrimary,
+    textAlign: "center",
+  },
+  emailSub: {
+    fontSize: 13,
+    color: MC.textSecondary,
+    marginTop: 3,
+    textAlign: "center",
+  },
+  menu: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: MC.background,
+    borderWidth: 1,
+    borderColor: MC.border,
+  },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 14,
     backgroundColor: MC.background,
@@ -142,15 +214,22 @@ const styles = StyleSheet.create({
   menuItemLast: { borderBottomWidth: 0 },
   menuItemDanger: { borderTopWidth: 1, borderTopColor: MC.border },
   menuIconWrap: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: MC.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
-  menuIconDanger: { backgroundColor: '#FEE2E2' },
-  menuLabel: { flex: 1, fontSize: 15, color: MC.textPrimary, fontWeight: '500' },
-  menuLabelDanger: { color: MC.error, fontWeight: '600' },
-  footer: { alignItems: 'center', paddingVertical: 24 },
+  menuIconDanger: { backgroundColor: "#FEE2E2" },
+  menuLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: MC.textPrimary,
+    fontWeight: "500",
+  },
+  menuLabelDanger: { color: MC.error, fontWeight: "600" },
+  footer: { alignItems: "center", paddingVertical: 24 },
   version: { fontSize: 12, color: MC.textMuted },
 });
