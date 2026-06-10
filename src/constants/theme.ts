@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-// ── Medical Cloud Brand Colors ────────────────────────────
+// ── Doctor Cloud Brand Colors ─────────────────────────────
 export const MC = {
   primary:       '#1BA8A0',
   primaryDark:   '#148C85',

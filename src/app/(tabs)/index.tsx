@@ -258,7 +258,7 @@ export default function HomeScreen() {
 
             <View style={s.heroTopRow}>
               <View style={{ flex: 1 }}>
-                <Text style={s.heroKicker}>Medical Cloud</Text>
+                <Text style={s.heroKicker}>Doctor Cloud</Text>
                 <Text style={s.heroTitle}>Hola, {firstName}</Text>
                 <Text style={s.heroSubtitle}>
                   Tu salud en un vistazo: citas, mensajes y doctores.
@@ -432,7 +432,7 @@ export default function HomeScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.sectionTitle}>Doctores recomendados</Text>
                 <Text style={s.sectionSub}>
-                  Perfiles reales desde MedicalUniverse
+                  Perfiles verificados de nuestro directorio
                 </Text>
               </View>
 
