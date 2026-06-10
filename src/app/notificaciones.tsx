@@ -1,7 +1,8 @@
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import { useRouter } from "expo-router";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function NotificacionesScreen() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function NotificacionesScreen() {
 
       <View style={styles.empty}>
         <View style={styles.emptyIcon}>
-          <Icon name="bell-slash" size={56} color={MC.textMuted} />
+          <Icon name="bell" size={56} color={MC.textMuted} />
         </View>
         <Text style={styles.emptyText}>No tienes notificaciones</Text>
         <Text style={styles.emptySubtext}>

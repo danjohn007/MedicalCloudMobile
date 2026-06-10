@@ -15,7 +15,6 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
         <Stack.Screen name="patient" />
-        <Stack.Screen name="patient/recetas" />
       </Stack>
     </>
   );
