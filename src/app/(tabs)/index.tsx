@@ -67,6 +67,20 @@ const QUICK_ACTIONS: {
     color: "#7C3AED",
     bg: "#F5F3FF",
   },
+  {
+    label: "Recetas",
+    icon: "pill",
+    route: "/patient/recetas",
+    color: "#059669",
+    bg: "#ECFDF5",
+  },
+  {
+    label: "Notificaciones",
+    icon: "bell",
+    route: "/notificaciones",
+    color: "#D97706",
+    bg: "#FFFBEB",
+  },
 ];
 
 // ── Animated counter hook ──────────────────────────────────
