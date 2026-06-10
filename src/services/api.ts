@@ -458,6 +458,53 @@ export async function getDashboardStats() {
   }>("/dashboard/stats");
 }
 
+export interface Prescription {
+  id: number;
+  medication_name: string;
+  dosage: string | null;
+  frequency: string | null;
+  duration: string | null;
+  instructions: string | null;
+  issued_date: string | null;
+  doctor_name: string;
+  specialty: string | null;
+  appt_date: string | null;
+}
+
+export interface SoapNote {
+  id: number;
+  appointment_id: number | null;
+  subjective: string | null;
+  objective: string | null;
+  assessment: string | null;
+  plan: string | null;
+  diagnosis_text: string | null;
+  doctor_name: string;
+  specialty: string | null;
+  scheduled_at: string | null;
+}
+
+export interface NotificationItem {
+  type: 'message' | 'system' | 'appointment';
+  id: number;
+  message: string;
+  created_at: string;
+  related_name: string | null;
+  thread_id: number | null;
+}
+
+export async function getPrescriptions() {
+  return request<{ data: Prescription[] }>("/prescriptions");
+}
+
+export async function getSoapNotes() {
+  return request<{ data: SoapNote[] }>("/soap-notes");
+}
+
+export async function getNotifications() {
+  return request<{ data: NotificationItem[] }>("/notifications");
+}
+
 // ── PayPal Appointment Payment ────────────────────────────
 export async function createAppointmentPayment(appointmentId: number) {
   return request<{ approve_url: string; order_id: string }>(

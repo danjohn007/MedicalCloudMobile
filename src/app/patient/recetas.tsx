@@ -13,35 +13,26 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface Prescription {
-    id: number;
-    patient_id: number;
-    doctor_id: number;
-    appointment_id: number | null;
-    medication_name: string;
-    dosage: string | null;
-    frequency: string | null;
-    duration: string | null;
-    instructions: string | null;
-    issued_date: string | null;
-    doctor_name: string | null;
-    appt_date: string | null;
-}
-
 export default function RecetasScreen() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+    const [prescriptions, setPrescriptions] = useState<api.Prescription[]>([]);
 
     useEffect(() => {
         (async () => {
             try {
                 setLoading(true);
-                const data = await api.getExpediente();
-                setPrescriptions(data.prescriptions ?? []);
+                const data = await api.getPrescriptions();
+                setPrescriptions(data.data ?? []);
             } catch (e: any) {
-                setError(e.message ?? "Error al cargar recetas");
+                // Fallback al endpoint de expediente
+                try {
+                    const data = await api.getExpediente();
+                    setPrescriptions(data.prescriptions ?? []);
+                } catch (e2: any) {
+                    setError(e.message ?? "Error al cargar recetas");
+                }
             } finally {
                 setLoading(false);
             }
