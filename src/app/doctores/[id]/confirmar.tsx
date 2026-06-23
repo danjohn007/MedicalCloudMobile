@@ -273,11 +273,20 @@ export default function ConfirmarScreen() {
           style={[styles.confirmBtn, !canContinue && styles.confirmBtnDisabled]}
           disabled={!canContinue}
           onPress={() => {
-            const reasonParam = encodeURIComponent(reason.trim());
-            const notesParam = encodeURIComponent(notes.trim());
-            router.push(
-              `/doctores/${doctorId}/pago?date=${date}&time=${time}&type=${appointmentType}&fee=${fee}&reason=${reasonParam}&notes=${notesParam}` as any,
-            );
+            router.push({
+              pathname: "/doctores/[id]/pago",
+              params: {
+                id: String(doctorId),
+                date: date ?? "",
+                time: time ?? "",
+                type: appointmentType,
+                fee: String(fee),
+                reason: reason.trim(),
+                notes: notes.trim(),
+                doctorName: doctor?.name ?? "",
+                specialty: doctor?.specialty ?? "",
+              },
+            } as any);
           }}
         >
           <Icon

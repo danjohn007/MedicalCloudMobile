@@ -13,20 +13,21 @@ import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveAppHome } from '@/utils/role-routing';
 
 export default function SplashScreen() {
   const router   = useRouter();
-  const { isLoading, isAuthenticated, loadSaved } = useAuthStore();
+  const { isLoading, isAuthenticated, loadSaved, user } = useAuthStore();
 
   useEffect(() => {
     loadSaved();
-  }, []);
+  }, [loadSaved]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace(resolveAppHome(user?.role));
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, router, user?.role]);
 
   if (isLoading) {
     return (

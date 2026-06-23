@@ -17,6 +17,7 @@ import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveAppHome } from '@/utils/role-routing';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LoginScreen() {
     setError('');
     try {
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)');
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
     } catch (e: any) {
       setError(e.message ?? 'Error al iniciar sesión.');
     } finally {

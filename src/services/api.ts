@@ -80,6 +80,7 @@ export interface Appointment {
   meeting_url?: string | null;
   jitsi_room?: string | null;
   jitsi_url?: string | null;
+  pay_deadline?: string | null;
 }
 
 export interface AppointmentDetail {
@@ -87,6 +88,34 @@ export interface AppointmentDetail {
     date?: string;
     time?: string;
   };
+}
+
+export interface AppointmentPaymentInfo {
+  ok?: boolean;
+  stripe_publishable_key?: string;
+  appointment: {
+    id: number;
+    doctor_name: string;
+    specialty: string;
+    type: string;
+    scheduled_at: string;
+    pay_deadline: string | null;
+    amount: number;
+    reason?: string;
+  };
+  methods: {
+    stripe_card: boolean;
+    paypal: boolean;
+  };
+}
+
+export interface AppointmentStripeIntent {
+  ok?: boolean;
+  publishable_key: string;
+  client_secret: string;
+  payment_method: string;
+  amount: number;
+  appt_id: number;
 }
 
 export interface Message {
@@ -171,6 +200,39 @@ export interface FinancialHistory {
 }
 
 const API_BASE = "https://doctorcloud.digital/app/api/mobile";
+
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseFloat(value)
+        : Number.NaN;
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeAppointment(raw: Record<string, any>): Appointment {
+  const locationParts = [raw.address, raw.city, raw.state]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+
+  return {
+    ...raw,
+    id: Number(raw.id),
+    doctor_id: Number(raw.doctor_id),
+    scheduled_at: String(raw.scheduled_at ?? ""),
+    status: String(raw.status ?? ""),
+    type: String(raw.type ?? ""),
+    fee: toNumber(raw.fee ?? raw.consultation_fee),
+    doctor_name: String(raw.doctor_name ?? ""),
+    specialty: String(raw.specialty ?? ""),
+    doctor_photo: raw.doctor_photo ?? null,
+    location:
+      String(raw.location ?? "").trim() ||
+      (locationParts.length ? locationParts.join(", ") : ""),
+  };
+}
 
 // ── Core fetch ────────────────────────────────────────────
 async function request<T>(
@@ -274,11 +336,27 @@ export async function getDoctorAvailability(id: number, date: string) {
 export async function getAppointments(
   status: "upcoming" | "past" = "upcoming",
 ) {
-  return request<{ data: Appointment[] }>(`/appointments?status=${status}`);
+  const response = await request<{ data: Record<string, any>[] }>(
+    `/appointments?status=${status}`,
+  );
+
+  return {
+    ...response,
+    data: response.data.map((item) => normalizeAppointment(item)),
+  };
 }
 
 export async function getAppointmentDetail(id: number) {
-  return request<AppointmentDetail>(`/appointments/${id}`);
+  const response = await request<{ data: Record<string, any> }>(`/appointments/${id}`);
+
+  return {
+    ...response,
+    data: normalizeAppointment(response.data),
+  };
+}
+
+export async function getAppointmentPaymentInfo(id: number) {
+  return request<AppointmentPaymentInfo>(`/appointments/${id}/payment-info`);
 }
 
 export async function createAppointment(data: {
@@ -510,5 +588,15 @@ export async function createAppointmentPayment(appointmentId: number) {
   return request<{ approve_url: string; order_id: string }>(
     `/appointments/${appointmentId}/pay`,
     { method: "POST" },
+  );
+}
+
+export async function createAppointmentStripeIntent(appointmentId: number) {
+  return request<AppointmentStripeIntent>(
+    `/appointments/${appointmentId}/stripe/create-intent`,
+    {
+      method: "POST",
+      body: JSON.stringify({ payment_method: "card" }),
+    },
   );
 }

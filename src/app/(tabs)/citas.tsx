@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -203,7 +202,6 @@ export default function CitasScreen() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<api.Appointment | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -286,20 +284,18 @@ export default function CitasScreen() {
   };
 
   const handlePay = async (a: api.Appointment) => {
-    try {
-      setBusy(true);
-      const { approve_url } = await api.createAppointmentPayment(a.id);
-      await WebBrowser.openBrowserAsync(approve_url);
-      load();
-      Alert.alert(
-        "Verificando pago",
-        "Si el pago se proceso correctamente, tu cita se confirmara.",
-      );
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "No se pudo iniciar el pago.");
-    } finally {
-      setBusy(false);
-    }
+    router.push({
+      pathname: "/doctores/[id]/pago",
+      params: {
+        id: String(a.doctor_id),
+        appointmentId: String(a.id),
+        doctorName: a.doctor_name,
+        specialty: a.specialty,
+        scheduledAt: a.scheduled_at,
+        type: a.type,
+        fee: String(a.fee),
+      },
+    } as any);
   };
 
   const handleCheckin = (a: api.Appointment) =>
@@ -775,9 +771,7 @@ function AppointmentDetail(props: {
               disabled={busy}
             >
               <Icon name="credit-card" size={18} color={MC.white} />
-              <Text style={s.payBtnText}>
-                Pagar ${appt.fee.toFixed(2)} con PayPal
-              </Text>
+              <Text style={s.payBtnText}>Elegir metodo de pago</Text>
             </Pressable>
           )}
           <View style={s.modalActionRow}>

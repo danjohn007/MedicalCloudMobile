@@ -17,6 +17,7 @@ import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveAppHome } from '@/utils/role-routing';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function RegisterScreen() {
     setError('');
     try {
       await register(name.trim(), email.trim().toLowerCase(), password, phone.trim() || undefined);
-      router.replace('/(tabs)');
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
     } catch (e: any) {
       setError(e.message ?? 'Error al crear tu cuenta.');
     } finally {

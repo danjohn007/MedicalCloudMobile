@@ -236,7 +236,7 @@ export default function VideoconsultaScreen() {
         </Pressable>
 
         <Text style={styles.helperText}>
-          Si el doctor adelanta la cita y cambia a "En consulta", podras unirte
+          Si el doctor adelanta la cita y cambia a &quot;En consulta&quot;, podras unirte
           incluso antes de la ventana normal.
         </Text>
       </View>

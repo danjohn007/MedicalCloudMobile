@@ -14,6 +14,7 @@ import { StyleProp, View, ViewStyle } from 'react-native';
 
 // Static imports — Metro bundles only what's imported.
 import AddressBook        from '../../assets/icons/regular/address-book.svg';
+import ArrowClockwise     from '../../assets/icons/regular/arrow-clockwise.svg';
 import ArrowLeft          from '../../assets/icons/regular/arrow-left.svg';
 import ArrowRight         from '../../assets/icons/regular/arrow-right.svg';
 import Baby               from '../../assets/icons/regular/baby.svg';
@@ -37,6 +38,7 @@ import DotsThreeVertical  from '../../assets/icons/regular/dots-three-vertical.s
 import Drop               from '../../assets/icons/regular/drop.svg';
 import Envelope           from '../../assets/icons/regular/envelope.svg';
 import Eye                from '../../assets/icons/regular/eye.svg';
+import File               from '../../assets/icons/regular/file.svg';
 import FirstAid           from '../../assets/icons/regular/first-aid.svg';
 import Funnel             from '../../assets/icons/regular/funnel.svg';
 import Gear               from '../../assets/icons/regular/gear.svg';
@@ -62,6 +64,7 @@ import Star               from '../../assets/icons/regular/star.svg';
 import Stethoscope        from '../../assets/icons/regular/stethoscope.svg';
 import Syringe            from '../../assets/icons/regular/syringe.svg';
 import Tooth              from '../../assets/icons/regular/tooth.svg';
+import Trash              from '../../assets/icons/regular/trash.svg';
 import Translate          from '../../assets/icons/regular/translate.svg';
 import User               from '../../assets/icons/regular/user.svg';
 import UserCircle         from '../../assets/icons/regular/user-circle.svg';
@@ -72,6 +75,7 @@ import X                  from '../../assets/icons/regular/x.svg';
 
 export type IconName =
   | 'address-book'
+  | 'arrow-clockwise'
   | 'arrow-left'
   | 'arrow-right'
   | 'baby'
@@ -95,6 +99,7 @@ export type IconName =
   | 'drop'
   | 'envelope'
   | 'eye'
+  | 'file'
   | 'first-aid'
   | 'funnel'
   | 'gear'
@@ -120,6 +125,7 @@ export type IconName =
   | 'stethoscope'
   | 'syringe'
   | 'tooth'
+  | 'trash'
   | 'translate'
   | 'user'
   | 'user-circle'
@@ -130,6 +136,7 @@ export type IconName =
 
 const ICONS: Record<IconName, React.ComponentType<any>> = {
   'address-book':       AddressBook,
+  'arrow-clockwise':    ArrowClockwise,
   'arrow-left':         ArrowLeft,
   'arrow-right':        ArrowRight,
   'baby':               Baby,
@@ -153,6 +160,7 @@ const ICONS: Record<IconName, React.ComponentType<any>> = {
   'drop':               Drop,
   'envelope':           Envelope,
   'eye':                Eye,
+  'file':               File,
   'first-aid':          FirstAid,
   'funnel':             Funnel,
   'gear':               Gear,
@@ -178,6 +186,7 @@ const ICONS: Record<IconName, React.ComponentType<any>> = {
   'stethoscope':        Stethoscope,
   'syringe':            Syringe,
   'tooth':              Tooth,
+  'trash':              Trash,
   'translate':          Translate,
   'user':               User,
   'user-circle':        UserCircle,
