@@ -1,6 +1,21 @@
 import { create } from 'zustand';
 import * as api from '@/services/api';
 
+function normalizeAuthErrorMessage(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : 'Error al iniciar sesión.';
+
+  if (/solo pacientes|solo pacientes y doctores|solo doctores|app movil/i.test(message)) {
+    return 'Credenciales incorrectas.';
+  }
+
+  return message;
+}
+
 interface AuthState {
   user: api.AuthUser | null;
   isLoading: boolean;
@@ -32,10 +47,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email, password) => {
-    const res = await api.login(email, password);
-    await api.saveToken(res.token);
-    await api.saveUser(res.user);
-    set({ user: res.user, isAuthenticated: true });
+    try {
+      const res = await api.login(email, password);
+      await api.saveToken(res.token);
+      await api.saveUser(res.user);
+      set({ user: res.user, isAuthenticated: true });
+    } catch (error) {
+      throw new Error(normalizeAuthErrorMessage(error));
+    }
   },
 
   register: async (name, email, password, phone) => {

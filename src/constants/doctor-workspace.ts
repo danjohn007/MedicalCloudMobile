@@ -122,7 +122,7 @@ export const DOCTOR_PROFILE_MODULES: DoctorModule[] = [
     title: "Historial financiero",
     summary: "Cobros por consulta, estatus de pago y conciliacion basica.",
     icon: "wallet",
-    status: "backend-required",
+    status: "mobile-shell",
   },
   {
     id: "doctor-assistants",
