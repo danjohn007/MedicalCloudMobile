@@ -57,12 +57,25 @@ export default function PerfilScreen() {
       action: () => router.push("/patient/documentos"),
     },
     {
+      icon: "pill",
+      label: "Mis recetas",
+      action: () => router.push("/patient/recetas"),
+    },
+    {
       icon: "wallet",
       label: "Historial financiero",
       action: () => router.push("/patient/finanzas"),
     },
-    { icon: "bell", label: "Notificaciones", action: () => {} },
-    { icon: "info", label: "Ayuda y soporte", action: () => {} },
+    {
+      icon: "bell",
+      label: "Notificaciones",
+      action: () => router.push("/notificaciones"),
+    },
+    {
+      icon: "info",
+      label: "Ayuda y soporte",
+      action: () => router.push("/soporte"),
+    },
   ];
 
   const handleLogout = async () => {
@@ -137,6 +150,23 @@ export default function PerfilScreen() {
           ) : null}
         </View>
 
+        <View style={styles.linkCodeCard}>
+          <Text style={styles.linkCodeLabel}>Codigo personal</Text>
+          <Text style={styles.linkCodeValue}>
+            {profile?.doctor_access_code || "Pendiente"}
+          </Text>
+          <Text style={styles.linkCodeHint}>
+            Compartelo solo con doctores que deban enlazarte o revisar tu
+            expediente.
+          </Text>
+          <Pressable
+            style={styles.linkCodeButton}
+            onPress={() => router.push("/patient/profile")}
+          >
+            <Text style={styles.linkCodeButtonText}>Ver perfil completo</Text>
+          </Pressable>
+        </View>
+
         {/* Menu */}
         <View style={styles.menu}>
           {menuItems.map((item, i) =>
@@ -193,6 +223,45 @@ const styles = StyleSheet.create({
     color: MC.textSecondary,
     marginTop: 3,
     textAlign: "center",
+  },
+  linkCodeCard: {
+    marginHorizontal: 20,
+    marginBottom: 18,
+    borderRadius: 18,
+    padding: 16,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: "#C9ECE8",
+    gap: 8,
+  },
+  linkCodeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.primaryDark,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  linkCodeValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: MC.textPrimary,
+  },
+  linkCodeHint: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: MC.textSecondary,
+  },
+  linkCodeButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: MC.white,
+  },
+  linkCodeButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: MC.primaryDark,
   },
   menu: {
     marginHorizontal: 20,

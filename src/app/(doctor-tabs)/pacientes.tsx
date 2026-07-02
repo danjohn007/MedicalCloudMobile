@@ -96,13 +96,21 @@ export default function DoctorPatientsScreen() {
           <Text style={styles.heroEyebrow}>Mis pacientes</Text>
           <Text style={styles.heroTitle}>Base clinica</Text>
           <Text style={styles.heroSubtitle}>
-            Busca, abre snapshot e identifica alertas antes de entrar a consulta.
+            Solo aparecen pacientes vinculados contigo por codigo, alta directa o consulta completada.
           </Text>
           <View style={styles.heroStats}>
             <HeroStat label="Pacientes" value={String(filteredPatients.length)} />
             <HeroStat label="Alertas" value={String(allergyCount)} />
           </View>
         </View>
+
+        <Pressable
+          style={styles.linkButton}
+          onPress={() => router.push("/doctor/patients/link" as any)}
+        >
+          <Icon name="shield-check" size={16} color={MC.white} />
+          <Text style={styles.linkButtonText}>Vincular o registrar paciente</Text>
+        </Pressable>
 
         <View style={styles.searchBox}>
           <Icon name="magnifying-glass" size={18} color={MC.textMuted} />
@@ -176,7 +184,9 @@ export default function DoctorPatientsScreen() {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No hay pacientes que coincidan con tu búsqueda.</Text>
+              <Text style={styles.emptyText}>
+                No hay pacientes vinculados con esa busqueda. Puedes agregarlos con su codigo personal o registrarlos directamente.
+              </Text>
             </View>
           )}
         </View>
@@ -254,6 +264,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: MC.textPrimary,
   },
+  linkButton: {
+    borderRadius: 18,
+    backgroundColor: MC.primary,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  linkButtonText: { fontSize: 14, fontWeight: "800", color: MC.white },
   errorBox: {
     borderRadius: 14,
     backgroundColor: "#FEE2E2",

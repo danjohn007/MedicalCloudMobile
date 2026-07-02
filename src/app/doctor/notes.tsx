@@ -25,6 +25,8 @@ const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
   month: "short",
   year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 function formatDate(value?: string | null) {
@@ -41,7 +43,7 @@ function truncate(value?: string | null, max = 150) {
   return `${text.slice(0, max - 1).trim()}...`;
 }
 
-export default function DoctorPrescriptionsScreen() {
+export default function DoctorNotesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ patientId?: string | string[] }>();
   const requestedPatientId = Number(
@@ -54,17 +56,17 @@ export default function DoctorPrescriptionsScreen() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [patients, setPatients] = useState<api.DoctorPatientSummary[]>([]);
-  const [data, setData] = useState<api.DoctorPrescriptionsData | null>(null);
+  const [notes, setNotes] = useState<api.DoctorNoteEntry[]>([]);
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
     Number.isFinite(requestedPatientId) && requestedPatientId > 0
       ? requestedPatientId
       : null,
   );
-  const [diagnosis, setDiagnosis] = useState("");
-  const [medications, setMedications] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [validDays, setValidDays] = useState("30");
+  const [subjective, setSubjective] = useState("");
+  const [objective, setObjective] = useState("");
+  const [assessment, setAssessment] = useState("");
+  const [planText, setPlanText] = useState("");
 
   useEffect(() => {
     void loadScreen();
@@ -77,15 +79,15 @@ export default function DoctorPrescriptionsScreen() {
 
       setError("");
 
-      const [patientsResponse, prescriptionsResponse] = await Promise.all([
+      const [patientsResponse, notesResponse] = await Promise.all([
         api.getDoctorPatients(),
-        api.getDoctorPrescriptions(),
+        api.getDoctorNotes(),
       ]);
 
       setPatients(patientsResponse.data || []);
-      setData(prescriptionsResponse);
+      setNotes(notesResponse.data || []);
     } catch (e: any) {
-      setError(e?.message || "No se pudieron cargar las recetas.");
+      setError(e?.message || "No se pudieron cargar las notas.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -114,11 +116,13 @@ export default function DoctorPrescriptionsScreen() {
       return;
     }
 
-    if (!diagnosis.trim() || !medications.trim()) {
-      Alert.alert(
-        "Datos incompletos",
-        "Diagnostico y medicamentos son obligatorios.",
-      );
+    if (
+      !subjective.trim() &&
+      !objective.trim() &&
+      !assessment.trim() &&
+      !planText.trim()
+    ) {
+      Alert.alert("Nota vacia", "Escribe al menos un dato clinico.");
       return;
     }
 
@@ -127,22 +131,22 @@ export default function DoctorPrescriptionsScreen() {
       setError("");
       setSuccess("");
 
-      await api.createDoctorPrescription({
+      await api.createDoctorNote({
         patient_id: selectedPatientId,
-        diagnosis: diagnosis.trim(),
-        medications: medications.trim(),
-        instructions: instructions.trim() || undefined,
-        valid_days: Math.max(1, Number(validDays) || 30),
+        subjective: subjective.trim() || undefined,
+        objective: objective.trim() || undefined,
+        assessment: assessment.trim() || undefined,
+        plan_text: planText.trim() || undefined,
       });
 
-      setDiagnosis("");
-      setMedications("");
-      setInstructions("");
-      setValidDays("30");
-      setSuccess("Receta guardada correctamente.");
+      setSubjective("");
+      setObjective("");
+      setAssessment("");
+      setPlanText("");
+      setSuccess("Nota guardada correctamente.");
       await loadScreen();
     } catch (e: any) {
-      setError(e?.message || "No se pudo guardar la receta.");
+      setError(e?.message || "No se pudo guardar la nota.");
     } finally {
       setSaving(false);
     }
@@ -172,17 +176,17 @@ export default function DoctorPrescriptionsScreen() {
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={22} color={MC.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Recetas</Text>
+          <Text style={styles.headerTitle}>Notas clinicas</Text>
           <Pressable onPress={() => loadScreen(true)} hitSlop={10}>
             <Icon name="arrow-clockwise" size={20} color={MC.primary} />
           </Pressable>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Emite una receta desde aqui</Text>
+          <Text style={styles.heroTitle}>Crea una nota sin salir de aqui</Text>
           <Text style={styles.heroText}>
-            Selecciona al paciente, captura diagnostico e indicaciones, y queda
-            lista en su historial.
+            Elige al paciente, guarda la nota y abre su ficha solo si necesitas
+            revisar algo mas.
           </Text>
         </View>
 
@@ -200,7 +204,7 @@ export default function DoctorPrescriptionsScreen() {
             onSelectPatient={setSelectedPatientId}
             search={patientSearch}
             onChangeSearch={setPatientSearch}
-            subtitle="Pacientes vinculados listos para receta."
+            subtitle="Pacientes vinculados para notas y seguimiento."
           />
 
           {selectedPatient ? (
@@ -225,31 +229,32 @@ export default function DoctorPrescriptionsScreen() {
           ) : null}
 
           <Field
-            label="Diagnostico"
-            placeholder="Escribe el diagnostico principal."
-            value={diagnosis}
-            onChangeText={setDiagnosis}
-          />
-          <Field
-            label="Medicamentos"
-            placeholder="Medicamento, dosis y frecuencia."
-            value={medications}
-            onChangeText={setMedications}
+            label="Subjetivo"
+            placeholder="Sintomas, motivo y lo que refiere el paciente."
+            value={subjective}
+            onChangeText={setSubjective}
             multiline
           />
           <Field
-            label="Indicaciones"
-            placeholder="Duracion, cuidados o recomendaciones."
-            value={instructions}
-            onChangeText={setInstructions}
+            label="Objetivo"
+            placeholder="Signos, exploracion o hallazgos importantes."
+            value={objective}
+            onChangeText={setObjective}
             multiline
           />
           <Field
-            label="Vigencia en dias"
-            placeholder="30"
-            value={validDays}
-            onChangeText={setValidDays}
-            keyboardType="numeric"
+            label="Valoracion"
+            placeholder="Diagnostico o impresion clinica."
+            value={assessment}
+            onChangeText={setAssessment}
+            multiline
+          />
+          <Field
+            label="Plan"
+            placeholder="Estudios, tratamiento, seguimiento o recomendaciones."
+            value={planText}
+            onChangeText={setPlanText}
+            multiline
           />
 
           <Pressable
@@ -262,58 +267,60 @@ export default function DoctorPrescriptionsScreen() {
             ) : (
               <>
                 <Icon name="check" size={16} color={MC.white} />
-                <Text style={styles.primaryButtonText}>Guardar receta</Text>
+                <Text style={styles.primaryButtonText}>Guardar nota</Text>
               </>
             )}
           </Pressable>
         </View>
 
         <SectionHeader
-          title="Recetas recientes"
-          subtitle={`${data?.summary.total ?? 0} registradas`}
+          title="Notas recientes"
+          subtitle={`${notes.length} notas registradas`}
         />
 
-        {data?.data.length ? (
-          data.data.map((item) => (
-            <View key={item.id} style={styles.listCard}>
+        {notes.length ? (
+          notes.map((note) => (
+            <View key={note.id} style={styles.listCard}>
               <View style={styles.listTop}>
                 <View style={styles.listBadge}>
                   <Text style={styles.listBadgeText}>
-                    {item.status === "active" ? "Activa" : item.status || "Receta"}
+                    {note.appointment_id ? "Con cita" : "Nota directa"}
                   </Text>
                 </View>
                 <Text style={styles.listDate}>
-                  {formatDate(item.issued_date || item.appt_date)}
+                  {formatDate(note.scheduled_at || note.created_at)}
                 </Text>
               </View>
 
-              <Text style={styles.listPatient}>{item.patient_name || "Paciente"}</Text>
-              <Text style={styles.listTitle}>
-                {item.diagnosis || "Receta sin diagnostico"}
-              </Text>
-              <Text style={styles.listText}>
-                {truncate(item.medications, 180) || "Sin medicamentos registrados."}
-              </Text>
-              {item.instructions ? (
-                <Text style={styles.listPlan}>{truncate(item.instructions, 160)}</Text>
+              <Text style={styles.listPatient}>{note.patient_name || "Paciente"}</Text>
+              {note.assessment ? (
+                <Text style={styles.listTitle}>{truncate(note.assessment, 120)}</Text>
+              ) : null}
+              {note.subjective ? (
+                <Text style={styles.listText}>
+                  {truncate(note.subjective, note.assessment ? 120 : 180)}
+                </Text>
+              ) : null}
+              {note.plan_text ? (
+                <Text style={styles.listPlan}>{truncate(note.plan_text, 150)}</Text>
               ) : null}
 
               <View style={styles.inlineActions}>
-                {item.patient_id ? (
+                {note.patient_id ? (
                   <ActionButton
                     icon="user-circle"
                     label="Paciente"
                     onPress={() =>
-                      router.push(`/doctor/patients/${item.patient_id}` as any)
+                      router.push(`/doctor/patients/${note.patient_id}` as any)
                     }
                   />
                 ) : null}
-                {item.appointment_id ? (
+                {note.appointment_id ? (
                   <ActionButton
                     icon="calendar"
                     label="Cita"
                     onPress={() =>
-                      router.push(`/doctor/appointments/${item.appointment_id}` as any)
+                      router.push(`/doctor/appointments/${note.appointment_id}` as any)
                     }
                   />
                 ) : null}
@@ -322,9 +329,9 @@ export default function DoctorPrescriptionsScreen() {
           ))
         ) : (
           <EmptyCard
-            icon="pill"
-            title="Todavia no hay recetas"
-            text="La primera receta que guardes aparecera aqui con acceso rapido al paciente."
+            icon="clipboard-text"
+            title="Todavia no hay notas"
+            text="La primera nota que guardes aparecera aqui con acceso rapido al paciente."
           />
         )}
       </ScrollView>
@@ -353,14 +360,12 @@ function Field({
   value,
   onChangeText,
   multiline = false,
-  keyboardType,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChangeText: (value: string) => void;
   multiline?: boolean;
-  keyboardType?: "default" | "numeric";
 }) {
   return (
     <View style={styles.field}>
@@ -372,7 +377,6 @@ function Field({
         placeholderTextColor={MC.textMuted}
         style={[styles.input, multiline && styles.inputMultiline]}
         multiline={multiline}
-        keyboardType={keyboardType}
         textAlignVertical={multiline ? "top" : "center"}
       />
     </View>
@@ -450,7 +454,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#EAF8F5",
+    backgroundColor: "#EEF8F6",
     borderWidth: 1,
     borderColor: "#CBEAE5",
     padding: 18,
@@ -548,7 +552,7 @@ const styles = StyleSheet.create({
   },
   listDate: { fontSize: 12, color: MC.textMuted },
   listPatient: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
-  listTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
+  listTitle: { fontSize: 14, fontWeight: "600", color: MC.textPrimary },
   listText: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
   listPlan: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
   emptyCard: {

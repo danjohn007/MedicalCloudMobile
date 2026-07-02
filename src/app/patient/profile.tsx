@@ -1,4 +1,5 @@
 import { Icon } from "@/components/Icon";
+import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import * as ImagePicker from "expo-image-picker";
@@ -40,6 +41,9 @@ export default function PatientProfileScreen() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [stateProv, setStateProv] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [accessCode, setAccessCode] = useState("");
   const [emergencyName, setEmergencyName] = useState("");
   const [emergencyPhone, setEmergencyPhone] = useState("");
 
@@ -63,6 +67,9 @@ export default function PatientProfileScreen() {
       setAddress(p.address ?? "");
       setCity(p.city ?? "");
       setStateProv(p.state ?? "");
+      setLat(typeof p.lat === "number" ? p.lat : null);
+      setLng(typeof p.lng === "number" ? p.lng : null);
+      setAccessCode((p as any).doctor_access_code ?? "");
       setEmergencyName((p as any).emergency_contact_name ?? "");
       setEmergencyPhone((p as any).emergency_contact_phone ?? "");
     } catch (e: any) {
@@ -93,6 +100,8 @@ export default function PatientProfileScreen() {
         address: address || undefined,
         city: city || undefined,
         state: stateProv || undefined,
+        lat,
+        lng,
         emergency_contact_name: emergencyName || undefined,
         emergency_contact_phone: emergencyPhone || undefined,
       });
@@ -352,30 +361,37 @@ export default function PatientProfileScreen() {
           </Card>
 
           <Card
+            icon="shield-check"
+            title="Codigo personal"
+            sub="Compartelo solo con doctores que deban ver tu expediente"
+          >
+            <Banner text="Los doctores independientes necesitan este codigo o una relacion previa para ver tu expediente completo." />
+            <View style={s.codeCard}>
+              <Text style={s.codeLabel}>CODIGO DE ACCESO</Text>
+              <Text style={s.codeValue}>{accessCode || "Pendiente"}</Text>
+              <Text style={s.codeHint}>
+                Si tu ubicacion en tiempo real falla, esta direccion guardada tambien se usa como respaldo para buscar doctores cercanos.
+              </Text>
+            </View>
+          </Card>
+
+          <Card
             icon="map-pin"
             title="Dirección"
-            sub="Tu ubicación para visitas y referencias"
+            sub="Tu ubicación para visitas, referencias y búsqueda cercana"
           >
-            <Lbl t="CALLE Y NÚMERO" />
-            <Input
-              v={address}
-              onChangeText={setAddress}
-              ph="Av. Insurgentes Sur 1234"
+            <LocationPicker
+              title="Ubicacion guardada"
+              subtitle="Busca tu direccion, usa tu ubicacion actual o toca el mapa para guardarla."
+              value={{ address, city, state: stateProv, lat, lng }}
+              onChange={(next) => {
+                setAddress(next.address);
+                setCity(next.city);
+                setStateProv(next.state);
+                setLat(next.lat);
+                setLng(next.lng);
+              }}
             />
-            <Row>
-              <Col>
-                <Lbl t="CIUDAD" />
-                <Input v={city} onChangeText={setCity} ph="Querétaro" />
-              </Col>
-              <Col>
-                <Lbl t="ESTADO / PROVINCIA" />
-                <Input
-                  v={stateProv}
-                  onChangeText={setStateProv}
-                  ph="Querétaro"
-                />
-              </Col>
-            </Row>
           </Card>
 
           <Card
@@ -612,6 +628,25 @@ const s = StyleSheet.create({
   },
   secTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
   secSub: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
+  codeCard: {
+    borderRadius: 16,
+    backgroundColor: "#0F172A",
+    padding: 16,
+    gap: 8,
+  },
+  codeLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.8,
+  },
+  codeValue: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#F8FAFC",
+    letterSpacing: 2,
+  },
+  codeHint: { fontSize: 12, lineHeight: 18, color: "#CBD5E1" },
   lbl: {
     fontSize: 11,
     fontWeight: "700",

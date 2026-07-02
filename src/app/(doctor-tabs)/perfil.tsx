@@ -13,14 +13,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
-import {
-  DOCTOR_APPOINTMENT_MODULES,
-  DOCTOR_PROFILE_MODULES,
-} from "@/constants/doctor-workspace";
 import * as api from "@/services/api";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function DoctorProfileScreen() {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState<api.DoctorDashboardData | null>(null);
@@ -54,6 +52,11 @@ export default function DoctorProfileScreen() {
     };
   }, []);
 
+  async function handleLogout() {
+    await logout();
+    router.replace("/(auth)/login");
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingWrap} edges={["top"]}>
@@ -78,7 +81,9 @@ export default function DoctorProfileScreen() {
             )}
           </View>
           <Text style={styles.heroTitle}>{name}</Text>
-          <Text style={styles.heroSubtitle}>{doctor?.specialty || "Especialidad pendiente"}</Text>
+          <Text style={styles.heroSubtitle}>
+            {doctor?.specialty || "Especialidad pendiente"}
+          </Text>
           {doctor?.email ? <Text style={styles.heroMeta}>{doctor.email}</Text> : null}
         </View>
 
@@ -90,81 +95,95 @@ export default function DoctorProfileScreen() {
         ) : null}
 
         <View style={styles.metricsRow}>
-          <MetricCard icon="star" label="Rating" value={`${(stats?.avg_rating ?? 0).toFixed(1)}`} />
-          <MetricCard icon="wallet" label="Mes" value={formatMoney(stats?.month_revenue ?? 0)} />
-          <MetricCard icon="calendar" label="Semana" value={String(stats?.week_appts ?? 0)} />
+          <MetricCard
+            icon="star"
+            label="Calificacion"
+            value={`${(stats?.avg_rating ?? 0).toFixed(1)}`}
+          />
+          <MetricCard
+            icon="wallet"
+            label="Mes"
+            value={formatMoney(stats?.month_revenue ?? 0)}
+          />
+          <MetricCard
+            icon="calendar"
+            label="Semana"
+            value={String(stats?.week_appts ?? 0)}
+          />
         </View>
 
-        <Section title="Accesos directos">
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tu espacio de trabajo</Text>
           <View style={styles.shortcutsGrid}>
             <ShortcutCard
               icon="calendar"
               title="Agenda"
-              summary="Abrir citas, estados y consulta activa."
+              summary="Citas, estados y consulta activa."
               onPress={() => router.push("/(doctor-tabs)/citas" as any)}
             />
             <ShortcutCard
               icon="user-circle"
               title="Pacientes"
-              summary="Entrar a snapshot, historial y recetas."
+              summary="Abrir fichas y expedientes."
               onPress={() => router.push("/(doctor-tabs)/pacientes" as any)}
+            />
+            <ShortcutCard
+              icon="clipboard-text"
+              title="Notas"
+              summary="Crear y revisar notas clinicas."
+              onPress={() => router.push("/doctor/notes" as any)}
+            />
+            <ShortcutCard
+              icon="list"
+              title="Plantillas"
+              summary="Biblioteca reusable para SOAP y planes."
+              onPress={() => router.push("/doctor/consultation-templates" as any)}
             />
             <ShortcutCard
               icon="pill"
               title="Recetas"
-              summary="Ver el historial de recetas emitidas."
+              summary="Emitir y revisar recetas."
               onPress={() => router.push("/doctor/prescriptions" as any)}
+            />
+            <ShortcutCard
+              icon="file"
+              title="Documentos"
+              summary="Abrir archivos por paciente."
+              onPress={() => router.push("/doctor/documents" as any)}
+            />
+            <ShortcutCard
+              icon="clock"
+              title="Horarios"
+              summary="Configurar disponibilidad."
+              onPress={() => router.push("/doctor/availability" as any)}
+            />
+            <ShortcutCard
+              icon="gear"
+              title="Perfil"
+              summary="Tarifas, direccion y datos base."
+              onPress={() => router.push("/doctor/settings" as any)}
             />
             <ShortcutCard
               icon="wallet"
               title="Finanzas"
-              summary="Revisar cobros y movimientos del doctor."
+              summary="Cobros e historial."
               onPress={() => router.push("/doctor/finanzas" as any)}
             />
-          </View>
-        </Section>
-
-        <Section title="Operacion disponible">
-          {DOCTOR_APPOINTMENT_MODULES.map((module) => (
-            <ModuleCard key={module.id} icon={module.icon} title={module.title} summary={module.summary} tone="brand" />
-          ))}
-        </Section>
-
-        <Section title="Siguiente bloque">
-          {DOCTOR_PROFILE_MODULES.map((module) => (
-            <ModuleCard
-              key={module.id}
-              icon={module.icon}
-              title={module.title}
-              summary={module.summary}
-              tone={module.status === "mobile-shell" ? "success" : "neutral"}
+            <ShortcutCard
+              icon="chat-circle-dots"
+              title="Soporte"
+              summary="Tickets y seguimiento con el equipo."
+              onPress={() => router.push("/soporte" as any)}
             />
-          ))}
-        </Section>
-
-        <View style={styles.roadmapCard}>
-          <Text style={styles.roadmapTitle}>Paridad que sigue pendiente</Text>
-          <Text style={styles.roadmapText}>
-            Ya quedo abierta la base para recetas y finanzas. El siguiente bloque grande contra web es disponibilidad con overrides, expediente completo con documentos, asistentes y firma o autosave de notas.
-          </Text>
+          </View>
         </View>
+
+        <Pressable style={styles.logoutButton} onPress={() => void handleLogout()}>
+          <Icon name="sign-out" size={18} color={MC.error} />
+          <Text style={styles.logoutText}>Cerrar sesion</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
   );
 }
 
@@ -184,41 +203,6 @@ function MetricCard({
       </View>
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function ModuleCard({
-  icon,
-  title,
-  summary,
-  tone,
-}: {
-  icon: IconName;
-  title: string;
-  summary: string;
-  tone: "brand" | "success" | "neutral";
-}) {
-  const tones = {
-    brand: { bg: MC.primaryLight, iconBg: MC.white, iconFg: MC.primaryDark, badge: "Disponible" },
-    success: { bg: "#ECFDF5", iconBg: "#FFFFFFCC", iconFg: "#047857", badge: "Base lista" },
-    neutral: { bg: MC.surface, iconBg: MC.white, iconFg: MC.textPrimary, badge: "En progreso" },
-  }[tone];
-
-  return (
-    <View style={[styles.moduleCard, { backgroundColor: tones.bg }]}>
-      <View style={[styles.moduleIcon, { backgroundColor: tones.iconBg }]}>
-        <Icon name={icon} size={18} color={tones.iconFg} />
-      </View>
-      <View style={styles.moduleBody}>
-        <View style={styles.moduleTitleRow}>
-          <Text style={styles.moduleTitle}>{title}</Text>
-          <View style={styles.moduleBadge}>
-            <Text style={styles.moduleBadgeText}>{tones.badge}</Text>
-          </View>
-        </View>
-        <Text style={styles.moduleSummary}>{summary}</Text>
-      </View>
     </View>
   );
 }
@@ -274,18 +258,21 @@ const styles = StyleSheet.create({
   heroAvatar: {
     width: 82,
     height: 82,
-    borderRadius: 28,
+    borderRadius: 41,
     backgroundColor: MC.white,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    marginBottom: 6,
   },
   heroAvatarImage: { width: "100%", height: "100%" },
-  heroAvatarText: { fontSize: 30, fontWeight: "700", color: MC.primaryDark },
+  heroAvatarText: {
+    fontSize: 34,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
   heroTitle: { fontSize: 24, fontWeight: "700", color: MC.textPrimary },
-  heroSubtitle: { fontSize: 14, color: MC.textSecondary },
-  heroMeta: { fontSize: 12, color: MC.textMuted },
+  heroSubtitle: { fontSize: 15, color: MC.textSecondary },
+  heroMeta: { fontSize: 13, color: MC.textMuted },
   errorBox: {
     borderRadius: 14,
     backgroundColor: "#FEE2E2",
@@ -294,83 +281,60 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
-  errorText: { flex: 1, color: MC.error, fontSize: 13 },
-  metricsRow: { flexDirection: "row", gap: 10 },
-  shortcutsGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  shortcutCard: {
-    width: "48%",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: MC.border,
-    backgroundColor: MC.white,
-    padding: 14,
-    gap: 8,
-  },
-  shortcutIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: MC.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shortcutTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
-  shortcutSummary: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
+  errorText: { flex: 1, fontSize: 13, color: MC.error },
+  metricsRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   metricCard: {
     flex: 1,
+    minWidth: 100,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
     backgroundColor: MC.white,
     padding: 14,
-    gap: 4,
+    gap: 6,
   },
   metricIcon: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 12,
     backgroundColor: MC.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  metricValue: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
+  metricValue: { fontSize: 20, fontWeight: "700", color: MC.textPrimary },
   metricLabel: { fontSize: 12, color: MC.textSecondary },
-  section: { gap: 10 },
+  section: { gap: 12 },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
-  sectionBody: { gap: 10 },
-  moduleCard: {
-    borderRadius: 20,
-    padding: 14,
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  moduleIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moduleBody: { flex: 1, gap: 6 },
-  moduleTitleRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  moduleTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: MC.textPrimary },
-  moduleBadge: {
-    borderRadius: 999,
-    backgroundColor: "#FFFFFFCC",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  moduleBadgeText: { fontSize: 11, fontWeight: "700", color: MC.textSecondary },
-  moduleSummary: { fontSize: 13, lineHeight: 19, color: MC.textSecondary },
-  roadmapCard: {
+  shortcutsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  shortcutCard: {
+    width: "48%",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
     backgroundColor: MC.white,
     padding: 16,
-    gap: 8,
+    gap: 10,
   },
-  roadmapTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
-  roadmapText: { fontSize: 13, lineHeight: 19, color: MC.textSecondary },
+  shortcutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: MC.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shortcutTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
+  shortcutSummary: { fontSize: 13, lineHeight: 19, color: MC.textSecondary },
+  logoutButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  logoutText: { fontSize: 15, fontWeight: "700", color: MC.error },
 });

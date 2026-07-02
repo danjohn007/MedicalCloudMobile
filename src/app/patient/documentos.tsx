@@ -2,15 +2,15 @@ import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,10 +27,10 @@ export default function DocumentosScreen() {
 
   const grouped = useMemo(() => {
     const map: Record<string, api.PatientDocument[]> = {};
-    for (const d of docs) {
-      const key = d.document_type || "other";
+    for (const doc of docs) {
+      const key = doc.document_type || "other";
       if (!map[key]) map[key] = [];
-      map[key].push(d);
+      map[key].push(doc);
     }
     return map;
   }, [docs]);
@@ -41,7 +41,7 @@ export default function DocumentosScreen() {
       const res = await api.getDocuments();
       setDocs(res.data || []);
     } catch (e: any) {
-      setError(e?.message || "No se pudieron cargar los documentos");
+      setError(e?.message || "No se pudieron cargar los documentos.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -49,16 +49,16 @@ export default function DocumentosScreen() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
-  const onRefresh = () => {
+  function onRefresh() {
     setRefreshing(true);
-    load();
-  };
+    void load();
+  }
 
-  const onDelete = (doc: api.PatientDocument) => {
-    Alert.alert("Eliminar documento", `¿Deseas eliminar "${doc.title}"?`, [
+  function onDelete(doc: api.PatientDocument) {
+    Alert.alert("Eliminar documento", `Deseas eliminar "${doc.title}"?`, [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Eliminar",
@@ -66,35 +66,37 @@ export default function DocumentosScreen() {
         onPress: async () => {
           try {
             await api.deleteDocument(doc.id);
-            setDocs((prev) => prev.filter((d) => d.id !== doc.id));
+            setDocs((current) => current.filter((item) => item.id !== doc.id));
           } catch (e: any) {
             Alert.alert(
               "Error",
-              e?.message || "No se pudo eliminar el documento",
+              e?.message || "No se pudo eliminar el documento.",
             );
           }
         },
       },
     ]);
-  };
+  }
 
-  const onOpen = async (doc: api.PatientDocument) => {
+  async function onOpen(doc: api.PatientDocument) {
     if (!doc.file_url) {
       Alert.alert("Documento", "Este documento no tiene URL disponible.");
       return;
     }
-    const can = await Linking.canOpenURL(doc.file_url);
-    if (!can) {
+
+    const canOpen = await Linking.canOpenURL(doc.file_url);
+    if (!canOpen) {
       Alert.alert(
         "Documento",
         "No se pudo abrir el archivo en este dispositivo.",
       );
       return;
     }
-    await Linking.openURL(doc.file_url);
-  };
 
-  const onUpload = async () => {
+    await Linking.openURL(doc.file_url);
+  }
+
+  async function onUpload() {
     try {
       const picked = await DocumentPicker.getDocumentAsync({
         type: ["application/pdf", "image/*"],
@@ -114,46 +116,46 @@ export default function DocumentosScreen() {
           ? "application/pdf"
           : "image/jpeg");
 
-      const res = await api.uploadDocument({
+      const response = await api.uploadDocument({
         uri: file.uri,
         name,
         type: mime,
         title: name,
-        document_type: mime.includes("pdf") ? "study" : "image",
+        document_type: mime.includes("pdf") ? "study" : "imaging",
       });
 
-      setDocs((prev) => [res.document, ...prev]);
+      setDocs((current) => [response.document, ...current]);
     } catch (e: any) {
-      Alert.alert("Error", e?.message || "No se pudo subir el documento");
+      Alert.alert("Error", e?.message || "No se pudo subir el documento.");
     }
-  };
+  }
 
   return (
-    <SafeAreaView style={s.ct} edges={["top"]}>
-      <View style={s.hdr}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Icon name="arrow-left" size={22} color={MC.textPrimary} />
         </Pressable>
-        <Text style={s.hdrTitle}>Mis Documentos</Text>
+        <Text style={styles.headerTitle}>Mis documentos</Text>
         <Pressable onPress={onRefresh} hitSlop={10}>
           <Icon name="arrow-clockwise" size={20} color={MC.primary} />
         </Pressable>
       </View>
 
-      <View style={s.topActions}>
-        <Pressable style={s.uploadBtn} onPress={onUpload}>
+      <View style={styles.topActions}>
+        <Pressable style={styles.uploadButton} onPress={() => void onUpload()}>
           <Icon name="plus" size={16} color={MC.white} />
-          <Text style={s.uploadTxt}>Subir documento</Text>
+          <Text style={styles.uploadText}>Subir documento</Text>
         </Pressable>
       </View>
 
       {loading ? (
-        <View style={s.center}>
+        <View style={styles.center}>
           <ActivityIndicator color={MC.primary} size="large" />
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={s.scrollCt}
+          contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -163,40 +165,44 @@ export default function DocumentosScreen() {
           }
         >
           {error ? (
-            <View style={s.errBox}>
+            <View style={styles.errorBox}>
               <Icon name="warning" size={16} color={MC.error} />
-              <Text style={s.errTxt}>{error}</Text>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
           {docs.length === 0 ? (
-            <View style={s.empty}>
+            <View style={styles.empty}>
               <Icon name="file" size={34} color={MC.textMuted} />
-              <Text style={s.emptyTitle}>Sin documentos por ahora</Text>
-              <Text style={s.emptySub}>
-                En el siguiente bloque te activo también carga directa desde
-                móvil.
+              <Text style={styles.emptyTitle}>Sin documentos por ahora</Text>
+              <Text style={styles.emptyText}>
+                Puedes subir estudios, recetas y archivos clinicos desde esta
+                misma pantalla.
               </Text>
             </View>
           ) : (
             Object.entries(grouped).map(([type, items]) => (
-              <View key={type} style={s.sec}>
-                <Text style={s.secTitle}>{type.toUpperCase()}</Text>
+              <View key={type} style={styles.section}>
+                <Text style={styles.sectionTitle}>{formatDocumentType(type)}</Text>
                 {items.map((doc) => (
-                  <View key={doc.id} style={s.card}>
-                    <Pressable style={{ flex: 1 }} onPress={() => onOpen(doc)}>
-                      <Text style={s.title}>{doc.title}</Text>
-                      <Text style={s.meta}>
-                        {(doc.file_mime || "archivo").toUpperCase()} ·{" "}
+                  <View key={doc.id} style={styles.card}>
+                    <Pressable style={styles.cardBody} onPress={() => void onOpen(doc)}>
+                      <Text style={styles.title}>{doc.title}</Text>
+                      <Text style={styles.meta}>
+                        {(doc.file_mime || "archivo").toUpperCase()} |{" "}
                         {doc.file_size_kb} KB
                       </Text>
                       {doc.created_at ? (
-                        <Text style={s.meta}>
+                        <Text style={styles.meta}>
                           Subido: {String(doc.created_at).slice(0, 10)}
                         </Text>
                       ) : null}
                     </Pressable>
-                    <Pressable onPress={() => onDelete(doc)} style={s.delBtn}>
+
+                    <Pressable
+                      onPress={() => onDelete(doc)}
+                      style={styles.deleteButton}
+                    >
                       <Icon name="trash" size={16} color={MC.error} />
                     </Pressable>
                   </View>
@@ -210,9 +216,28 @@ export default function DocumentosScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: MC.background },
-  hdr: {
+function formatDocumentType(type: string) {
+  switch ((type || "").toLowerCase()) {
+    case "lab_result":
+      return "Laboratorio";
+    case "imaging":
+      return "Imagenologia";
+    case "study":
+      return "Estudios";
+    case "prescription":
+      return "Recetas";
+    case "referral":
+      return "Referencias";
+    case "consent":
+      return "Consentimientos";
+    default:
+      return "Otros documentos";
+  }
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: MC.background },
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -221,74 +246,76 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: MC.border,
   },
-  hdrTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   topActions: { paddingHorizontal: 16, paddingTop: 10 },
-  uploadBtn: {
+  uploadButton: {
     backgroundColor: MC.primary,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  uploadTxt: { color: MC.white, fontSize: 13, fontWeight: "700" },
+  uploadText: { color: MC.white, fontSize: 13, fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scrollCt: { padding: 16, paddingBottom: 36 },
-  errBox: {
+  content: { padding: 16, paddingBottom: 36, gap: 14 },
+  errorBox: {
     backgroundColor: "#FEE2E2",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
   },
-  errTxt: { color: MC.error, fontSize: 13, flex: 1 },
+  errorText: { color: MC.error, fontSize: 13, flex: 1 },
   empty: {
     borderWidth: 1,
     borderColor: MC.border,
-    borderRadius: 14,
-    padding: 20,
+    borderRadius: 18,
+    padding: 22,
     alignItems: "center",
+    gap: 8,
     marginTop: 10,
+    backgroundColor: MC.white,
   },
   emptyTitle: {
-    marginTop: 8,
     fontSize: 16,
     fontWeight: "700",
     color: MC.textPrimary,
   },
-  emptySub: {
-    marginTop: 6,
-    fontSize: 12,
-    color: MC.textMuted,
+  emptyText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: MC.textSecondary,
     textAlign: "center",
   },
-  sec: { marginTop: 14, gap: 8 },
-  secTitle: {
-    fontSize: 12,
+  section: { gap: 10 },
+  sectionTitle: {
+    fontSize: 15,
     fontWeight: "700",
-    color: MC.textSecondary,
-    letterSpacing: 0.6,
+    color: MC.textPrimary,
   },
   card: {
-    borderWidth: 1,
-    borderColor: MC.border,
-    borderRadius: 12,
-    padding: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 16,
+    backgroundColor: MC.white,
+    padding: 14,
   },
+  cardBody: { flex: 1, gap: 4 },
   title: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
-  meta: { marginTop: 2, fontSize: 12, color: MC.textMuted },
-  delBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+  meta: { fontSize: 12, color: MC.textSecondary },
+  deleteButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FEE2E2",
   },
 });

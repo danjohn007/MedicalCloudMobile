@@ -159,7 +159,7 @@ export default function PagoScreen() {
         setPaymentInfo(null);
         if (isMissingMobilePaymentInfo(err)) {
           setError(
-            "La app ya puede abrir el flujo nuevo de pago, pero MedicalUniverse aun no expone /api/mobile/appointments/:id/payment-info. PayPal seguira funcionando con el endpoint movil actual y Stripe requiere esa ampliacion del backend.",
+            "No se pudo cargar la configuracion de pago de esta cita. Intenta de nuevo en unos segundos.",
           );
           return;
         }
@@ -407,7 +407,7 @@ export default function PagoScreen() {
                     </StripeProvider>
                   ) : (
                     <InfoNotice kind="warning">
-                      La vista ya esta lista para Stripe, pero MedicalUniverse aun no expone la clave publishable ni el endpoint movil equivalente a la web para esta cita.
+                      Stripe no esta disponible para esta cita porque faltan datos de configuracion de pago.
                     </InfoNotice>
                   )
                 ) : (
@@ -431,7 +431,7 @@ export default function PagoScreen() {
                   <View style={styles.paypalPanel}>
                     <Text style={styles.paypalBody}>
                       Abriremos PayPal en un navegador seguro para completar la autorizacion.
-                      Con el backend actual esta es la opcion correcta frente a usar un WebView embebido.
+                      Cuando el pago se apruebe volveras a la app para validar la cita.
                     </Text>
                     <Pressable
                       style={[styles.primaryPayButton, step !== "idle" && styles.buttonDisabled]}
@@ -833,7 +833,7 @@ function isMissingMobilePaymentInfo(error: unknown) {
 function buildStripeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
   if (message.includes("HTTP 404") || message.includes("Status: 404")) {
-    return "Stripe aun no esta expuesto en la API movil. Falta habilitar en MedicalUniverse un endpoint JWT como /api/mobile/appointments/:id/stripe/create-intent para igualar el flujo web.";
+    return "No se pudo iniciar el pago con Stripe para esta cita.";
   }
   return message || "No se pudo procesar el pago con Stripe.";
 }

@@ -159,6 +159,13 @@ export default function DoctorHomeScreen() {
             onPress={() => router.push("/(doctor-tabs)/citas" as any)}
           />
           <QuickAction
+            icon="gear"
+            label="Config"
+            toneBg="#F5F3FF"
+            toneFg="#7C3AED"
+            onPress={() => router.push("/doctor/settings" as any)}
+          />
+          <QuickAction
             icon="user-circle"
             label="Pacientes"
             toneBg="#ECFDF5"
@@ -166,11 +173,39 @@ export default function DoctorHomeScreen() {
             onPress={() => router.push("/(doctor-tabs)/pacientes" as any)}
           />
           <QuickAction
+            icon="clipboard-text"
+            label="Notas"
+            toneBg="#E0F2FE"
+            toneFg="#075985"
+            onPress={() => router.push("/doctor/notes" as any)}
+          />
+          <QuickAction
+            icon="list"
+            label="Plantillas"
+            toneBg="#F5F3FF"
+            toneFg="#7C3AED"
+            onPress={() => router.push("/doctor/consultation-templates" as any)}
+          />
+          <QuickAction
             icon="pill"
             label="Recetas"
             toneBg="#F5F3FF"
             toneFg="#7C3AED"
             onPress={() => router.push("/doctor/prescriptions" as any)}
+          />
+          <QuickAction
+            icon="clock"
+            label="Horarios"
+            toneBg="#F0FDFA"
+            toneFg="#0F766E"
+            onPress={() => router.push("/doctor/availability" as any)}
+          />
+          <QuickAction
+            icon="file"
+            label="Docs"
+            toneBg="#FFF7ED"
+            toneFg="#C2410C"
+            onPress={() => router.push("/doctor/documents" as any)}
           />
           <QuickAction
             icon="wallet"
@@ -270,6 +305,35 @@ export default function DoctorHomeScreen() {
           ) : (
             <EmptyState text="Aun no hay pacientes recientes para mostrar." />
           )}
+        </Section>
+
+        <Section
+          title="Paridad operativa"
+          subtitle="Los huecos grandes contra la web ya quedaron concentrados por modulo."
+        >
+          <View style={styles.parityRow}>
+            <QuickAction
+              icon="clock"
+              label="Disponibilidad"
+              toneBg="#F0FDFA"
+              toneFg="#0F766E"
+              onPress={() => router.push("/doctor/availability" as any)}
+            />
+            <QuickAction
+              icon="clipboard-text"
+              label="Notas"
+              toneBg="#E0F2FE"
+              toneFg="#075985"
+              onPress={() => router.push("/doctor/notes" as any)}
+            />
+            <QuickAction
+              icon="chat-circle-dots"
+              label="Asistentes"
+              toneBg="#FFF7ED"
+              toneFg="#B45309"
+              onPress={() => router.push("/doctor/assistants" as any)}
+            />
+          </View>
         </Section>
       </ScrollView>
     </SafeAreaView>
@@ -541,6 +605,11 @@ const styles = StyleSheet.create({
   liveTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   liveMeta: { fontSize: 12, color: MC.textSecondary },
   quickActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  parityRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,

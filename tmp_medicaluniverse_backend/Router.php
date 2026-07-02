@@ -121,6 +121,11 @@ class Router
         self::addRoute('GET', '/api/mobile/prescriptions'                       , 'MobileApiController@prescriptions');
         self::addRoute('GET', '/api/mobile/soap-notes'                          , 'MobileApiController@soapNotes');
         self::addRoute('GET', '/api/mobile/notifications'                       , 'MobileApiController@notifications');
+        self::addRoute('GET', '/api/mobile/support'                             , 'MobileApiController@supportTickets');
+        self::addRoute('POST', '/api/mobile/support'                            , 'MobileApiController@createSupportTicket');
+        self::addRoute('GET', '/api/mobile/support/:id'                         , 'MobileApiController@supportTicketDetail');
+        self::addRoute('POST', '/api/mobile/support/:id/reply'                  , 'MobileApiController@replySupportTicket');
+        self::addRoute('POST', '/api/mobile/support/:id/close'                  , 'MobileApiController@closeSupportTicket');
         self::addRoute('GET', '/api/mobile/doctor/dashboard'                    , 'MobileApiController@doctorDashboard');
         self::addRoute('POST', '/api/mobile/doctor/appointments'                , 'MobileApiController@doctorCreateAppointment');
         self::addRoute('GET', '/api/mobile/doctor/appointments'                 , 'MobileApiController@doctorAppointments');
@@ -130,10 +135,25 @@ class Router
         self::addRoute('POST', '/api/mobile/doctor/appointments/:id/status'     , 'MobileApiController@doctorAppointmentUpdateStatus');
         self::addRoute('GET', '/api/mobile/doctor/appointments/:id/soap'        , 'MobileApiController@doctorAppointmentSoap');
         self::addRoute('POST', '/api/mobile/doctor/appointments/:id/soap'       , 'MobileApiController@doctorAppointmentSoap');
+        self::addRoute('GET', '/api/mobile/doctor/profile'                      , 'MobileApiController@doctorProfileSettings');
+        self::addRoute('PUT', '/api/mobile/doctor/profile'                      , 'MobileApiController@updateDoctorProfile');
+        self::addRoute('GET', '/api/mobile/doctor/availability'                 , 'MobileApiController@doctorAvailabilitySettings');
+        self::addRoute('PUT', '/api/mobile/doctor/availability'                 , 'MobileApiController@updateDoctorAvailability');
+        self::addRoute('POST', '/api/mobile/doctor/availability/override'       , 'MobileApiController@doctorAvailabilityOverride');
+        self::addRoute('GET', '/api/mobile/doctor/consultation-templates'       , 'MobileApiController@doctorConsultationTemplates');
+        self::addRoute('POST', '/api/mobile/doctor/consultation-templates'      , 'MobileApiController@saveDoctorConsultationTemplate');
+        self::addRoute('POST', '/api/mobile/doctor/consultation-templates/:id/delete', 'MobileApiController@deleteDoctorConsultationTemplate');
         self::addRoute('GET', '/api/mobile/doctor/patients'                     , 'MobileApiController@doctorPatients');
+        self::addRoute('POST', '/api/mobile/doctor/patients/link'               , 'MobileApiController@doctorLinkPatient');
+        self::addRoute('POST', '/api/mobile/doctor/patients/register'           , 'MobileApiController@doctorRegisterPatient');
         self::addRoute('GET', '/api/mobile/doctor/patients/:id/snapshot'        , 'MobileApiController@doctorPatientSnapshot');
         self::addRoute('GET', '/api/mobile/doctor/patients/:id/history'         , 'MobileApiController@doctorPatientHistory');
+        self::addRoute('GET', '/api/mobile/doctor/patients/:id/documents'       , 'MobileApiController@doctorPatientDocuments');
+        self::addRoute('POST', '/api/mobile/doctor/patients/:id/documents/upload', 'MobileApiController@doctorPatientDocumentsUpload');
+        self::addRoute('GET', '/api/mobile/doctor/notes'                        , 'MobileApiController@doctorNotes');
+        self::addRoute('POST', '/api/mobile/doctor/notes'                       , 'MobileApiController@doctorCreateNote');
         self::addRoute('GET', '/api/mobile/doctor/prescriptions'                , 'MobileApiController@doctorPrescriptions');
+        self::addRoute('POST', '/api/mobile/doctor/prescriptions'               , 'MobileApiController@doctorCreatePrescription');
         self::addRoute('GET', '/api/mobile/doctor/financial-history'            , 'MobileApiController@doctorFinancialHistory');
 
         // ── LANDING (public) ──────────────────────────────────

@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { resolvePatientSearchLocation, type PatientSearchLocation } from "@/services/patient-search-location";
 
 type SpecialtyItem = { name: string; icon: IconName };
 
@@ -75,6 +76,12 @@ function FeeChip({ label, value }: { label: string; value: string }) {
 
 function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => void }) {
   const photoUri = doctor.photo?.trim();
+  const distanceLabel =
+    typeof doctor.distance_meters === "number" && doctor.distance_meters >= 0
+      ? doctor.distance_meters < 1000
+        ? `${Math.round(doctor.distance_meters)} m`
+        : `${(doctor.distance_meters / 1000).toFixed(1)} km`
+      : null;
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -124,6 +131,7 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
           <View style={styles.metaRow}>
             <Icon name="map-pin" size={12} color={MC.textMuted} />
             <Text style={styles.metaText} numberOfLines={1}>
+              {distanceLabel ? `${distanceLabel} · ` : ""}
               {doctor.city}
               {doctor.address ? ` · ${doctor.address}` : ""}
             </Text>
@@ -177,10 +185,16 @@ export default function DoctoresScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [searchLocation, setSearchLocation] = useState<PatientSearchLocation>({ source: "none" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoaded = useRef(false);
 
-  const fetchDoctors = async (p = 1, searchText = search, spec = selSpec) => {
+  const fetchDoctors = async (
+    p = 1,
+    searchText = search,
+    spec = selSpec,
+    location = searchLocation,
+  ) => {
     try {
       setLoading(true);
       setErrorMsg("");
@@ -188,6 +202,8 @@ export default function DoctoresScreen() {
         page: p,
         search: searchText.trim() || undefined,
         specialty: spec === "Todos" ? undefined : spec,
+        lat: location.lat,
+        lng: location.lng,
       });
 
       const data = res.data ?? [];
@@ -209,6 +225,14 @@ export default function DoctoresScreen() {
 
   useEffect(() => {
     let mounted = true;
+
+    void resolvePatientSearchLocation().then((location) => {
+      if (!mounted) return;
+      setSearchLocation(location);
+      if (initialLoaded.current) {
+        void fetchDoctors(1, search, selSpec, location);
+      }
+    });
 
     api
       .getSpecialties()
@@ -333,6 +357,14 @@ export default function DoctoresScreen() {
           <Text style={styles.searchMetaText}>{resultLabel}</Text>
           <View style={styles.searchMetaDivider} />
           <Text style={styles.searchMetaText}>{activeSpecialtyLabel}</Text>
+          {searchLocation.source !== "none" ? (
+            <>
+              <View style={styles.searchMetaDivider} />
+              <Text style={styles.searchMetaText}>
+                {searchLocation.source === "device" ? "Cerca de ti" : "Usando perfil"}
+              </Text>
+            </>
+          ) : null}
         </View>
       </View>
 

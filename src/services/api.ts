@@ -1,5 +1,10 @@
 // ── Storage ──────────────────────────────────────────────
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+
 import { getSecure, removeSecure, setSecure } from "@/services/storage";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const TOKEN_KEY = "mc_jwt_token";
 const USER_KEY = "mc_user";
@@ -35,6 +40,24 @@ export interface AuthUser {
   role: string;
 }
 
+export interface PendingGoogleRegistration {
+  pending_token: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export type GoogleLoginResult =
+  | {
+      status: "authenticated";
+      token: string;
+      user: AuthUser;
+    }
+  | {
+      status: "pending_profile";
+      pending: PendingGoogleRegistration;
+    };
+
 export interface Doctor {
   id: number;
   name: string;
@@ -50,7 +73,15 @@ export interface Doctor {
   telemedicine_fee?: number;
   home_visit_fee?: number;
   address?: string;
+  state?: string;
   duration_minutes?: number;
+  lat?: number | null;
+  lng?: number | null;
+  distance_meters?: number | null;
+  profile_score?: number | null;
+  avatar_url?: string | null;
+  email?: string;
+  cedula?: string | null;
 }
 
 export interface Appointment {
@@ -153,6 +184,9 @@ export interface ProfileData extends AuthUser {
   occupation?: string;
   height_cm?: number;
   weight_kg?: number;
+  lat?: number | null;
+  lng?: number | null;
+  doctor_access_code?: string | null;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
 }
@@ -272,6 +306,30 @@ export interface DoctorPatientSummary {
   emergency_contact_phone?: string | null;
 }
 
+export interface DoctorSettingsResponse {
+  ok?: boolean;
+  data: Doctor;
+}
+
+export interface DoctorLinkPatientResult {
+  ok?: boolean;
+  message: string;
+  patient?: DoctorPatientSummary;
+}
+
+export interface DoctorRegisterPatientPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  gender?: string;
+  birth_date?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  lat?: number | null;
+  lng?: number | null;
+}
+
 export interface DoctorDashboardData {
   ok?: boolean;
   doctor: DoctorDashboardProfile;
@@ -279,6 +337,30 @@ export interface DoctorDashboardData {
   upcoming: DoctorAppointmentItem[];
   today: DoctorAppointmentItem[];
   recent_patients: DoctorPatientSummary[];
+}
+
+export interface DoctorAvailabilityScheduleEntry {
+  day_of_week: number;
+  start_time?: string | null;
+  end_time?: string | null;
+  slot_duration_minutes?: number;
+  is_active?: number;
+  break_start?: string | null;
+  break_end?: string | null;
+}
+
+export interface DoctorAvailabilityOverrideEntry {
+  override_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  is_off?: number;
+  reason?: string | null;
+}
+
+export interface DoctorAvailabilitySettingsData {
+  ok?: boolean;
+  schedule: DoctorAvailabilityScheduleEntry[];
+  overrides: DoctorAvailabilityOverrideEntry[];
 }
 
 export interface DoctorPatientSnapshot {
@@ -327,6 +409,22 @@ export interface DoctorPrescriptionEntry {
   doctor_name?: string | null;
   appt_date?: string | null;
   appt_type?: string | null;
+}
+
+export interface DoctorNoteEntry {
+  id: number;
+  patient_id?: number | null;
+  patient_name?: string | null;
+  patient_avatar_url?: string | null;
+  appointment_id?: number | null;
+  subjective?: string | null;
+  objective?: string | null;
+  assessment?: string | null;
+  plan_text?: string | null;
+  created_at?: string | null;
+  scheduled_at?: string | null;
+  appt_type?: string | null;
+  appt_reason?: string | null;
 }
 
 export interface DoctorSoapEntry {
@@ -399,6 +497,67 @@ export interface DoctorPrescriptionsData {
     linked_to_appointments: number;
   };
   data: DoctorPrescriptionEntry[];
+}
+
+export interface DoctorNotesData {
+  ok?: boolean;
+  data: DoctorNoteEntry[];
+}
+
+export interface DoctorPatientDocumentsData {
+  ok?: boolean;
+  patient?: {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+  } | null;
+  data: PatientDocument[];
+}
+
+export interface DoctorPatientDocumentUploadInput {
+  uri: string;
+  name: string;
+  type: string;
+  title?: string;
+  document_type?: string;
+  notes?: string;
+}
+
+export interface DoctorConsultationTemplate {
+  id: number;
+  label: string;
+  tone: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  diagnosis: string;
+  usage_notes: string;
+  source: "custom" | "default";
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface DoctorConsultationTemplatesData {
+  ok?: boolean;
+  storage_ready?: boolean;
+  data: DoctorConsultationTemplate[];
+  defaults: DoctorConsultationTemplate[];
+  library: DoctorConsultationTemplate[];
+}
+
+export interface DoctorConsultationTemplatePayload {
+  template_id?: number;
+  name: string;
+  color_hex?: string;
+  usage_notes?: string;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+  diagnosis?: string;
+  is_active?: boolean;
+  sort_order?: number;
 }
 
 export interface DoctorFinancialConsultationEntry {
@@ -483,7 +642,48 @@ export interface DoctorAppointmentCompleteResult {
   status: string;
 }
 
+export interface DoctorAvailabilitySavePayload {
+  schedule: {
+    day: number;
+    enabled: boolean;
+    start: string;
+    end: string;
+    duration?: number;
+    break_start?: string | null;
+    break_end?: string | null;
+  }[];
+}
+
+export interface DoctorAvailabilityOverridePayload {
+  date: string;
+  clear?: boolean;
+  is_off?: boolean;
+  start_time?: string;
+  end_time?: string;
+  reason?: string;
+}
+
+export interface DoctorCreateNotePayload {
+  patient_id: number;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan_text?: string;
+}
+
+export interface DoctorCreatePrescriptionPayload {
+  patient_id: number;
+  diagnosis: string;
+  medications: string;
+  instructions?: string;
+  valid_days?: number;
+}
+
 const API_BASE = "https://doctorcloud.digital/app/api/mobile";
+
+function getWebBaseUrl(): string {
+  return API_BASE.replace(/\/api\/mobile\/?$/, "/");
+}
 
 function toNumber(value: unknown, fallback = 0): number {
   const parsed =
@@ -562,6 +762,112 @@ export async function login(email: string, password: string) {
   );
 }
 
+export async function loginWithGoogle(): Promise<GoogleLoginResult> {
+  const redirectUri = Linking.createURL("login");
+  const startUrl = `${getWebBaseUrl()}auth/google?mobile=1&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
+
+  if (result.type === "cancel" || result.type === "dismiss") {
+    throw new Error("Inicio de sesion con Google cancelado.");
+  }
+
+  if (result.type !== "success" || !result.url) {
+    throw new Error("No se pudo completar el inicio de sesion con Google.");
+  }
+
+  const parsed = Linking.parse(result.url);
+  const params = parsed.queryParams ?? {};
+  const errorMessage = typeof params.error === "string" ? params.error : "";
+  const isPendingGoogle = params.pending_google === "1";
+
+  if (errorMessage) {
+    throw new Error(errorMessage);
+  }
+
+  if (isPendingGoogle) {
+    const pendingToken =
+      typeof params.pending_token === "string" ? params.pending_token : "";
+    const name = typeof params.name === "string" ? params.name : "";
+    const email = typeof params.email === "string" ? params.email : "";
+    const avatarUrl =
+      typeof params.avatar_url === "string" && params.avatar_url.trim() !== ""
+        ? params.avatar_url
+        : null;
+
+    if (!pendingToken || !name || !email) {
+      throw new Error("Google respondio sin los datos necesarios para completar tu registro.");
+    }
+
+    return {
+      status: "pending_profile",
+      pending: {
+        pending_token: pendingToken,
+        name,
+        email,
+        avatar_url: avatarUrl,
+      },
+    };
+  }
+
+  const token = typeof params.token === "string" ? params.token : "";
+  const idRaw = typeof params.id === "string" ? params.id : "";
+  const name = typeof params.name === "string" ? params.name : "";
+  const email = typeof params.email === "string" ? params.email : "";
+  const role = typeof params.role === "string" ? params.role : "";
+  const avatarUrl =
+    typeof params.avatar_url === "string" && params.avatar_url.trim() !== ""
+      ? params.avatar_url
+      : null;
+
+  if (!token || !idRaw || !name || !email || !role) {
+    throw new Error("Google respondio sin los datos de autenticacion completos.");
+  }
+
+  return {
+    status: "authenticated",
+    token,
+    user: {
+      id: Number.parseInt(idRaw, 10),
+      name,
+      email,
+      avatar_url: avatarUrl,
+      role,
+    },
+  };
+}
+
+export async function completeGoogleRegistration(input: {
+  pending_token: string;
+  role: "doctor" | "patient";
+  cedula?: string;
+  specialty?: string;
+  city?: string;
+  birth_date?: string;
+  gender?: string;
+  phone?: string;
+}) {
+  return request<
+    | {
+        ok?: boolean;
+        status: "authenticated";
+        token: string;
+        user: AuthUser;
+      }
+    | {
+        ok?: boolean;
+        status: "pending_approval";
+        message: string;
+      }
+  >(
+    "/auth/google/complete",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
 export async function register(
   name: string,
   email: string,
@@ -587,6 +893,8 @@ export async function getDoctors(params: {
   specialty?: string;
   search?: string;
   city?: string;
+  lat?: number;
+  lng?: number;
   page?: number;
 }) {
   const qs = new URLSearchParams(
@@ -697,6 +1005,8 @@ export async function updateProfile(
     occupation: string;
     height_cm: number;
     weight_kg: number;
+    lat: number | null;
+    lng: number | null;
     emergency_contact_name: string;
     emergency_contact_phone: string;
   }>,
@@ -855,6 +1165,51 @@ export interface NotificationItem {
   thread_id: number | null;
 }
 
+export type SupportTicketStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "closed";
+
+export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
+
+export interface SupportTicket {
+  id: number;
+  subject: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  role: string;
+  created_at: string | null;
+  updated_at: string | null;
+  message_count: number;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  is_closed: boolean;
+}
+
+export interface SupportTicketMessage {
+  id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_avatar: string | null;
+  body: string;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  created_at: string | null;
+  is_me: boolean;
+}
+
+export interface SupportTicketDetail {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+}
+
+export interface SupportAttachmentInput {
+  uri: string;
+  name: string;
+  type: string;
+}
+
 export async function getPrescriptions() {
   return request<{ data: Prescription[] }>("/prescriptions");
 }
@@ -865,6 +1220,81 @@ export async function getSoapNotes() {
 
 export async function getNotifications() {
   return request<{ data: NotificationItem[] }>("/notifications");
+}
+
+export async function getSupportTickets() {
+  return request<{ data: SupportTicket[] }>("/support");
+}
+
+export async function getSupportTicket(id: number) {
+  return request<SupportTicketDetail>(`/support/${id}`);
+}
+
+export async function createSupportTicket(input: {
+  subject: string;
+  body: string;
+  priority?: SupportTicketPriority;
+  attachment?: SupportAttachmentInput | null;
+}) {
+  if (input.attachment) {
+    const form = new FormData();
+    form.append("subject", input.subject);
+    form.append("body", input.body);
+    form.append("priority", input.priority ?? "normal");
+    form.append("attachment", {
+      uri: input.attachment.uri,
+      name: input.attachment.name,
+      type: input.attachment.type,
+    } as any);
+
+    return request<{ message: string; ticket_id: number }>("/support", {
+      method: "POST",
+      body: form,
+    });
+  }
+
+  return request<{ message: string; ticket_id: number }>("/support", {
+    method: "POST",
+    body: JSON.stringify({
+      subject: input.subject,
+      body: input.body,
+      priority: input.priority ?? "normal",
+    }),
+  });
+}
+
+export async function replySupportTicket(
+  id: number,
+  input: {
+    body: string;
+    attachment?: SupportAttachmentInput | null;
+  },
+) {
+  if (input.attachment) {
+    const form = new FormData();
+    form.append("body", input.body);
+    form.append("attachment", {
+      uri: input.attachment.uri,
+      name: input.attachment.name,
+      type: input.attachment.type,
+    } as any);
+
+    return request<{ message: string }>(`/support/${id}/reply`, {
+      method: "POST",
+      body: form,
+    });
+  }
+
+  return request<{ message: string }>(`/support/${id}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ body: input.body }),
+  });
+}
+
+export async function closeSupportTicket(id: number) {
+  return request<{ message: string }>(`/support/${id}/close`, {
+    method: "POST",
+  });
 }
 
 // ── PayPal Appointment Payment ────────────────────────────
@@ -888,6 +1318,76 @@ export async function getDoctorPatients() {
   );
 }
 
+export async function linkDoctorPatient(accessCode: string) {
+  return request<DoctorLinkPatientResult>("/doctor/patients/link", {
+    method: "POST",
+    body: JSON.stringify({ access_code: accessCode }),
+  });
+}
+
+export async function registerDoctorPatient(
+  payload: DoctorRegisterPatientPayload,
+) {
+  return request<{ ok?: boolean; message: string; patient_id?: number }>("/doctor/patients/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getDoctorSettings() {
+  return request<DoctorSettingsResponse>("/doctor/profile");
+}
+
+export async function updateDoctorProfile(
+  data: Partial<{
+    name: string;
+    specialty: string;
+    subspecialty: string;
+    bio: string;
+    consultation_fee: number;
+    telemedicine_fee: number;
+    home_visit_fee: number;
+    duration_minutes: number;
+    address: string;
+    city: string;
+    state: string;
+    lat: number | null;
+    lng: number | null;
+  }>,
+) {
+  return request<{ ok?: boolean; message: string }>("/doctor/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getDoctorAvailabilitySettings(month: string) {
+  return request<DoctorAvailabilitySettingsData>(
+    `/doctor/availability?month=${encodeURIComponent(month)}`,
+  );
+}
+
+export async function updateDoctorAvailability(
+  payload: DoctorAvailabilitySavePayload,
+) {
+  return request<{ ok?: boolean; message: string }>("/doctor/availability", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveDoctorAvailabilityOverride(
+  payload: DoctorAvailabilityOverridePayload,
+) {
+  return request<{ ok?: boolean; message: string }>(
+    "/doctor/availability/override",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 export async function getDoctorPatientSnapshot(patientId: number) {
   return request<DoctorPatientSnapshotData>(
     `/doctor/patients/${patientId}/snapshot`,
@@ -897,6 +1397,74 @@ export async function getDoctorPatientSnapshot(patientId: number) {
 export async function getDoctorPatientHistory(patientId: number) {
   return request<DoctorPatientHistoryData>(
     `/doctor/patients/${patientId}/history`,
+  );
+}
+
+export async function getDoctorPatientDocuments(patientId: number) {
+  return request<DoctorPatientDocumentsData>(
+    `/doctor/patients/${patientId}/documents`,
+  );
+}
+
+export async function uploadDoctorPatientDocument(
+  patientId: number,
+  input: DoctorPatientDocumentUploadInput,
+) {
+  const form = new FormData();
+  form.append("document_file", {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as any);
+  if (input.title) form.append("title", input.title);
+  if (input.document_type) form.append("document_type", input.document_type);
+  if (input.notes) form.append("notes", input.notes);
+
+  return request<{ id: number; document: PatientDocument; message?: string }>(
+    `/doctor/patients/${patientId}/documents/upload`,
+    { method: "POST", body: form },
+  );
+}
+
+export async function getDoctorConsultationTemplates() {
+  return request<DoctorConsultationTemplatesData>(
+    "/doctor/consultation-templates",
+  );
+}
+
+export async function saveDoctorConsultationTemplate(
+  payload: DoctorConsultationTemplatePayload,
+) {
+  return request<{
+    ok?: boolean;
+    message: string;
+    template?: DoctorConsultationTemplate | null;
+  }>("/doctor/consultation-templates", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteDoctorConsultationTemplate(templateId: number) {
+  return request<{ ok?: boolean; message: string }>(
+    `/doctor/consultation-templates/${templateId}/delete`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function getDoctorNotes() {
+  return request<DoctorNotesData>("/doctor/notes");
+}
+
+export async function createDoctorNote(payload: DoctorCreateNotePayload) {
+  return request<{ ok?: boolean; message: string; id?: number }>(
+    "/doctor/notes",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
   );
 }
 
@@ -975,6 +1543,18 @@ export async function completeDoctorAppointment(
 
 export async function getDoctorPrescriptions() {
   return request<DoctorPrescriptionsData>("/doctor/prescriptions");
+}
+
+export async function createDoctorPrescription(
+  payload: DoctorCreatePrescriptionPayload,
+) {
+  return request<{ ok?: boolean; message: string; id?: number }>(
+    "/doctor/prescriptions",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function getDoctorFinancialHistory() {

@@ -12,10 +12,10 @@ export default function RootLayout() {
         <Stack.Screen name="(doctor-tabs)" />
         <Stack.Screen name="doctores" />
         <Stack.Screen name="notificaciones" />
+        <Stack.Screen name="soporte" />
         <Stack.Screen name="confirmacion" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
-        <Stack.Screen name="doctor" />
         <Stack.Screen name="patient" />
       </Stack>
     </>

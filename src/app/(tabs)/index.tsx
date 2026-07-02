@@ -1,6 +1,7 @@
 import { Icon, IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { resolvePatientSearchLocation } from "@/services/patient-search-location";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -81,6 +82,13 @@ const QUICK_ACTIONS: {
     color: "#D97706",
     bg: "#FFFBEB",
   },
+  {
+    label: "Soporte",
+    icon: "info",
+    route: "/soporte",
+    color: "#0F766E",
+    bg: "#F0FDFA",
+  },
 ];
 
 // ── Animated counter hook ──────────────────────────────────
@@ -148,11 +156,12 @@ export default function HomeScreen() {
     (async () => {
       try {
         setLoading(true);
+        const location = await resolvePatientSearchLocation();
 
         // Use dedicated dashboard stats endpoint + specialties + doctors
         const [specRes, docRes, statsRes] = await Promise.all([
           api.getSpecialties(),
-          api.getDoctors({ page: 1 }),
+          api.getDoctors({ page: 1, lat: location.lat, lng: location.lng }),
           api.getDashboardStats(),
         ]);
 

@@ -45,6 +45,12 @@
       [
         "@stripe/stripe-react-native",
         {}
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicacion para encontrar doctores cercanos, completar direcciones y validar consultorios."
+        }
       ]
     ],
     "experiments": {

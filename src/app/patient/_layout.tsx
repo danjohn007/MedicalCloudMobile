@@ -8,6 +8,7 @@ export default function PatientLayout() {
       <Stack.Screen name="checkin" />
       <Stack.Screen name="documentos" />
       <Stack.Screen name="finanzas" />
+      <Stack.Screen name="recetas" />
     </Stack>
   );
 }

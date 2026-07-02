@@ -21,14 +21,14 @@ import { resolveAppHome } from '@/utils/role-routing';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAuthStore();
+  const { register, loginWithGoogle } = useAuthStore();
 
   const [name,     setName]     = useState('');
   const [email,    setEmail]    = useState('');
   const [phone,    setPhone]    = useState('');
   const [password, setPassword] = useState('');
   const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
+  const [loadingMode, setLoadingMode] = useState<'email' | 'google' | null>(null);
   const [error,    setError]    = useState('');
 
   const handleRegister = async () => {
@@ -40,7 +40,7 @@ export default function RegisterScreen() {
       setError('La contraseña debe tener al menos 8 caracteres.');
       return;
     }
-    setLoading(true);
+    setLoadingMode('email');
     setError('');
     try {
       await register(name.trim(), email.trim().toLowerCase(), password, phone.trim() || undefined);
@@ -48,7 +48,24 @@ export default function RegisterScreen() {
     } catch (e: any) {
       setError(e.message ?? 'Error al crear tu cuenta.');
     } finally {
-      setLoading(false);
+      setLoadingMode(null);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setLoadingMode('google');
+    setError('');
+    try {
+      const result = await loginWithGoogle();
+      if (result === 'pending_profile') {
+        router.replace('/(auth)/google-register');
+        return;
+      }
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
+    } catch (e: any) {
+      setError(e.message ?? 'Error al registrarte con Google.');
+    } finally {
+      setLoadingMode(null);
     }
   };
 
@@ -158,12 +175,35 @@ export default function RegisterScreen() {
           <Pressable
             style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}
             onPress={handleRegister}
-            disabled={loading}
+            disabled={loadingMode !== null}
           >
-            {loading
+            {loadingMode === 'email'
               ? <ActivityIndicator color={MC.white} />
               : <Text style={styles.btnText}>Crear cuenta</Text>
             }
+          </Pressable>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>o</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnGoogle, pressed && { opacity: 0.85 }]}
+            onPress={handleGoogleRegister}
+            disabled={loadingMode !== null}
+          >
+            {loadingMode === 'google' ? (
+              <ActivityIndicator color={MC.textPrimary} />
+            ) : (
+              <>
+                <View style={styles.googleBadge}>
+                  <Text style={styles.googleBadgeText}>G</Text>
+                </View>
+                <Text style={styles.btnGoogleText}>Registrarte con Google</Text>
+              </>
+            )}
           </Pressable>
 
           <View style={styles.footer}>
@@ -199,6 +239,48 @@ const styles = StyleSheet.create({
   eyeBtn: { paddingHorizontal: 14 },
   btnPrimary: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 20 },
   btnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: MC.border,
+  },
+  separatorText: { color: MC.textMuted, fontSize: 14 },
+  btnGoogle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: MC.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: MC.border,
+    paddingVertical: 16,
+    marginBottom: 20,
+  },
+  googleBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleBadgeText: {
+    color: '#DB4437',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  btnGoogleText: {
+    color: MC.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { color: MC.textSecondary, fontSize: 15 },
   footerLink: { color: MC.primary, fontSize: 15, fontWeight: '600' },

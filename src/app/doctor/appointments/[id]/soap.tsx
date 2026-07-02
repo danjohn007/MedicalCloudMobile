@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -16,39 +16,52 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { getSecure, removeSecure, setSecure } from "@/services/storage";
 
 type SoapFormState = Required<api.DoctorSoapPayload>;
+type SoapDraftPayload = {
+  form: SoapFormState;
+  updated_at: string;
+};
 
-const SOAP_TEMPLATES = [
+const SOAP_DRAFT_PREFIX = "doctor-soap-draft:";
+
+const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
   {
-    id: "ir",
-    title: "Respiratoria",
+    id: -1,
+    label: "Respiratoria",
+    tone: "#2563EB",
     subjective:
       "Paciente refiere cuadro respiratorio de inicio reciente con sintomas de via aerea superior y malestar general.",
     objective:
       "Signos vitales clinicamente estables, exploracion dirigida sin datos de alarma inmediata.",
     assessment: "Infeccion respiratoria alta no complicada.",
-    plan_text:
+    plan:
       "Manejo sintomatico, hidratacion oral, vigilancia de signos de alarma y reevaluacion por evolucion.",
-    rx_diagnosis: "Infeccion respiratoria alta no complicada",
-    rx_medications:
-      "Paracetamol o manejo sintomatico segun valoracion. Medidas generales e hidratacion.",
+    diagnosis: "Infeccion respiratoria alta no complicada",
+    usage_notes:
+      "Base breve para cuadros respiratorios no complicados, con ajuste clinico final segun exploracion.",
+    source: "default",
+    is_active: true,
   },
   {
-    id: "gastro",
-    title: "Gastro",
+    id: -2,
+    label: "Gastro",
+    tone: "#0F766E",
     subjective:
       "Paciente refiere molestias gastrointestinales recientes sin datos iniciales de compromiso grave.",
     objective:
       "Exploracion clinica registrada sin datos de irritacion peritoneal y con estabilidad general.",
     assessment: "Cuadro gastrointestinal no complicado.",
-    plan_text:
+    plan:
       "Reposicion de liquidos, dieta progresiva, vigilancia de deshidratacion y seguimiento clinico.",
-    rx_diagnosis: "Cuadro gastrointestinal no complicado",
-    rx_medications:
-      "Hidratacion oral y manejo sintomatico segun valoracion medica actual.",
+    diagnosis: "Cuadro gastrointestinal no complicado",
+    usage_notes:
+      "Sirve como borrador rapido para evolucion digestiva sin datos de alarma.",
+    source: "default",
+    is_active: true,
   },
-] as const;
+];
 
 function emptyForm(): SoapFormState {
   return {
@@ -63,17 +76,72 @@ function emptyForm(): SoapFormState {
   };
 }
 
+function soapDraftKey(appointmentId: number): string {
+  return `${SOAP_DRAFT_PREFIX}${appointmentId}`;
+}
+
+function parseSoapDraft(raw: string | null): SoapDraftPayload | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<SoapDraftPayload> | null;
+    const form = parsed?.form;
+    if (!form || typeof form !== "object") {
+      return null;
+    }
+
+    return {
+      updated_at:
+        typeof parsed.updated_at === "string" ? parsed.updated_at : new Date().toISOString(),
+      form: {
+        subjective: typeof form.subjective === "string" ? form.subjective : "",
+        objective: typeof form.objective === "string" ? form.objective : "",
+        assessment: typeof form.assessment === "string" ? form.assessment : "",
+        plan_text: typeof form.plan_text === "string" ? form.plan_text : "",
+        rx_diagnosis: typeof form.rx_diagnosis === "string" ? form.rx_diagnosis : "",
+        rx_medications: typeof form.rx_medications === "string" ? form.rx_medications : "",
+        rx_instructions: typeof form.rx_instructions === "string" ? form.rx_instructions : "",
+        rx_valid_days:
+          typeof form.rx_valid_days === "number" && Number.isFinite(form.rx_valid_days)
+            ? Math.max(1, form.rx_valid_days)
+            : 30,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mergeServerSoapWithDraft(
+  serverForm: SoapFormState,
+  draftForm: SoapFormState,
+): SoapFormState {
+  return {
+    subjective: draftForm.subjective || serverForm.subjective,
+    objective: draftForm.objective || serverForm.objective,
+    assessment: draftForm.assessment || serverForm.assessment,
+    plan_text: draftForm.plan_text || serverForm.plan_text,
+    rx_diagnosis: draftForm.rx_diagnosis || serverForm.rx_diagnosis,
+    rx_medications: draftForm.rx_medications || serverForm.rx_medications,
+    rx_instructions: draftForm.rx_instructions || serverForm.rx_instructions,
+    rx_valid_days: Math.max(1, draftForm.rx_valid_days || serverForm.rx_valid_days || 30),
+  };
+}
+
 export default function DoctorSoapScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const appointmentId = Number(Array.isArray(params.id) ? params.id[0] : params.id);
+  const restoredDraftRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [data, setData] = useState<api.DoctorAppointmentSoapData | null>(null);
+  const [templateLibrary, setTemplateLibrary] = useState<api.DoctorConsultationTemplate[]>([]);
   const [form, setForm] = useState<SoapFormState>(emptyForm());
+  const serverForm = data ? buildFormFromResponse(data) : emptyForm();
 
   useEffect(() => {
     if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
@@ -88,10 +156,41 @@ export default function DoctorSoapScreen() {
       try {
         setLoading(true);
         setError("");
+        restoredDraftRef.current = false;
         const response = await api.getDoctorAppointmentSoap(appointmentId);
         if (cancelled) return;
         setData(response);
-        setForm(buildFormFromResponse(response));
+        const nextServerForm = buildFormFromResponse(response);
+        let nextForm = nextServerForm;
+
+        try {
+          const savedDraft = parseSoapDraft(await getSecure(soapDraftKey(appointmentId)));
+          if (savedDraft && !formsEqual(savedDraft.form, nextServerForm)) {
+            nextForm = mergeServerSoapWithDraft(nextServerForm, savedDraft.form);
+            restoredDraftRef.current = true;
+          }
+        } catch {
+        }
+
+        setForm(nextForm);
+        if (restoredDraftRef.current) {
+          setSuccess("Recuperamos un borrador local para que sigas donde te quedaste.");
+        }
+
+        try {
+          const templatesResponse = await api.getDoctorConsultationTemplates();
+          if (!cancelled) {
+            setTemplateLibrary(
+              templatesResponse.library?.length
+                ? templatesResponse.library
+                : FALLBACK_SOAP_TEMPLATES,
+            );
+          }
+        } catch {
+          if (!cancelled) {
+            setTemplateLibrary(FALLBACK_SOAP_TEMPLATES);
+          }
+        }
       } catch (e: any) {
         if (cancelled) return;
         setError(e?.message || "No se pudo cargar la nota clinica.");
@@ -109,6 +208,35 @@ export default function DoctorSoapScreen() {
     };
   }, [appointmentId]);
 
+  useEffect(() => {
+    if (loading || !data || !Number.isFinite(appointmentId) || appointmentId <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const key = soapDraftKey(appointmentId);
+          if (formsEqual(form, serverForm)) {
+            await removeSecure(key);
+            return;
+          }
+
+          await setSecure(
+            key,
+            JSON.stringify({
+              form,
+              updated_at: new Date().toISOString(),
+            } satisfies SoapDraftPayload),
+          );
+        } catch {
+        }
+      })();
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [appointmentId, data, form, loading, serverForm]);
+
   async function handleSave() {
     try {
       setSaving(true);
@@ -119,6 +247,7 @@ export default function DoctorSoapScreen() {
       const refreshed = await api.getDoctorAppointmentSoap(appointmentId);
       setData(refreshed);
       setForm(buildFormFromResponse(refreshed));
+      await removeSecure(soapDraftKey(appointmentId));
       setSuccess(result.message || "Nota clinica guardada correctamente.");
     } catch (e: any) {
       setError(e?.message || "No se pudo guardar la nota clinica.");
@@ -131,12 +260,17 @@ export default function DoctorSoapScreen() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  const availableTemplates = templateLibrary.length
+    ? templateLibrary
+    : FALLBACK_SOAP_TEMPLATES;
+
   async function handleCompleteConsultation() {
     try {
       setSaving(true);
       setError("");
       setSuccess("");
       await api.saveDoctorAppointmentSoap(appointmentId, form);
+      await removeSecure(soapDraftKey(appointmentId));
       if (appointment?.type === "presential") {
         router.push(`/doctor/appointments/${appointmentId}/complete` as any);
       } else {
@@ -150,8 +284,8 @@ export default function DoctorSoapScreen() {
     }
   }
 
-  function applyTemplate(templateId: string) {
-    const template = SOAP_TEMPLATES.find((item) => item.id === templateId);
+  function applyTemplate(templateId: number) {
+    const template = availableTemplates.find((item) => item.id === templateId);
     if (!template) return;
 
     setForm((current) => ({
@@ -159,9 +293,8 @@ export default function DoctorSoapScreen() {
       subjective: current.subjective || template.subjective,
       objective: current.objective || template.objective,
       assessment: current.assessment || template.assessment,
-      plan_text: current.plan_text || template.plan_text,
-      rx_diagnosis: current.rx_diagnosis || template.rx_diagnosis,
-      rx_medications: current.rx_medications || template.rx_medications,
+      plan_text: current.plan_text || template.plan,
+      rx_diagnosis: current.rx_diagnosis || template.diagnosis,
     }));
   }
 
@@ -174,8 +307,7 @@ export default function DoctorSoapScreen() {
   }
 
   const appointment = data?.appointment ?? null;
-  const initialForm = data ? buildFormFromResponse(data) : emptyForm();
-  const isDirty = !formsEqual(form, initialForm);
+  const isDirty = !formsEqual(form, serverForm);
   const progress = buildProgress(form);
 
   return (
@@ -260,6 +392,9 @@ export default function DoctorSoapScreen() {
                 {isDirty ? "Hay cambios sin guardar" : "Todo lo visible ya esta guardado"}
               </Text>
             </View>
+            <Text style={styles.draftHint}>
+              Mientras escribes se guarda un borrador local en este dispositivo.
+            </Text>
           </View>
 
           {error ? (
@@ -277,18 +412,33 @@ export default function DoctorSoapScreen() {
           ) : null}
 
           <Section
-            title="Plantillas rapidas"
-            subtitle="Completa primero un borrador util y luego ajusta los datos clinicos reales."
+            title="Plantillas de consulta"
+            subtitle="Usa tu biblioteca activa para empezar rapido y luego ajusta los datos clinicos reales."
           >
+            <View style={styles.inlineActionRow}>
+              <InlineAction
+                icon="list"
+                label="Gestionar plantillas"
+                onPress={() => router.push("/doctor/consultation-templates" as any)}
+              />
+            </View>
             <View style={styles.templateRow}>
-              {SOAP_TEMPLATES.map((template) => (
+              {availableTemplates.map((template) => (
                 <Pressable
                   key={template.id}
                   onPress={() => applyTemplate(template.id)}
-                  style={styles.templateChip}
+                  style={[
+                    styles.templateChip,
+                    { borderColor: template.tone || "#7C3AED" },
+                  ]}
                 >
-                  <Icon name="list" size={14} color="#7C3AED" />
-                  <Text style={styles.templateChipText}>{template.title}</Text>
+                  <Icon name="list" size={14} color={template.tone || "#7C3AED"} />
+                  <View style={styles.templateChipBody}>
+                    <Text style={styles.templateChipText}>{template.label}</Text>
+                    {template.usage_notes ? (
+                      <Text style={styles.templateChipNote}>{template.usage_notes}</Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -501,7 +651,7 @@ function InlineAction({
   label,
   onPress,
 }: {
-  icon: "user-circle" | "calendar";
+  icon: "user-circle" | "calendar" | "list";
   label: string;
   onPress: () => void;
 }) {
@@ -625,6 +775,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 13, color: MC.textSecondary },
   contextRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   actionStrip: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  inlineActionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   inlineAction: {
     borderRadius: 999,
     backgroundColor: MC.surface,
@@ -684,6 +835,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   draftBadgeText: { fontSize: 11, fontWeight: "700" },
+  draftHint: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 18,
+    color: MC.textSecondary,
+  },
   errorBox: {
     borderRadius: 14,
     backgroundColor: "#FEE2E2",
@@ -708,15 +865,24 @@ const styles = StyleSheet.create({
   sectionBody: { gap: 10 },
   templateRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   templateChip: {
-    borderRadius: 999,
-    backgroundColor: "#F5F3FF",
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: "#F8FAFC",
     paddingHorizontal: 12,
     paddingVertical: 9,
     flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
+    gap: 8,
+    alignItems: "flex-start",
+    maxWidth: "100%",
   },
-  templateChipText: { fontSize: 12, fontWeight: "700", color: "#7C3AED" },
+  templateChipBody: { flexShrink: 1, gap: 4 },
+  templateChipText: { fontSize: 12, fontWeight: "700", color: MC.textPrimary },
+  templateChipNote: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: MC.textSecondary,
+    maxWidth: 220,
+  },
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 12, fontWeight: "700", color: MC.textPrimary },
   fieldInput: {

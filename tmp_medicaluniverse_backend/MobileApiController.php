@@ -11,6 +11,21 @@ declare(strict_types=1);
  */
 class MobileApiController extends Controller
 {
+    /** @var array<string, bool> */
+    private array $tableExistsCache = [];
+    /** @var array<string, bool> */
+    private array $columnExistsCache = [];
+    /** @var string[] */
+    private const SUPPORT_ALLOWED_MIME = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    private const SUPPORT_MAX_BYTES = 10 * 1024 * 1024;
+
     private function jwtSecret(): string
     {
         return defined('Config::MOBILE_JWT_SECRET')
@@ -267,38 +282,296 @@ class MobileApiController extends Controller
         }
     }
 
-    private function doctorCanAccessPatient(int $doctorId, int $patientId): bool
+    private function hasTable(string $table): bool
     {
-        $db = Database::getInstance();
-
-        $stmt = $db->prepare(
-            "SELECT 1 FROM appointments WHERE doctor_id = ? AND patient_id = ? LIMIT 1"
-        );
-        $stmt->execute([$doctorId, $patientId]);
-        if ((bool)$stmt->fetchColumn()) {
-            return true;
+        if (array_key_exists($table, $this->tableExistsCache)) {
+            return $this->tableExistsCache[$table];
         }
 
-        $stmt = $db->prepare(
-            "SELECT 1 FROM patient_profiles WHERE user_id = ? AND associated_doctor_id = ? LIMIT 1"
+        try {
+            $stmt = Database::getInstance()->prepare('SHOW TABLES LIKE ?');
+            $stmt->execute([$table]);
+            return $this->tableExistsCache[$table] = (bool)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return $this->tableExistsCache[$table] = false;
+        }
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        $cacheKey = $table . '.' . $column;
+        if (array_key_exists($cacheKey, $this->columnExistsCache)) {
+            return $this->columnExistsCache[$cacheKey];
+        }
+
+        try {
+            $stmt = Database::getInstance()->prepare(sprintf('SHOW COLUMNS FROM `%s` LIKE ?', $table));
+            $stmt->execute([$column]);
+            return $this->columnExistsCache[$cacheKey] = (bool)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return $this->columnExistsCache[$cacheKey] = false;
+        }
+    }
+
+    private function normalizeAccessCode(string $value): string
+    {
+        return strtoupper(preg_replace('/[^A-Z0-9]/', '', $value));
+    }
+
+    private function generateAccessCode(int $length = 10): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $maxIndex = strlen($alphabet) - 1;
+        $code = '';
+        for ($i = 0; $i < $length; $i++) {
+            $code .= $alphabet[random_int(0, $maxIndex)];
+        }
+
+        return $code;
+    }
+
+    private function ensurePatientAccessCode(int $patientId): ?string
+    {
+        if (!$this->hasColumn('patient_profiles', 'doctor_access_code')) {
+            return null;
+        }
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT doctor_access_code FROM patient_profiles WHERE user_id = ? LIMIT 1');
+        $stmt->execute([$patientId]);
+        $current = $this->normalizeAccessCode((string)($stmt->fetchColumn() ?: ''));
+        if (strlen($current) >= 8) {
+            return $current;
+        }
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = $this->generateAccessCode(10);
+            try {
+                $db->prepare(
+                    'UPDATE patient_profiles
+                     SET doctor_access_code = ?
+                     WHERE user_id = ? AND (doctor_access_code IS NULL OR doctor_access_code = "")'
+                )->execute([$candidate, $patientId]);
+            } catch (\Throwable) {
+                return null;
+            }
+
+            $stmt->execute([$patientId]);
+            $saved = $this->normalizeAccessCode((string)($stmt->fetchColumn() ?: ''));
+            if ($saved !== '') {
+                return $saved;
+            }
+        }
+
+        return null;
+    }
+
+    private function doctorPatientLinksEnabled(): bool
+    {
+        return $this->hasTable('doctor_patient_links');
+    }
+
+    private function patientHasDirectDoctorAssociation(int $doctorId, int $patientId): bool
+    {
+        $stmt = Database::getInstance()->prepare(
+            'SELECT 1 FROM patient_profiles WHERE user_id = ? AND associated_doctor_id = ? LIMIT 1'
         );
         $stmt->execute([$patientId, $doctorId]);
-        if ((bool)$stmt->fetchColumn()) {
-            return true;
+        return (bool)$stmt->fetchColumn();
+    }
+
+    private function doctorHasCompletedAppointmentWithPatient(int $doctorId, int $patientId): bool
+    {
+        $stmt = Database::getInstance()->prepare(
+            "SELECT 1
+             FROM appointments
+             WHERE doctor_id = ?
+               AND patient_id = ?
+               AND status IN ('completed','finished')
+             LIMIT 1"
+        );
+        $stmt->execute([$doctorId, $patientId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    private function doctorHasPatientLink(int $doctorId, int $patientId): bool
+    {
+        if (!$this->doctorPatientLinksEnabled()) {
+            return false;
         }
 
+        $stmt = Database::getInstance()->prepare(
+            'SELECT 1
+             FROM doctor_patient_links
+             WHERE doctor_id = ? AND patient_id = ? AND is_active = 1
+             LIMIT 1'
+        );
+        $stmt->execute([$doctorId, $patientId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    private function upsertDoctorPatientLink(int $doctorId, int $patientId, string $source): void
+    {
+        if (!$this->doctorPatientLinksEnabled()) {
+            return;
+        }
+
+        try {
+            Database::getInstance()->prepare(
+                "INSERT INTO doctor_patient_links
+                    (doctor_id, patient_id, link_source, linked_by_user_id, is_active, verified_at, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 1, NOW(), NOW(), NOW())
+                 ON DUPLICATE KEY UPDATE
+                    link_source = VALUES(link_source),
+                    linked_by_user_id = VALUES(linked_by_user_id),
+                    is_active = 1,
+                    verified_at = NOW(),
+                    updated_at = NOW()"
+            )->execute([$doctorId, $patientId, $source, $doctorId]);
+        } catch (\Throwable) {
+        }
+    }
+
+    private function getDoctorPatientAccessReason(int $doctorId, int $patientId): ?string
+    {
         $licenseId = $this->doctorHospitalLicenseId($doctorId);
         if ($licenseId) {
-            $stmt = $db->prepare(
+            $stmt = Database::getInstance()->prepare(
                 "SELECT 1 FROM users WHERE id = ? AND hospital_license_id = ? AND status = 'active' LIMIT 1"
             );
             $stmt->execute([$patientId, $licenseId]);
             if ((bool)$stmt->fetchColumn()) {
-                return true;
+                return 'hospital';
             }
         }
 
-        return false;
+        if ($this->patientHasDirectDoctorAssociation($doctorId, $patientId)) {
+            $this->upsertDoctorPatientLink($doctorId, $patientId, 'doctor_registered');
+            return 'doctor_registered';
+        }
+
+        if ($this->doctorHasPatientLink($doctorId, $patientId)) {
+            return 'linked';
+        }
+
+        if ($this->doctorHasCompletedAppointmentWithPatient($doctorId, $patientId)) {
+            $this->upsertDoctorPatientLink($doctorId, $patientId, 'completed_appointment');
+            return 'completed_appointment';
+        }
+
+        return null;
+    }
+
+    private function doctorCanAccessPatient(int $doctorId, int $patientId): bool
+    {
+        return $this->getDoctorPatientAccessReason($doctorId, $patientId) !== null;
+    }
+
+    private function publicDoctorProfileScoreSql(): string
+    {
+        return implode(' + ', [
+            '(CASE WHEN TRIM(COALESCE(dp.bio, "")) <> "" THEN 2 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.subspecialty, "")) <> "" THEN 1 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.address, "")) <> "" THEN 2 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.city, "")) <> "" THEN 1 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.state, "")) <> "" THEN 1 ELSE 0 END)',
+            '(CASE WHEN dp.lat IS NOT NULL AND dp.lng IS NOT NULL THEN 2 ELSE 0 END)',
+            '(CASE WHEN COALESCE(dp.duration_minutes, 0) > 0 THEN 1 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.schedule_json, "")) <> "" THEN 1 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.photo, u.avatar_url, "")) <> "" THEN 1 ELSE 0 END)',
+            '(CASE WHEN TRIM(COALESCE(dp.cedula, "")) <> "" THEN 1 ELSE 0 END)',
+        ]);
+    }
+
+    private function publicDoctorSearchBase(array $filters): array
+    {
+        $wheres = [
+            'u.status = "active"',
+            'u.name != "Doctor"',
+            'COALESCE(dp.consultation_fee, 0) > 0',
+            'COALESCE(dp.telemedicine_fee, 0) > 0',
+        ];
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $wheres[] = '(u.name LIKE ? OR dp.specialty LIKE ? OR dp.city LIKE ? OR dp.address LIKE ?)';
+            $needle = '%' . $filters['search'] . '%';
+            array_push($params, $needle, $needle, $needle, $needle);
+        }
+
+        if (!empty($filters['specialty'])) {
+            $wheres[] = 'dp.specialty LIKE ?';
+            $params[] = '%' . $filters['specialty'] . '%';
+        }
+
+        if (!empty($filters['city'])) {
+            $wheres[] = '(LOWER(dp.city) LIKE LOWER(?) OR LOWER(dp.state) LIKE LOWER(?))';
+            $needle = '%' . $filters['city'] . '%';
+            $params[] = $needle;
+            $params[] = $needle;
+        }
+
+        if (!empty($filters['max_fee']) && (float)$filters['max_fee'] > 0) {
+            $wheres[] = 'dp.consultation_fee <= ?';
+            $params[] = (float)$filters['max_fee'];
+        }
+
+        return ['WHERE ' . implode(' AND ', $wheres), $params];
+    }
+
+    private function managedPatientsRows(int $doctorId): array
+    {
+        $licenseId = $this->doctorHospitalLicenseId($doctorId);
+        if ($licenseId) {
+            return (new DoctorProfile())->getPatientsOf($doctorId, $licenseId);
+        }
+
+        $linkExistsSql = $this->doctorPatientLinksEnabled()
+            ? 'OR EXISTS (
+                    SELECT 1
+                    FROM doctor_patient_links dpl
+                    WHERE dpl.doctor_id = ?
+                      AND dpl.patient_id = u.id
+                      AND dpl.is_active = 1
+                )'
+            : '';
+
+        $params = [$doctorId, $doctorId, $doctorId];
+        if ($this->doctorPatientLinksEnabled()) {
+            $params[] = $doctorId;
+        }
+
+        return $this->safeQuery(
+            "SELECT DISTINCT u.id, u.name, u.email, u.avatar_url,
+                    pp.birth_date, pp.gender, pp.blood_type,
+                    pp.phone, pp.address, pp.city,
+                    pp.emergency_contact_name, pp.emergency_contact_phone,
+                    COALESCE(NULLIF(pp.allergies, ''), pmr.allergies) AS allergies,
+                    pp.chronic_conditions AS chronic_conditions,
+                    COALESCE(NULLIF(pp.current_medications, ''), pmr.current_medications) AS current_medications,
+                    pp.associated_doctor_id,
+                    MAX(a.scheduled_at) AS last_appointment,
+                    COUNT(a.id) AS total_appointments
+             FROM users u
+             JOIN patient_profiles pp ON pp.user_id = u.id
+             LEFT JOIN patient_medical_records pmr ON pmr.patient_id = u.id
+             LEFT JOIN appointments a ON a.patient_id = u.id AND a.doctor_id = ?
+             WHERE u.status = 'active'
+               AND (
+                    pp.associated_doctor_id = ?
+                    OR EXISTS (
+                        SELECT 1
+                        FROM appointments a2
+                        WHERE a2.doctor_id = ?
+                          AND a2.patient_id = u.id
+                          AND a2.status IN ('completed', 'finished')
+                    )
+                    {$linkExistsSql}
+               )
+             GROUP BY u.id
+             ORDER BY MAX(a.scheduled_at) DESC, u.name ASC",
+            $params
+        );
     }
 
     private function safeQuery(string $sql, array $params = []): array
@@ -309,6 +582,238 @@ class MobileApiController extends Controller
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
             return []; // table doesn't exist or other error → return empty
+        }
+    }
+
+    private function isValidTimeValue(string $value): bool
+    {
+        return (bool)preg_match('/^\d{2}:\d{2}$/', $value);
+    }
+
+    private function timeToMinutes(string $value): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $value));
+        return $hours * 60 + $minutes;
+    }
+
+    private function consultationTemplateDefaults(): array
+    {
+        return [
+            [
+                'name' => 'Infeccion respiratoria',
+                'color_hex' => '#2563EB',
+                'usage_notes' => 'Usala como base para cuadros respiratorios sin datos de alarma; valida sintomas actuales antes de copiar.',
+                'subjective' => 'Paciente refiere cuadro respiratorio de inicio reciente con odinofagia, febricula y malestar general.',
+                'objective' => 'Signos vitales estables, orofaringe hiperemica, sin datos de dificultad respiratoria ni compromiso sistemico.',
+                'assessment' => 'Infeccion respiratoria alta no complicada.',
+                'plan' => 'Manejo sintomatico, hidratacion oral, vigilancia de signos de alarma y reevaluacion si persiste fiebre.',
+                'diagnosis' => 'Infeccion respiratoria alta no complicada',
+            ],
+            [
+                'name' => 'Control metabolico',
+                'color_hex' => '#0F766E',
+                'usage_notes' => 'Apropiada para seguimientos metabolicos estables; ajusta metas y estudios segun el caso actual.',
+                'subjective' => 'Consulta de seguimiento para control metabolico, adherencia irregular y revision de sintomas recientes.',
+                'objective' => 'Paciente hemodinamicamente estable, sin datos de descompensacion aguda, requiere seguimiento de metas clinicas.',
+                'assessment' => 'Control metabolico en seguimiento, sin complicaciones agudas al momento.',
+                'plan' => 'Reforzar apego terapeutico, actualizar estudios de control y mantener vigilancia de signos de alarma.',
+                'diagnosis' => 'Seguimiento de control metabolico',
+            ],
+            [
+                'name' => 'Dolor musculoesqueletico',
+                'color_hex' => '#B45309',
+                'usage_notes' => 'Util para dolor mecanico sin trauma mayor; revisa limitacion funcional y signos neurologicos antes de reutilizar.',
+                'subjective' => 'Paciente refiere dolor musculoesqueletico localizado, de evolucion subaguda, sin antecedente traumatico mayor.',
+                'objective' => 'Dolor a la palpacion y movilidad conservada, sin datos neurovasculares de alarma.',
+                'assessment' => 'Dolor musculoesqueletico mecanico sin datos de alarma.',
+                'plan' => 'Analgesia, reposo relativo, medidas locales y reevaluacion si persiste limitacion funcional.',
+                'diagnosis' => 'Dolor musculoesqueletico mecanico',
+            ],
+        ];
+    }
+
+    private function mapDoctorConsultationTemplate(array $row, string $source = 'custom'): array
+    {
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'label' => (string)($row['label'] ?? $row['name'] ?? 'Plantilla clinica'),
+            'tone' => (string)($row['tone'] ?? $row['color_hex'] ?? '#2563EB'),
+            'subjective' => (string)($row['subjective'] ?? ''),
+            'objective' => (string)($row['objective'] ?? ''),
+            'assessment' => (string)($row['assessment'] ?? ''),
+            'plan' => (string)($row['plan'] ?? $row['plan_text'] ?? ''),
+            'diagnosis' => (string)($row['diagnosis'] ?? ''),
+            'usage_notes' => (string)($row['usage_notes'] ?? ''),
+            'source' => $source,
+            'is_active' => isset($row['is_active']) ? (bool)$row['is_active'] : $source === 'default',
+            'sort_order' => isset($row['sort_order']) ? (int)$row['sort_order'] : 0,
+        ];
+    }
+
+    private function supportInput(): array
+    {
+        $jsonBody = $this->body();
+        if (!is_array($jsonBody)) {
+            $jsonBody = [];
+        }
+
+        return array_merge($jsonBody, $_POST);
+    }
+
+    private function requireSupportTables(): void
+    {
+        if (!$this->hasTable('support_tickets') || !$this->hasTable('support_ticket_messages')) {
+            $this->fail('El modulo de soporte todavia no esta disponible en este entorno.', 503);
+        }
+    }
+
+    private function supportBaseUrl(): string
+    {
+        return defined('BASE_URL') ? constant('BASE_URL') : 'https://doctorcloud.digital/app/';
+    }
+
+    private function supportRoleForJwt(array $jwt): string
+    {
+        $role = strtolower(trim((string)($jwt['role'] ?? '')));
+        return in_array($role, ['doctor', 'patient'], true) ? $role : 'patient';
+    }
+
+    private function supportLicenseIdForJwt(array $jwt): ?int
+    {
+        $role = $this->supportRoleForJwt($jwt);
+        $userId = (int)($jwt['sub'] ?? 0);
+
+        if ($role !== 'doctor' || $userId < 1) {
+            return null;
+        }
+
+        return $this->doctorHospitalLicenseId($userId);
+    }
+
+    private function mapSupportTicketRow(array $row): array
+    {
+        $preview = trim((string)($row['last_message'] ?? ''));
+        if ($preview !== '') {
+            $preview = mb_substr(preg_replace('/\s+/', ' ', $preview) ?: '', 0, 180);
+        }
+
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'subject' => (string)($row['subject'] ?? ''),
+            'status' => (string)($row['status'] ?? 'open'),
+            'priority' => (string)($row['priority'] ?? 'normal'),
+            'role' => (string)($row['role'] ?? ''),
+            'created_at' => $row['created_at'] ?? null,
+            'updated_at' => $row['updated_at'] ?? null,
+            'message_count' => (int)($row['message_count'] ?? 0),
+            'last_message_at' => $row['last_message_at'] ?? null,
+            'last_message_preview' => $preview !== '' ? $preview : null,
+            'is_closed' => (string)($row['status'] ?? '') === 'closed',
+        ];
+    }
+
+    private function mobileSupportAttachment(): ?string
+    {
+        if (!isset($_FILES['attachment']) || ($_FILES['attachment']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        $file = $_FILES['attachment'];
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $this->fail('Error al subir el archivo adjunto.');
+        }
+
+        if ((int)($file['size'] ?? 0) > self::SUPPORT_MAX_BYTES) {
+            $this->fail('El archivo excede el maximo permitido de 10 MB.');
+        }
+
+        $tmpName = (string)($file['tmp_name'] ?? '');
+        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+            $this->fail('No se recibio un archivo valido.');
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeReal = (string)($finfo->file($tmpName) ?: '');
+        if (!in_array($mimeReal, self::SUPPORT_ALLOWED_MIME, true)) {
+            $this->fail('Tipo de archivo no permitido. Usa PDF, JPG, PNG, WEBP, DOC o DOCX.');
+        }
+
+        $originalName = (string)($file['name'] ?? 'adjunto');
+        $ext = strtolower((string)pathinfo($originalName, PATHINFO_EXTENSION));
+        if ($ext === '') {
+            $ext = match ($mimeReal) {
+                'application/pdf' => 'pdf',
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'application/msword' => 'doc',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+                default => 'bin',
+            };
+        }
+
+        $safeName = bin2hex(random_bytes(16)) . '.' . $ext;
+        $destDir = APP_ROOT . '/storage/uploads/support/';
+        if (!is_dir($destDir) && !mkdir($destDir, 0755, true) && !is_dir($destDir)) {
+            $this->fail('No se pudo preparar el almacenamiento del adjunto.');
+        }
+
+        $destPath = $destDir . $safeName;
+        if (!move_uploaded_file($tmpName, $destPath)) {
+            $this->fail('No se pudo guardar el archivo adjunto.');
+        }
+
+        return 'storage/uploads/support/' . $safeName;
+    }
+
+    private function notifySupportAdmins(int $ticketId, ?int $licenseId, string $title, string $body): void
+    {
+        if (!class_exists('Notification')) {
+            return;
+        }
+
+        try {
+            $pdo = Database::getInstance();
+            $baseUrl = $this->supportBaseUrl();
+
+            $stmt = $pdo->query(
+                "SELECT u.id
+                 FROM users u
+                 JOIN roles r ON r.id = u.role_id
+                 WHERE r.name = 'superadmin'
+                 LIMIT 10"
+            );
+            foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $uid) {
+                Notification::create(
+                    (int)$uid,
+                    'support_ticket',
+                    $title,
+                    $body,
+                    $baseUrl . 'superadmin/support/' . $ticketId
+                );
+            }
+
+            if ($licenseId) {
+                $stmt2 = $pdo->prepare(
+                    "SELECT u.id
+                     FROM users u
+                     JOIN roles r ON r.id = u.role_id
+                     WHERE r.name = 'hospital_admin'
+                       AND u.hospital_license_id = ?
+                     LIMIT 5"
+                );
+                $stmt2->execute([$licenseId]);
+                foreach ($stmt2->fetchAll(\PDO::FETCH_COLUMN) as $uid) {
+                    Notification::create(
+                        (int)$uid,
+                        'support_ticket',
+                        $title,
+                        $body,
+                        $baseUrl . 'hospital/support/' . $ticketId
+                    );
+                }
+            }
+        } catch (\Throwable) {
         }
     }
 
@@ -462,11 +967,7 @@ class MobileApiController extends Controller
         $todayStmt->execute([$doctorId]);
         $today = $todayStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
-        $recentPatients = array_slice(
-            $dp->getPatientsOf($doctorId, $this->doctorHospitalLicenseId($doctorId)),
-            0,
-            5,
-        );
+        $recentPatients = array_slice($this->managedPatientsRows($doctorId), 0, 5);
 
         $this->ok([
             'ok' => true,
@@ -482,6 +983,506 @@ class MobileApiController extends Controller
             'upcoming' => array_map(fn(array $row): array => $this->formatDoctorAppointment($row, $baseUrl), $upcoming),
             'today' => array_map(fn(array $row): array => $this->formatDoctorAppointment($row, $baseUrl), $today),
             'recent_patients' => array_map(fn(array $row): array => $this->formatDoctorPatient($row, $baseUrl), $recentPatients),
+        ]);
+    }
+
+    /** GET /api/mobile/doctor/profile */
+    public function doctorProfileSettings(): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
+
+        $stmt = Database::getInstance()->prepare(
+            "SELECT u.id AS user_id, u.name, u.email, u.avatar_url,
+                    dp.cedula, dp.specialty, dp.subspecialty, dp.bio, dp.photo,
+                    dp.consultation_fee, dp.telemedicine_fee, dp.home_visit_fee,
+                    dp.duration_minutes, dp.address, dp.city, dp.state, dp.lat, dp.lng
+             FROM users u
+             LEFT JOIN doctor_profiles dp ON dp.user_id = u.id
+             WHERE u.id = ? AND u.role_id = 2
+             LIMIT 1"
+        );
+        $stmt->execute([$doctorId]);
+        $doctor = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        if (!$doctor) {
+            $this->fail('Doctor no encontrado.', 404);
+        }
+
+        $doctor = $this->hydrateDoctorPricing($doctorId, $doctor);
+
+        $this->ok([
+            'ok' => true,
+            'data' => $this->formatDoctor($doctor, $baseUrl, true) + [
+                'email' => (string)($doctor['email'] ?? ''),
+                'avatar_url' => $this->absoluteUrl($doctor['photo'] ?? $doctor['avatar_url'] ?? null, $baseUrl),
+                'cedula' => $doctor['cedula'] ?? null,
+            ],
+        ]);
+    }
+
+    /** PUT /api/mobile/doctor/profile */
+    public function updateDoctorProfile(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+
+        $name = trim((string)($body['name'] ?? ''));
+        $specialty = trim((string)($body['specialty'] ?? ''));
+        $consultationFee = max(0, (float)($body['consultation_fee'] ?? 0));
+        $telemedicineFee = max(0, (float)($body['telemedicine_fee'] ?? 0));
+
+        if ($name === '' || $specialty === '') {
+            $this->fail('Nombre y especialidad son obligatorios.', 400);
+        }
+
+        if ($consultationFee <= 0 || $telemedicineFee <= 0) {
+            $this->fail('Las tarifas de consulta presencial y videoconsulta deben ser mayores a 0.', 400);
+        }
+
+        $profileData = [
+            'specialty' => $specialty,
+            'subspecialty' => trim((string)($body['subspecialty'] ?? '')) ?: null,
+            'bio' => trim((string)($body['bio'] ?? '')) ?: null,
+            'consultation_fee' => $consultationFee,
+            'telemedicine_fee' => $telemedicineFee,
+            'home_visit_fee' => max(0, (float)($body['home_visit_fee'] ?? 0)),
+            'duration_minutes' => max(15, (int)($body['duration_minutes'] ?? 30)),
+            'address' => trim((string)($body['address'] ?? '')) ?: null,
+            'city' => trim((string)($body['city'] ?? '')) ?: null,
+            'state' => trim((string)($body['state'] ?? '')) ?: null,
+        ];
+
+        if ($this->hasColumn('doctor_profiles', 'lat') && array_key_exists('lat', $body)) {
+            $profileData['lat'] = $body['lat'] !== null && $body['lat'] !== '' ? (float)$body['lat'] : null;
+        }
+        if ($this->hasColumn('doctor_profiles', 'lng') && array_key_exists('lng', $body)) {
+            $profileData['lng'] = $body['lng'] !== null && $body['lng'] !== '' ? (float)$body['lng'] : null;
+        }
+
+        $db = Database::getInstance();
+        $db->prepare('UPDATE users SET name = ? WHERE id = ?')->execute([$name, $doctorId]);
+
+        $existing = $db->prepare('SELECT user_id FROM doctor_profiles WHERE user_id = ? LIMIT 1');
+        $existing->execute([$doctorId]);
+
+        if ((bool)$existing->fetchColumn()) {
+            $sets = [];
+            $params = [];
+            foreach ($profileData as $column => $value) {
+                $sets[] = "{$column} = ?";
+                $params[] = $value;
+            }
+            $params[] = $doctorId;
+
+            $db->prepare('UPDATE doctor_profiles SET ' . implode(', ', $sets) . ' WHERE user_id = ?')
+                ->execute($params);
+        } else {
+            $columns = array_keys($profileData);
+            $placeholders = implode(', ', array_fill(0, count($columns) + 1, '?'));
+            $params = [$doctorId];
+            foreach ($columns as $column) {
+                $params[] = $profileData[$column];
+            }
+            $db->prepare(
+                'INSERT INTO doctor_profiles (user_id, ' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')'
+            )->execute($params);
+        }
+
+        $this->ok(['ok' => true, 'message' => 'Configuracion del doctor actualizada correctamente.']);
+    }
+
+    /** GET /api/mobile/doctor/availability?month=YYYY-MM */
+    public function doctorAvailabilitySettings(): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $month = trim((string)($_GET['month'] ?? date('Y-m')));
+
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $this->fail('Formato de mes invalido. Usa YYYY-MM.', 400);
+        }
+
+        $dp = new DoctorProfile();
+        $schedule = $dp->getAvailability($doctorId);
+        $overrides = $dp->getAvailabilityOverrides($doctorId, $month);
+
+        $this->ok([
+            'ok' => true,
+            'schedule' => array_map(static function (array $item): array {
+                return [
+                    'day_of_week' => (int)($item['day_of_week'] ?? -1),
+                    'start_time' => $item['start_time'] ?? null,
+                    'end_time' => $item['end_time'] ?? null,
+                    'slot_duration_minutes' => (int)($item['slot_duration_minutes'] ?? 30),
+                    'is_active' => (int)($item['is_active'] ?? 1),
+                    'break_start' => $item['break_start'] ?? null,
+                    'break_end' => $item['break_end'] ?? null,
+                ];
+            }, $schedule),
+            'overrides' => array_map(static function (array $item): array {
+                return [
+                    'override_date' => $item['override_date'] ?? null,
+                    'start_time' => $item['start_time'] ?? null,
+                    'end_time' => $item['end_time'] ?? null,
+                    'is_off' => !empty($item['is_off']) ? 1 : 0,
+                    'reason' => $item['reason'] ?? null,
+                ];
+            }, array_values($overrides)),
+        ]);
+    }
+
+    /** PUT /api/mobile/doctor/availability */
+    public function updateDoctorAvailability(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+        $rawSchedule = $body['schedule'] ?? null;
+
+        if (!is_array($rawSchedule)) {
+            $this->fail('Schedule invalido.', 400);
+        }
+
+        $allowedDays = [0, 1, 2, 3, 4, 5, 6];
+        $schedule = [];
+
+        foreach ($rawSchedule as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $day = (int)($item['day'] ?? -1);
+            $enabled = !empty($item['enabled']);
+            $start = trim((string)($item['start'] ?? '09:00'));
+            $end = trim((string)($item['end'] ?? '17:00'));
+            $breakStart = trim((string)($item['break_start'] ?? ''));
+            $breakEnd = trim((string)($item['break_end'] ?? ''));
+            $duration = max(15, (int)($item['duration'] ?? 30));
+
+            if (!in_array($day, $allowedDays, true)) {
+                $this->fail('Dia invalido en horario semanal.', 400);
+            }
+
+            if (!$enabled) {
+                continue;
+            }
+
+            if (!$this->isValidTimeValue($start) || !$this->isValidTimeValue($end)) {
+                $this->fail('Horario invalido. Usa HH:MM.', 400);
+            }
+
+            if ($this->timeToMinutes($start) >= $this->timeToMinutes($end)) {
+                $this->fail('La hora de inicio debe ser menor que la hora final.', 400);
+            }
+
+            if ($breakStart !== '' || $breakEnd !== '') {
+                if (!$this->isValidTimeValue($breakStart) || !$this->isValidTimeValue($breakEnd)) {
+                    $this->fail('Descanso invalido. Usa HH:MM.', 400);
+                }
+
+                $breakStartMinutes = $this->timeToMinutes($breakStart);
+                $breakEndMinutes = $this->timeToMinutes($breakEnd);
+
+                if (
+                    $breakStartMinutes < $this->timeToMinutes($start) ||
+                    $breakEndMinutes > $this->timeToMinutes($end) ||
+                    $breakStartMinutes >= $breakEndMinutes
+                ) {
+                    $this->fail('El descanso debe quedar dentro de la jornada.', 400);
+                }
+            }
+
+            $schedule[] = [
+                'day' => $day,
+                'start' => $start,
+                'end' => $end,
+                'duration' => $duration,
+                'break_start' => $breakStart !== '' ? $breakStart : null,
+                'break_end' => $breakEnd !== '' ? $breakEnd : null,
+            ];
+        }
+
+        (new DoctorProfile())->saveAvailability($doctorId, $schedule);
+
+        $this->ok([
+            'ok' => true,
+            'message' => 'Horario semanal actualizado correctamente.',
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/availability/override */
+    public function doctorAvailabilityOverride(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+
+        $date = trim((string)($body['date'] ?? ''));
+        $clear = !empty($body['clear']);
+        $isOff = !empty($body['is_off']);
+        $startTime = trim((string)($body['start_time'] ?? ''));
+        $endTime = trim((string)($body['end_time'] ?? ''));
+        $reason = trim((string)($body['reason'] ?? '')) ?: null;
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $this->fail('Fecha invalida. Usa YYYY-MM-DD.', 400);
+        }
+
+        $dp = new DoctorProfile();
+
+        if ($clear) {
+            $dp->deleteAvailabilityOverride($doctorId, $date);
+            $this->ok([
+                'ok' => true,
+                'message' => 'Se elimino el ajuste especial del dia.',
+            ]);
+            return;
+        }
+
+        if (!$isOff) {
+            if ($startTime === '' || $endTime === '') {
+                $this->fail('Debes indicar un horario o marcar el dia como descanso.', 400);
+            }
+
+            if (!$this->isValidTimeValue($startTime) || !$this->isValidTimeValue($endTime)) {
+                $this->fail('Horario invalido. Usa HH:MM.', 400);
+            }
+
+            if ($this->timeToMinutes($startTime) >= $this->timeToMinutes($endTime)) {
+                $this->fail('La hora de inicio debe ser menor que la hora final.', 400);
+            }
+        }
+
+        $dp->saveAvailabilityOverride($doctorId, $date, [
+            'start_time' => $isOff ? null : $startTime,
+            'end_time' => $isOff ? null : $endTime,
+            'is_off' => $isOff ? 1 : 0,
+            'reason' => $reason,
+        ]);
+
+        $this->ok([
+            'ok' => true,
+            'message' => $isOff
+                ? 'Dia bloqueado correctamente.'
+                : 'Ajuste especial guardado correctamente.',
+        ]);
+    }
+
+    /** GET /api/mobile/doctor/consultation-templates */
+    public function doctorConsultationTemplates(): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+
+        $defaults = array_map(
+            fn(array $template): array => $this->mapDoctorConsultationTemplate($template, 'default'),
+            $this->consultationTemplateDefaults()
+        );
+
+        $storageReady = true;
+        $customTemplates = [];
+
+        try {
+            $stmt = Database::getInstance()->prepare(
+                'SELECT id, name, color_hex, usage_notes, subjective, objective, assessment, plan, diagnosis, is_active, sort_order, updated_at
+                 FROM doctor_consultation_templates
+                 WHERE doctor_id = ?
+                 ORDER BY is_active DESC, sort_order ASC, updated_at DESC, id DESC'
+            );
+            $stmt->execute([$doctorId]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $customTemplates = array_map(
+                fn(array $row): array => $this->mapDoctorConsultationTemplate($row, 'custom'),
+                $rows
+            );
+        } catch (\Throwable) {
+            $storageReady = false;
+        }
+
+        $activeCustom = array_values(array_filter(
+            $customTemplates,
+            static fn(array $template): bool => !empty($template['is_active'])
+        ));
+
+        $this->ok([
+            'ok' => true,
+            'storage_ready' => $storageReady,
+            'data' => $customTemplates,
+            'defaults' => $defaults,
+            'library' => !empty($activeCustom) ? $activeCustom : $defaults,
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/consultation-templates */
+    public function saveDoctorConsultationTemplate(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+
+        if (!$this->hasTable('doctor_consultation_templates')) {
+            $this->fail('El almacenamiento de plantillas todavia no esta disponible en este entorno.', 503);
+        }
+
+        $body = $this->body();
+        $templateId = (int)($body['template_id'] ?? $body['id'] ?? 0);
+        $name = trim((string)($body['name'] ?? ''));
+        $colorHex = strtoupper(trim((string)($body['color_hex'] ?? '#2563EB')));
+        $usageNotes = trim((string)($body['usage_notes'] ?? ''));
+        $subjective = trim((string)($body['subjective'] ?? ''));
+        $objective = trim((string)($body['objective'] ?? ''));
+        $assessment = trim((string)($body['assessment'] ?? ''));
+        $plan = trim((string)($body['plan'] ?? ''));
+        $diagnosis = trim((string)($body['diagnosis'] ?? ''));
+        $sortOrder = max(0, min(999, (int)($body['sort_order'] ?? 0)));
+        $isActive = !array_key_exists('is_active', $body) || !empty($body['is_active']) ? 1 : 0;
+
+        if (!preg_match('/^#[0-9A-F]{6}$/', $colorHex)) {
+            $colorHex = '#2563EB';
+        }
+
+        if ($name === '') {
+            $this->fail('Asigna un nombre a la plantilla.', 400);
+        }
+
+        if ($subjective === '' && $objective === '' && $assessment === '' && $plan === '' && $diagnosis === '') {
+            $this->fail('La plantilla debe incluir al menos un bloque clinico o un diagnostico base.', 400);
+        }
+
+        $db = Database::getInstance();
+
+        try {
+            if ($templateId > 0) {
+                $updateStmt = $db->prepare(
+                    'UPDATE doctor_consultation_templates
+                     SET name = ?, color_hex = ?, usage_notes = ?, subjective = ?, objective = ?,
+                         assessment = ?, plan = ?, diagnosis = ?, is_active = ?, sort_order = ?, updated_at = NOW()
+                     WHERE id = ? AND doctor_id = ?'
+                );
+                $updateStmt->execute([
+                    $name,
+                    $colorHex,
+                    $usageNotes !== '' ? $usageNotes : null,
+                    $subjective !== '' ? $subjective : null,
+                    $objective !== '' ? $objective : null,
+                    $assessment !== '' ? $assessment : null,
+                    $plan !== '' ? $plan : null,
+                    $diagnosis !== '' ? $diagnosis : null,
+                    $isActive,
+                    $sortOrder,
+                    $templateId,
+                    $doctorId,
+                ]);
+
+                if ($updateStmt->rowCount() < 1) {
+                    $checkStmt = $db->prepare(
+                        'SELECT id FROM doctor_consultation_templates WHERE id = ? AND doctor_id = ? LIMIT 1'
+                    );
+                    $checkStmt->execute([$templateId, $doctorId]);
+                    if (!$checkStmt->fetchColumn()) {
+                        $this->fail('Plantilla no encontrada.', 404);
+                    }
+                }
+            } else {
+                $db->prepare(
+                    'INSERT INTO doctor_consultation_templates
+                       (doctor_id, name, color_hex, usage_notes, subjective, objective, assessment, plan, diagnosis, is_active, sort_order, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+                )->execute([
+                    $doctorId,
+                    $name,
+                    $colorHex,
+                    $usageNotes !== '' ? $usageNotes : null,
+                    $subjective !== '' ? $subjective : null,
+                    $objective !== '' ? $objective : null,
+                    $assessment !== '' ? $assessment : null,
+                    $plan !== '' ? $plan : null,
+                    $diagnosis !== '' ? $diagnosis : null,
+                    $isActive,
+                    $sortOrder,
+                ]);
+                $templateId = (int)$db->lastInsertId();
+            }
+        } catch (\Throwable $e) {
+            error_log('[MobileApiController::saveDoctorConsultationTemplate] ' . $e->getMessage());
+            $this->fail('No se pudo guardar la plantilla. Verifica la migracion de plantillas.', 500);
+        }
+
+        $savedStmt = $db->prepare(
+            'SELECT id, name, color_hex, usage_notes, subjective, objective, assessment, plan, diagnosis, is_active, sort_order
+             FROM doctor_consultation_templates
+             WHERE id = ? AND doctor_id = ?
+             LIMIT 1'
+        );
+        $savedStmt->execute([$templateId, $doctorId]);
+        $saved = $savedStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        $this->ok([
+            'ok' => true,
+            'message' => array_key_exists('template_id', $body) || array_key_exists('id', $body)
+                ? 'Plantilla actualizada.'
+                : 'Plantilla guardada.',
+            'template' => $saved ? $this->mapDoctorConsultationTemplate($saved, 'custom') : null,
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/consultation-templates/:id/delete */
+    public function deleteDoctorConsultationTemplate(string $id): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $templateId = (int)$id;
+
+        if ($templateId <= 0) {
+            $this->fail('Plantilla invalida.', 400);
+        }
+
+        if (!$this->hasTable('doctor_consultation_templates')) {
+            $this->fail('El almacenamiento de plantillas todavia no esta disponible en este entorno.', 503);
+        }
+
+        $stmt = Database::getInstance()->prepare(
+            'DELETE FROM doctor_consultation_templates WHERE id = ? AND doctor_id = ?'
+        );
+        $stmt->execute([$templateId, $doctorId]);
+
+        if ($stmt->rowCount() < 1) {
+            $this->fail('Plantilla no encontrada.', 404);
+        }
+
+        $this->ok([
+            'ok' => true,
+            'message' => 'Plantilla eliminada.',
         ]);
     }
 
@@ -659,15 +1660,185 @@ class MobileApiController extends Controller
         $this->apiHeaders();
         $jwt = $this->requireDoctorJwt();
         $doctorId = (int)$jwt['sub'];
-        $dp = new DoctorProfile();
         $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
 
-        $rows = $dp->getPatientsOf($doctorId, $this->doctorHospitalLicenseId($doctorId));
+        $rows = $this->managedPatientsRows($doctorId);
 
         $this->ok([
             'ok' => true,
             'data' => array_map(fn(array $row): array => $this->formatDoctorPatient($row, $baseUrl), $rows),
         ]);
+    }
+
+    /** POST /api/mobile/doctor/patients/link */
+    public function doctorLinkPatient(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+        $code = $this->normalizeAccessCode((string)($body['access_code'] ?? ''));
+
+        if (strlen($code) < 8) {
+            $this->fail('Ingresa un codigo valido de al menos 8 caracteres.', 400);
+        }
+
+        if (!$this->hasColumn('patient_profiles', 'doctor_access_code')) {
+            $this->fail('El codigo de acceso de pacientes aun no esta habilitado en este entorno.', 409);
+        }
+
+        $stmt = Database::getInstance()->prepare(
+            "SELECT u.id, u.name, u.email, u.avatar_url,
+                    pp.birth_date, pp.gender, pp.blood_type, pp.phone, pp.address, pp.city,
+                    pp.emergency_contact_name, pp.emergency_contact_phone,
+                    pp.allergies, pp.chronic_conditions, pp.current_medications,
+                    MAX(a.scheduled_at) AS last_appointment,
+                    COUNT(a.id) AS total_appointments
+             FROM patient_profiles pp
+             JOIN users u ON u.id = pp.user_id
+             LEFT JOIN appointments a ON a.patient_id = u.id AND a.doctor_id = ?
+             WHERE pp.doctor_access_code = ?
+               AND u.status = 'active'
+             GROUP BY u.id
+             LIMIT 1"
+        );
+        $stmt->execute([$doctorId, $code]);
+        $patient = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        if (!$patient) {
+            $this->fail('No se encontro un paciente activo con ese codigo.', 404);
+        }
+
+        $patientId = (int)($patient['id'] ?? 0);
+        if ($patientId <= 0) {
+            $this->fail('Paciente invalido.', 404);
+        }
+
+        $this->upsertDoctorPatientLink($doctorId, $patientId, 'patient_code');
+
+        $this->ok([
+            'ok' => true,
+            'message' => 'Paciente vinculado correctamente.',
+            'patient' => $this->formatDoctorPatient($patient, defined('BASE_URL') ? constant('BASE_URL') : ''),
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/patients/register */
+    public function doctorRegisterPatient(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+
+        $name = trim((string)($body['name'] ?? ''));
+        $email = filter_var(trim((string)($body['email'] ?? '')), FILTER_VALIDATE_EMAIL);
+        $phone = preg_replace('/\D/', '', (string)($body['phone'] ?? ''));
+        $gender = trim((string)($body['gender'] ?? '')) ?: null;
+        $birthDate = trim((string)($body['birth_date'] ?? '')) ?: null;
+
+        if ($name === '' || !$email) {
+            $this->fail('Nombre y correo valido son obligatorios.', 400);
+        }
+
+        $userModel = new User();
+        if ($userModel->findByEmail($email)) {
+            $this->fail('Ya existe un usuario con ese correo.', 409);
+        }
+
+        $db = Database::getInstance();
+        $licenseId = $this->doctorHospitalLicenseId($doctorId);
+        $rawPassword = bin2hex(random_bytes(6));
+        $hash = password_hash($rawPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                "INSERT INTO users (name, email, password_hash, role_id, status)
+                 VALUES (?, ?, ?, 3, 'active')"
+            )->execute([$name, $email, $hash]);
+            $newUserId = (int)$db->lastInsertId();
+
+            try {
+                $db->prepare('UPDATE users SET force_password_change = 1 WHERE id = ?')->execute([$newUserId]);
+            } catch (\Throwable) {
+            }
+
+            $columns = ['user_id', 'phone', 'gender', 'birth_date', 'associated_doctor_id'];
+            $values = [$newUserId, $phone ?: null, $gender, $birthDate, $doctorId];
+
+            if ($this->hasColumn('patient_profiles', 'lat') && array_key_exists('lat', $body)) {
+                $columns[] = 'lat';
+                $values[] = $body['lat'] !== null && $body['lat'] !== '' ? (float)$body['lat'] : null;
+            }
+            if ($this->hasColumn('patient_profiles', 'lng') && array_key_exists('lng', $body)) {
+                $columns[] = 'lng';
+                $values[] = $body['lng'] !== null && $body['lng'] !== '' ? (float)$body['lng'] : null;
+            }
+            if (array_key_exists('address', $body)) {
+                $columns[] = 'address';
+                $values[] = trim((string)($body['address'] ?? '')) ?: null;
+            }
+            if (array_key_exists('city', $body)) {
+                $columns[] = 'city';
+                $values[] = trim((string)($body['city'] ?? '')) ?: null;
+            }
+            if (array_key_exists('state', $body)) {
+                $columns[] = 'state';
+                $values[] = trim((string)($body['state'] ?? '')) ?: null;
+            }
+
+            $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+            $db->prepare(
+                'INSERT INTO patient_profiles (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')'
+            )->execute($values);
+
+            if ($licenseId) {
+                $db->prepare('UPDATE users SET hospital_license_id = ? WHERE id = ?')->execute([$licenseId, $newUserId]);
+            }
+
+            $db->commit();
+            $this->ensurePatientAccessCode($newUserId);
+            $this->upsertDoctorPatientLink($doctorId, $newUserId, 'doctor_registered');
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('[MobileApiController::doctorRegisterPatient] ' . $e->getMessage());
+            $this->fail('No se pudo registrar el paciente.', 500);
+        }
+
+        $doctorName = trim((string)($jwt['name'] ?? '')) ?: 'Doctor';
+        try {
+            $clinicName = null;
+            if ($licenseId) {
+                $clinicStmt = $db->prepare('SELECT name FROM hospital_licenses WHERE id = ? LIMIT 1');
+                $clinicStmt->execute([$licenseId]);
+                $clinicName = $clinicStmt->fetchColumn() ?: null;
+            }
+
+            Mailer::sendWelcomeCredentials(
+                (string)$email,
+                $name,
+                'Paciente',
+                $rawPassword,
+                'https://doctorcloud.digital/app/login',
+                $clinicName ?: null,
+                'el Dr. ' . $doctorName
+            );
+        } catch (\Throwable) {
+        }
+
+        $this->ok([
+            'ok' => true,
+            'message' => 'Paciente registrado y vinculado correctamente. Se enviaron credenciales por correo.',
+        ], 201);
     }
 
     /** GET /api/mobile/doctor/patients/:id/snapshot */
@@ -806,6 +1977,284 @@ class MobileApiController extends Controller
             'prescriptions' => $prescriptions,
             'history' => $history,
         ]);
+    }
+
+    /** GET /api/mobile/doctor/patients/:id/documents */
+    public function doctorPatientDocuments(string $id): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $patientId = (int)$id;
+
+        if ($patientId <= 0) {
+            $this->fail('Paciente invalido.', 400);
+        }
+
+        if (!$this->doctorCanAccessPatient($doctorId, $patientId)) {
+            $this->fail('No tienes acceso a este paciente.', 403);
+        }
+
+        $db = Database::getInstance();
+        $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
+
+        $patientStmt = $db->prepare(
+            'SELECT u.id, u.name, u.avatar_url
+             FROM users u
+             WHERE u.id = ?
+             LIMIT 1'
+        );
+        $patientStmt->execute([$patientId]);
+        $patient = $patientStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        if (!$patient) {
+            $this->fail('Paciente no encontrado.', 404);
+        }
+
+        $rows = $this->safeQuery(
+            'SELECT pd.id, pd.document_type, pd.title, pd.file_path, pd.file_mime,
+                    pd.file_size_kb, pd.notes, pd.created_at, u.name AS uploader_name
+             FROM patient_documents pd
+             LEFT JOIN users u ON u.id = pd.uploaded_by
+             WHERE pd.patient_id = ?
+             ORDER BY pd.created_at DESC
+             LIMIT 100',
+            [$patientId]
+        );
+
+        $patient['id'] = (int)($patient['id'] ?? $patientId);
+        $patient['avatar_url'] = $this->absoluteUrl($patient['avatar_url'] ?? null, $baseUrl);
+
+        $data = array_map(function (array $row) use ($baseUrl): array {
+            $path = (string)($row['file_path'] ?? '');
+
+            return [
+                'id' => (int)($row['id'] ?? 0),
+                'document_type' => $row['document_type'] ?? 'other',
+                'title' => $row['title'] ?? 'Documento',
+                'file_path' => $path,
+                'file_url' => $path !== '' ? rtrim($baseUrl, '/') . '/' . ltrim($path, '/') : null,
+                'file_mime' => $row['file_mime'] ?? null,
+                'file_size_kb' => (int)($row['file_size_kb'] ?? 0),
+                'notes' => $row['notes'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'uploader_name' => $row['uploader_name'] ?? null,
+            ];
+        }, $rows);
+
+        $this->ok([
+            'ok' => true,
+            'patient' => $patient,
+            'data' => $data,
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/patients/:id/documents/upload */
+    public function doctorPatientDocumentsUpload(string $id): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $patientId = (int)$id;
+
+        if ($patientId <= 0) {
+            $this->fail('Paciente invalido.', 400);
+        }
+
+        if (!$this->doctorCanAccessPatient($doctorId, $patientId)) {
+            $this->fail('No tienes acceso a este paciente.', 403);
+        }
+
+        if (empty($_FILES['document_file'])) {
+            $this->fail('No se recibio ningun archivo.', 400);
+        }
+
+        $file = $_FILES['document_file'];
+        $allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = (string)$finfo->file($file['tmp_name']);
+        if (!in_array($mime, $allowed, true)) {
+            $this->fail('Tipo de archivo no permitido. Solo PDF, JPG o PNG.', 422);
+        }
+
+        $maxBytes = 10 * 1024 * 1024;
+        if ((int)$file['size'] > $maxBytes) {
+            $this->fail('El archivo excede el tamano maximo de 10 MB.', 422);
+        }
+
+        $dir = APP_ROOT . '/storage/uploads/documents/' . $patientId . '/';
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+            $this->fail('No se pudo crear el directorio de carga.', 500);
+        }
+
+        $ext = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if ($ext === '') {
+            $ext = match ($mime) {
+                'application/pdf' => 'pdf',
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                default => 'bin',
+            };
+        }
+
+        $filename = bin2hex(random_bytes(8)) . '_' . time() . ($ext !== '' ? '.' . $ext : '');
+        $destPath = $dir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+            $this->fail('No se pudo guardar el archivo.', 500);
+        }
+
+        $relativePath = 'storage/uploads/documents/' . $patientId . '/' . $filename;
+        $sizeKb = (int)round(((int)$file['size']) / 1024);
+        $docType = trim((string)($_POST['document_type'] ?? 'other')) ?: 'other';
+        $title = trim((string)($_POST['title'] ?? '')) ?: 'Documento';
+        $notes = trim((string)($_POST['notes'] ?? ''));
+
+        $pdo = Database::getInstance();
+        $pdo->prepare(
+            'INSERT INTO patient_documents
+               (patient_id, uploaded_by, document_type, title, file_path, file_mime, file_size_kb, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $patientId,
+            $doctorId,
+            $docType,
+            $title,
+            $relativePath,
+            $mime,
+            $sizeKb,
+            $notes !== '' ? $notes : null,
+        ]);
+
+        $docId = (int)$pdo->lastInsertId();
+        $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
+        $uploaderName = null;
+
+        try {
+            $uploaderStmt = $pdo->prepare('SELECT name FROM users WHERE id = ? LIMIT 1');
+            $uploaderStmt->execute([$doctorId]);
+            $uploaderName = $uploaderStmt->fetchColumn() ?: null;
+        } catch (\Throwable) {
+            $uploaderName = null;
+        }
+
+        $this->ok([
+            'id' => $docId,
+            'message' => 'Documento subido correctamente al expediente del paciente.',
+            'document' => [
+                'id' => $docId,
+                'document_type' => $docType,
+                'title' => $title,
+                'file_path' => $relativePath,
+                'file_url' => rtrim($baseUrl, '/') . '/' . ltrim($relativePath, '/'),
+                'file_mime' => $mime,
+                'file_size_kb' => $sizeKb,
+                'notes' => $notes !== '' ? $notes : null,
+                'uploader_name' => $uploaderName,
+            ],
+        ], 201);
+    }
+
+    /** GET /api/mobile/doctor/notes */
+    public function doctorNotes(): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
+
+        $rows = $this->safeQuery(
+            'SELECT mn.id, mn.patient_id, mn.appointment_id, mn.subjective, mn.objective,
+                    mn.assessment, mn.plan_text, mn.created_at,
+                    u.name AS patient_name, u.avatar_url AS patient_avatar_url,
+                    a.scheduled_at, a.type AS appt_type, a.reason AS appt_reason
+             FROM medical_notes mn
+             JOIN users u ON u.id = mn.patient_id
+             LEFT JOIN appointments a ON a.id = mn.appointment_id
+             WHERE mn.doctor_id = ?
+             ORDER BY COALESCE(a.scheduled_at, mn.created_at) DESC, mn.id DESC
+             LIMIT 150',
+            [$doctorId]
+        );
+
+        $data = array_map(function (array $row) use ($baseUrl): array {
+            return [
+                'id' => (int)($row['id'] ?? 0),
+                'patient_id' => isset($row['patient_id']) ? (int)$row['patient_id'] : null,
+                'patient_name' => $row['patient_name'] ?? null,
+                'patient_avatar_url' => $this->absoluteUrl($row['patient_avatar_url'] ?? null, $baseUrl),
+                'appointment_id' => isset($row['appointment_id']) ? (int)$row['appointment_id'] : null,
+                'subjective' => $row['subjective'] ?? null,
+                'objective' => $row['objective'] ?? null,
+                'assessment' => $row['assessment'] ?? null,
+                'plan_text' => $row['plan_text'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'scheduled_at' => $row['scheduled_at'] ?? null,
+                'appt_type' => $row['appt_type'] ?? null,
+                'appt_reason' => $row['appt_reason'] ?? null,
+            ];
+        }, $rows);
+
+        $this->ok([
+            'ok' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /** POST /api/mobile/doctor/notes */
+    public function doctorCreateNote(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+
+        $patientId = (int)($body['patient_id'] ?? 0);
+        $subjective = trim((string)($body['subjective'] ?? ''));
+        $objective = trim((string)($body['objective'] ?? ''));
+        $assessment = trim((string)($body['assessment'] ?? ''));
+        $planText = trim((string)($body['plan_text'] ?? ''));
+
+        if ($patientId <= 0) {
+            $this->fail('Paciente invalido.', 400);
+        }
+
+        if (!$this->doctorCanAccessPatient($doctorId, $patientId)) {
+            $this->fail('No tienes acceso a este paciente.', 403);
+        }
+
+        if ($subjective === '' && $objective === '' && $assessment === '' && $planText === '') {
+            $this->fail('Agrega al menos un dato clinico para guardar la nota.', 400);
+        }
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare(
+            'INSERT INTO medical_notes
+               (appointment_id, doctor_id, patient_id, subjective, objective, assessment, plan_text)
+             VALUES (NULL, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            $doctorId,
+            $patientId,
+            $subjective !== '' ? $subjective : null,
+            $objective !== '' ? $objective : null,
+            $assessment !== '' ? $assessment : null,
+            $planText !== '' ? $planText : null,
+        ]);
+
+        $this->ok([
+            'ok' => true,
+            'id' => (int)$db->lastInsertId(),
+            'message' => 'Nota guardada correctamente.',
+        ], 201);
     }
 
     /** GET /api/mobile/doctor/appointments/:id */
@@ -1423,6 +2872,84 @@ class MobileApiController extends Controller
         ]);
     }
 
+    /** POST /api/mobile/doctor/prescriptions */
+    public function doctorCreatePrescription(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireDoctorJwt();
+        $doctorId = (int)$jwt['sub'];
+        $body = $this->body();
+
+        $patientId = (int)($body['patient_id'] ?? 0);
+        $diagnosis = trim((string)($body['diagnosis'] ?? ''));
+        $medications = trim((string)($body['medications'] ?? ''));
+        $instructions = trim((string)($body['instructions'] ?? ''));
+        $validDays = max(1, (int)($body['valid_days'] ?? 30));
+
+        if ($patientId <= 0) {
+            $this->fail('Paciente invalido.', 400);
+        }
+
+        if (!$this->doctorCanAccessPatient($doctorId, $patientId)) {
+            $this->fail('No tienes acceso a este paciente.', 403);
+        }
+
+        if ($diagnosis === '' || $medications === '') {
+            $this->fail('Diagnostico y medicamentos son obligatorios.', 400);
+        }
+
+        $db = Database::getInstance();
+        $profileStmt = $db->prepare(
+            'SELECT pp.birth_date, pp.weight_kg, pp.height_cm, pp.blood_type,
+                    COALESCE(NULLIF(pp.allergies, ""), pmr.allergies) AS allergies
+             FROM patient_profiles pp
+             LEFT JOIN patient_medical_records pmr ON pmr.patient_id = pp.user_id
+             WHERE pp.user_id = ?
+             LIMIT 1'
+        );
+        $profileStmt->execute([$patientId]);
+        $profile = $profileStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+        $patientAge = $this->ageFromBirthDate($profile['birth_date'] ?? null);
+        $patientWeight = isset($profile['weight_kg']) && $profile['weight_kg'] !== ''
+            ? (float)$profile['weight_kg']
+            : null;
+        $patientHeight = isset($profile['height_cm']) && $profile['height_cm'] !== ''
+            ? (float)$profile['height_cm']
+            : null;
+
+        $stmt = $db->prepare(
+            'INSERT INTO prescriptions
+               (doctor_id, patient_id, appointment_id, patient_age, patient_weight,
+                patient_height, patient_blood_type, patient_allergies, diagnosis,
+                medications, instructions, issued_date, valid_days, status)
+             VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, "active")'
+        );
+        $stmt->execute([
+            $doctorId,
+            $patientId,
+            $patientAge,
+            $patientWeight,
+            $patientHeight,
+            $profile['blood_type'] ?? null,
+            $profile['allergies'] ?? null,
+            $diagnosis,
+            $medications,
+            $instructions !== '' ? $instructions : null,
+            $validDays,
+        ]);
+
+        $this->ok([
+            'ok' => true,
+            'id' => (int)$db->lastInsertId(),
+            'message' => 'Receta guardada correctamente.',
+        ], 201);
+    }
+
     /** GET /api/mobile/doctor/financial-history */
     public function doctorFinancialHistory(): void
     {
@@ -1636,14 +3163,23 @@ class MobileApiController extends Controller
             }
         }
 
+        $yearMonth = substr($date, 0, 7);
+        $overrides = $dp->getAvailabilityOverrides($id, $yearMonth);
+        $override = $overrides[$date] ?? null;
+
+        if ($override && !empty($override['is_off'])) {
+            $this->ok(['date' => $date, 'slots' => []]);
+            return;
+        }
+
         if (!$daySchedule) {
             $this->ok(['date' => $date, 'slots' => []]);
             return;
         }
 
         $duration = $profileDuration;
-        $start    = $daySchedule['start_time'] ?? '09:00';
-        $end      = $daySchedule['end_time']   ?? '17:00';
+        $start    = $override['start_time'] ?? ($daySchedule['start_time'] ?? '09:00');
+        $end      = $override['end_time']   ?? ($daySchedule['end_time']   ?? '17:00');
         $breakS   = $daySchedule['break_start'] ?? null;
         $breakE   = $daySchedule['break_end']   ?? null;
 
@@ -2343,6 +3879,7 @@ class MobileApiController extends Controller
         $pp      = new PatientProfile();
         $profile = $pp->findByUserId($userId);
         $baseUrl = defined('BASE_URL') ? constant('BASE_URL') : '';
+        $accessCode = $this->ensurePatientAccessCode($userId);
 
         $this->ok([
             'id'          => (int)$user['id'],
@@ -2359,6 +3896,9 @@ class MobileApiController extends Controller
             'weight_kg'               => $profile['weight_kg']               ?? null,
             'occupation'              => $profile['occupation']              ?? null,
             'state'                   => $profile['state']                   ?? null,
+            'lat'                     => $this->hasColumn('patient_profiles', 'lat') ? ($profile['lat'] ?? null) : null,
+            'lng'                     => $this->hasColumn('patient_profiles', 'lng') ? ($profile['lng'] ?? null) : null,
+            'doctor_access_code'      => $accessCode,
             'emergency_contact_name'  => $profile['emergency_contact_name']  ?? null,
             'emergency_contact_phone' => $profile['emergency_contact_phone'] ?? null,
         ]);
@@ -2397,6 +3937,18 @@ class MobileApiController extends Controller
             'emergency_contact_name'  => $body['emergency_contact_name']  ?? null,
             'emergency_contact_phone' => $body['emergency_contact_phone'] ?? null,
         ], fn($v) => $v !== null);
+
+        if ($this->hasColumn('patient_profiles', 'lat') && array_key_exists('lat', $body)) {
+            $profileData['lat'] = $body['lat'] !== null && $body['lat'] !== ''
+                ? (float)$body['lat']
+                : null;
+        }
+
+        if ($this->hasColumn('patient_profiles', 'lng') && array_key_exists('lng', $body)) {
+            $profileData['lng'] = $body['lng'] !== null && $body['lng'] !== ''
+                ? (float)$body['lng']
+                : null;
+        }
 
         if ($profileData) {
             $pp = new PatientProfile();
@@ -2959,6 +4511,270 @@ class MobileApiController extends Controller
 
     // ── NOTIFICACIONES ────────────────────────────────────────
 
+    /** GET /api/mobile/support */
+    public function supportTickets(): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireJwt(['patient', 'doctor']);
+        $userId = (int)($jwt['sub'] ?? 0);
+        $this->requireSupportTables();
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare(
+            "SELECT t.*,
+                    COUNT(m.id) AS message_count,
+                    MAX(m.created_at) AS last_message_at,
+                    SUBSTRING_INDEX(GROUP_CONCAT(m.body ORDER BY m.created_at DESC SEPARATOR '\n'), '\n', 1) AS last_message
+             FROM support_tickets t
+             LEFT JOIN support_ticket_messages m ON m.ticket_id = t.id
+             WHERE t.user_id = ?
+             GROUP BY t.id
+             ORDER BY t.updated_at DESC
+             LIMIT 100"
+        );
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $this->ok([
+            'data' => array_map(fn(array $row): array => $this->mapSupportTicketRow($row), $rows),
+        ]);
+    }
+
+    /** POST /api/mobile/support */
+    public function createSupportTicket(): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireJwt(['patient', 'doctor']);
+        $userId = (int)($jwt['sub'] ?? 0);
+        $role = $this->supportRoleForJwt($jwt);
+        $licenseId = $this->supportLicenseIdForJwt($jwt);
+        $this->requireSupportTables();
+
+        $input = $this->supportInput();
+        $subject = trim((string)($input['subject'] ?? ''));
+        $body = trim((string)($input['body'] ?? ''));
+        $priority = strtolower(trim((string)($input['priority'] ?? 'normal')));
+
+        if ($subject === '' || mb_strlen($subject) > 200) {
+            $this->fail('El asunto es requerido y debe tener maximo 200 caracteres.');
+        }
+        if ($body === '' && !isset($_FILES['attachment'])) {
+            $this->fail('Escribe el detalle del problema o adjunta un archivo.');
+        }
+        if (!in_array($priority, ['low', 'normal', 'high', 'urgent'], true)) {
+            $priority = 'normal';
+        }
+
+        $attachmentPath = $this->mobileSupportAttachment();
+        $pdo = Database::getInstance();
+
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare(
+                "INSERT INTO support_tickets (license_id, user_id, role, subject, priority, status)
+                 VALUES (?, ?, ?, ?, ?, 'open')"
+            )->execute([$licenseId, $userId, $role, $subject, $priority]);
+
+            $ticketId = (int)$pdo->lastInsertId();
+            $pdo->prepare(
+                "INSERT INTO support_ticket_messages (ticket_id, sender_id, body, attachment)
+                 VALUES (?, ?, ?, ?)"
+            )->execute([$ticketId, $userId, $body, $attachmentPath]);
+            $pdo->commit();
+        } catch (\Throwable) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $this->fail('No se pudo crear el ticket de soporte.', 500);
+        }
+
+        $this->notifySupportAdmins(
+            $ticketId,
+            $licenseId,
+            'Nuevo ticket #' . $ticketId,
+            'Se abrio un ticket desde la app: ' . mb_substr($subject, 0, 80)
+        );
+
+        $this->ok([
+            'message' => 'Ticket creado correctamente.',
+            'ticket_id' => $ticketId,
+        ], 201);
+    }
+
+    /** GET /api/mobile/support/:id */
+    public function supportTicketDetail(string $id): void
+    {
+        $this->apiHeaders();
+        $jwt = $this->requireJwt(['patient', 'doctor']);
+        $userId = (int)($jwt['sub'] ?? 0);
+        $ticketId = (int)$id;
+        $this->requireSupportTables();
+
+        if ($ticketId < 1) {
+            $this->fail('Ticket invalido.', 400);
+        }
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare('SELECT * FROM support_tickets WHERE id = ? AND user_id = ? LIMIT 1');
+        $stmt->execute([$ticketId, $userId]);
+        $ticket = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$ticket) {
+            $this->fail('Ticket no encontrado.', 404);
+        }
+
+        if ($this->hasColumn('support_tickets', 'user_last_read_at')) {
+            try {
+                $pdo->prepare('UPDATE support_tickets SET user_last_read_at = NOW() WHERE id = ?')
+                    ->execute([$ticketId]);
+            } catch (\Throwable) {
+            }
+        }
+
+        $mStmt = $pdo->prepare(
+            "SELECT m.*, u.name AS sender_name, u.avatar_url AS sender_avatar
+             FROM support_ticket_messages m
+             JOIN users u ON u.id = m.sender_id
+             WHERE m.ticket_id = ?
+             ORDER BY m.created_at ASC"
+        );
+        $mStmt->execute([$ticketId]);
+        $messages = $mStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $baseUrl = $this->supportBaseUrl();
+
+        $mappedMessages = array_map(function (array $row) use ($userId, $baseUrl): array {
+            $attachmentPath = trim((string)($row['attachment'] ?? ''));
+            return [
+                'id' => (int)($row['id'] ?? 0),
+                'sender_id' => (int)($row['sender_id'] ?? 0),
+                'sender_name' => (string)($row['sender_name'] ?? 'Soporte'),
+                'sender_avatar' => $this->absoluteUrl($row['sender_avatar'] ?? null, $baseUrl),
+                'body' => (string)($row['body'] ?? ''),
+                'attachment_url' => $attachmentPath !== '' ? $this->absoluteUrl($attachmentPath, $baseUrl) : null,
+                'attachment_name' => $attachmentPath !== '' ? basename($attachmentPath) : null,
+                'created_at' => $row['created_at'] ?? null,
+                'is_me' => (int)($row['sender_id'] ?? 0) === $userId,
+            ];
+        }, $messages);
+
+        $ticket['message_count'] = count($mappedMessages);
+        $ticket['last_message_at'] = !empty($mappedMessages)
+            ? $mappedMessages[count($mappedMessages) - 1]['created_at']
+            : ($ticket['updated_at'] ?? null);
+        $ticket['last_message'] = !empty($mappedMessages)
+            ? (string)($mappedMessages[count($mappedMessages) - 1]['body'] ?? '')
+            : '';
+
+        $this->ok([
+            'ticket' => $this->mapSupportTicketRow($ticket),
+            'messages' => $mappedMessages,
+        ]);
+    }
+
+    /** POST /api/mobile/support/:id/reply */
+    public function replySupportTicket(string $id): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireJwt(['patient', 'doctor']);
+        $userId = (int)($jwt['sub'] ?? 0);
+        $ticketId = (int)$id;
+        $this->requireSupportTables();
+
+        if ($ticketId < 1) {
+            $this->fail('Ticket invalido.', 400);
+        }
+
+        $input = $this->supportInput();
+        $body = trim((string)($input['body'] ?? ''));
+        if ($body === '' && !isset($_FILES['attachment'])) {
+            $this->fail('Escribe una respuesta o adjunta un archivo.');
+        }
+
+        $pdo = Database::getInstance();
+        $tStmt = $pdo->prepare('SELECT id, subject, status, license_id FROM support_tickets WHERE id = ? AND user_id = ? LIMIT 1');
+        $tStmt->execute([$ticketId, $userId]);
+        $ticket = $tStmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$ticket) {
+            $this->fail('Ticket no encontrado.', 404);
+        }
+        if (($ticket['status'] ?? '') === 'closed') {
+            $this->fail('Este ticket ya esta cerrado.', 409);
+        }
+
+        $attachmentPath = $this->mobileSupportAttachment();
+
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare(
+                "INSERT INTO support_ticket_messages (ticket_id, sender_id, body, attachment)
+                 VALUES (?, ?, ?, ?)"
+            )->execute([$ticketId, $userId, $body, $attachmentPath]);
+
+            if (($ticket['status'] ?? '') === 'resolved') {
+                $pdo->prepare("UPDATE support_tickets SET status = 'open', updated_at = NOW() WHERE id = ?")
+                    ->execute([$ticketId]);
+            } else {
+                $pdo->prepare('UPDATE support_tickets SET updated_at = NOW() WHERE id = ?')
+                    ->execute([$ticketId]);
+            }
+            $pdo->commit();
+        } catch (\Throwable) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $this->fail('No se pudo guardar la respuesta.', 500);
+        }
+
+        $this->notifySupportAdmins(
+            $ticketId,
+            isset($ticket['license_id']) ? (int)$ticket['license_id'] : null,
+            'Respuesta en ticket #' . $ticketId,
+            'Hay una nueva respuesta desde la app en: ' . mb_substr((string)($ticket['subject'] ?? ''), 0, 80)
+        );
+
+        $this->ok(['message' => 'Respuesta enviada correctamente.']);
+    }
+
+    /** POST /api/mobile/support/:id/close */
+    public function closeSupportTicket(string $id): void
+    {
+        $this->apiHeaders();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->fail('Method not allowed.', 405);
+        }
+
+        $jwt = $this->requireJwt(['patient', 'doctor']);
+        $userId = (int)($jwt['sub'] ?? 0);
+        $ticketId = (int)$id;
+        $this->requireSupportTables();
+
+        if ($ticketId < 1) {
+            $this->fail('Ticket invalido.', 400);
+        }
+
+        $stmt = Database::getInstance()->prepare(
+            "UPDATE support_tickets
+             SET status = 'closed', updated_at = NOW()
+             WHERE id = ? AND user_id = ?"
+        );
+        $stmt->execute([$ticketId, $userId]);
+
+        if ($stmt->rowCount() < 1) {
+            $this->fail('No se pudo cerrar el ticket.', 404);
+        }
+
+        $this->ok(['message' => 'Ticket cerrado.']);
+    }
+
     /** GET /api/mobile/notifications — recent notifications for patient */
     public function notifications(): void
     {
@@ -3244,16 +5060,21 @@ class MobileApiController extends Controller
             'rating'           => (float)($d['avg_rating'] ?? 0),
             'reviews_count'    => (int)($d['review_count'] ?? $d['reviews_count'] ?? $d['total_reviews'] ?? 0),
             'consultation_fee' => (float)($d['consultation_fee'] ?? 0),
+            'telemedicine_fee' => (float)($d['telemedicine_fee'] ?? 0),
+            'home_visit_fee'   => (float)($d['home_visit_fee']   ?? 0),
             'city'             => $d['city'] ?? '',
+            'state'            => $d['state'] ?? '',
+            'address'          => $d['address'] ?? '',
+            'lat'              => isset($d['lat']) && $d['lat'] !== null ? (float)$d['lat'] : null,
+            'lng'              => isset($d['lng']) && $d['lng'] !== null ? (float)$d['lng'] : null,
+            'distance_meters'  => isset($d['distance_meters']) && $d['distance_meters'] !== null ? (float)$d['distance_meters'] : null,
+            'profile_score'    => isset($d['profile_score']) ? (int)$d['profile_score'] : null,
             'is_verified'      => (bool)($d['cedula'] ?? false),
         ];
 
         if ($full) {
             $base['bio']              = $d['bio']              ?? '';
             $base['subspecialty']     = $d['subspecialty']     ?? '';
-            $base['telemedicine_fee'] = (float)($d['telemedicine_fee'] ?? 0);
-            $base['home_visit_fee']   = (float)($d['home_visit_fee']   ?? 0);
-            $base['address']          = $d['address'] ?? '';
             $base['duration_minutes'] = (int)($d['duration_minutes'] ?? 30);
         }
 

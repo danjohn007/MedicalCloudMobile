@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -45,6 +45,7 @@ const money = new Intl.NumberFormat("es-MX", {
 
 export default function DoctorCreateAppointmentScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ patientId?: string | string[] }>();
   const today = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -87,12 +88,21 @@ export default function DoctorCreateAppointmentScreen() {
 
         const nextDoctorId = Number(dashboard.doctor.id || 0);
         const nextPatients = patientResponse.data || [];
+        const requestedPatientId = Number(
+          Array.isArray(params.patientId) ? params.patientId[0] : params.patientId,
+        );
 
         setDoctorId(nextDoctorId);
         setPatients(nextPatients);
 
         const sorted = sortPatients(nextPatients);
-        setPatientId((current) => current || Number(sorted[0]?.id || 0));
+        setPatientId((current) => {
+          if (current) return current;
+          if (requestedPatientId > 0 && sorted.some((patient) => patient.id === requestedPatientId)) {
+            return requestedPatientId;
+          }
+          return Number(sorted[0]?.id || 0);
+        });
 
         if (nextDoctorId > 0) {
           const profileResponse = await api.getDoctorProfile(nextDoctorId);
@@ -115,7 +125,7 @@ export default function DoctorCreateAppointmentScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [params.patientId]);
 
   useEffect(() => {
     if (!doctorId || !selectedDate) return;
@@ -269,9 +279,17 @@ export default function DoctorCreateAppointmentScreen() {
           <Text style={styles.heroEyebrow}>Agenda desde doctor</Text>
           <Text style={styles.heroTitle}>Crear cita para paciente</Text>
           <Text style={styles.heroSubtitle}>
-            Primero elige al paciente, luego fecha, horario y forma de cobro.
+            Primero elige un paciente ya vinculado, luego fecha, horario y forma de cobro.
           </Text>
         </View>
+
+        <Pressable
+          onPress={() => router.push("/doctor/patients/link" as any)}
+          style={styles.linkButton}
+        >
+          <Icon name="shield-check" size={16} color={MC.white} />
+          <Text style={styles.linkButtonText}>Vincular o registrar paciente</Text>
+        </Pressable>
 
         {error ? (
           <View style={styles.errorBox}>
@@ -343,7 +361,7 @@ export default function DoctorCreateAppointmentScreen() {
               })}
             </View>
           ) : (
-            <EmptyCard text="No se encontraron pacientes con esa busqueda." />
+            <EmptyCard text="No hay pacientes vinculados. Agrega uno con su codigo personal o registralo desde esta misma seccion." />
           )}
 
           {!search.trim() && sortedPatients.length > 6 ? (
@@ -734,6 +752,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   errorText: { flex: 1, color: MC.error, fontSize: 13 },
+  linkButton: {
+    borderRadius: 18,
+    backgroundColor: MC.primary,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  linkButtonText: { fontSize: 14, fontWeight: "800", color: MC.white },
   stepCard: {
     borderRadius: 24,
     borderWidth: 1,

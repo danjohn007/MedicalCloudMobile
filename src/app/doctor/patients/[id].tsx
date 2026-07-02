@@ -166,6 +166,29 @@ export default function DoctorPatientDetailScreen() {
               <MetricCard label="Historial" value={String(historyEntries.length)} />
             </View>
 
+            <View style={styles.actionRow}>
+              <ActionPill
+                icon="calendar"
+                label="Nueva cita"
+                onPress={() => router.push(`/doctor/appointments/create?patientId=${patient.id}` as any)}
+              />
+              <ActionPill
+                icon="clipboard-text"
+                label="Bitacora"
+                onPress={() => router.push("/doctor/notes" as any)}
+              />
+              <ActionPill
+                icon="pill"
+                label="Recetas"
+                onPress={() => router.push("/doctor/prescriptions" as any)}
+              />
+              <ActionPill
+                icon="file"
+                label="Documentos"
+                onPress={() => router.push(`/doctor/documents?patientId=${patient.id}` as any)}
+              />
+            </View>
+
             <Section title="Resumen clinico">
               <InfoRow label="Telefono" value={patient.phone || "Sin telefono"} />
               <InfoRow label="Ciudad" value={patient.city || "Sin ciudad"} />
@@ -177,6 +200,25 @@ export default function DoctorPatientDetailScreen() {
                     ? `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` | ${patient.emergency_contact_phone}` : ""}`
                     : "Sin dato"
                 }
+              />
+            </Section>
+
+            <Section title="Expediente base">
+              <InfoRow
+                label="Nacimiento"
+                value={patient.birth_date ? formatDate(patient.birth_date) : "Sin dato"}
+              />
+              <InfoRow
+                label="Altura"
+                value={patient.height_cm ? `${patient.height_cm} cm` : "Sin dato"}
+              />
+              <InfoRow
+                label="Peso"
+                value={patient.weight_kg ? `${patient.weight_kg} kg` : "Sin dato"}
+              />
+              <InfoRow
+                label="Direccion"
+                value={pickFirst(patient.address, patient.state) || "Sin direccion"}
               />
             </Section>
 
@@ -198,6 +240,17 @@ export default function DoctorPatientDetailScreen() {
                   pickFirst(patient.chronic_conditions, snapshot?.record?.chronic_conditions) ||
                   "Sin condiciones cronicas registradas"
                 }
+              />
+            </Section>
+
+            <Section title="Documentos y carga clinica">
+              <AlertBox
+                title="Documentos disponibles"
+                text="Desde esta ficha ya puedes abrir la seccion de documentos del paciente para revisar estudios y archivos ligados a su expediente."
+              />
+              <AlertBox
+                title="Siguiente paso sugerido"
+                text="Si necesitas revisar archivos o preparar una nueva consulta, usa los accesos directos de Documentos, Notas, Recetas o Nueva cita."
               />
             </Section>
 
@@ -287,6 +340,23 @@ function MetaChip({ icon, label }: { icon: "clock" | "drop" | "user-circle"; lab
       <Icon name={icon} size={14} color={MC.primaryDark} />
       <Text style={styles.metaChipText}>{label}</Text>
     </View>
+  );
+}
+
+function ActionPill({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: "calendar" | "clipboard-text" | "pill" | "file";
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.actionPill}>
+      <Icon name={icon} size={15} color={MC.primaryDark} />
+      <Text style={styles.actionPillText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -412,6 +482,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 21, fontWeight: "700", color: MC.textPrimary },
   heroSubtitle: { fontSize: 13, color: MC.textSecondary },
   heroChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   metaChip: {
     borderRadius: 999,
     backgroundColor: MC.white,
@@ -422,6 +493,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   metaChipText: { fontSize: 11, fontWeight: "700", color: MC.primaryDark },
+  actionPill: {
+    borderRadius: 999,
+    backgroundColor: MC.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  actionPillText: { fontSize: 12, fontWeight: "700", color: MC.primaryDark },
   metricsRow: { flexDirection: "row", gap: 10 },
   metricCard: {
     flex: 1,
