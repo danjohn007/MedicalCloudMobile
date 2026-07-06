@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GoogleLogo } from '@/components/GoogleLogo';
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
@@ -168,7 +169,7 @@ export default function LoginScreen() {
             ) : (
               <>
                 <View style={styles.googleBadge}>
-                  <Text style={styles.googleBadgeText}>G</Text>
+                  <GoogleLogo size={18} />
                 </View>
                 <Text style={styles.btnGoogleText}>Continuar con Google</Text>
               </>
@@ -257,11 +258,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  googleBadgeText: {
-    color: '#DB4437',
-    fontSize: 16,
-    fontWeight: '700',
   },
   btnGoogleText: {
     color: MC.textPrimary,

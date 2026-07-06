@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { GoogleLogo } from "@/components/GoogleLogo";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/Logo";
 import { MC } from "@/constants/theme";
@@ -136,7 +137,7 @@ export default function RegisterScreen() {
             ) : (
               <>
                 <View style={styles.googleBadge}>
-                  <Text style={styles.googleBadgeText}>G</Text>
+                  <GoogleLogo size={21} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.btnGoogleText}>Continuar con Google</Text>
@@ -267,11 +268,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  googleBadgeText: {
-    color: "#DB4437",
-    fontSize: 18,
-    fontWeight: "700",
   },
   btnGoogleText: { color: MC.textPrimary, fontSize: 16, fontWeight: "700" },
   btnGoogleHint: { color: MC.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
