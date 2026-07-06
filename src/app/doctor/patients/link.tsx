@@ -41,8 +41,8 @@ export default function DoctorLinkPatientScreen() {
   const [lng, setLng] = useState<number | null>(null);
 
   async function handleLinkByCode() {
-    if (accessCode.trim().length < 8) {
-      Alert.alert("Codigo invalido", "Ingresa el codigo personal completo del paciente.");
+    if (accessCode.trim().replace(/[^a-zA-Z0-9]/g, "").length !== 8) {
+      Alert.alert("Codigo invalido", "Ingresa el codigo personal de 8 caracteres del paciente.");
       return;
     }
 

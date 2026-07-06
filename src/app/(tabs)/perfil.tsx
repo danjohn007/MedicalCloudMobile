@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, IconName } from "@/components/Icon";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -150,22 +151,11 @@ export default function PerfilScreen() {
           ) : null}
         </View>
 
-        <View style={styles.linkCodeCard}>
-          <Text style={styles.linkCodeLabel}>Codigo personal</Text>
-          <Text style={styles.linkCodeValue}>
-            {profile?.doctor_access_code || "Pendiente"}
-          </Text>
-          <Text style={styles.linkCodeHint}>
-            Compartelo solo con doctores que deban enlazarte o revisar tu
-            expediente.
-          </Text>
-          <Pressable
-            style={styles.linkCodeButton}
-            onPress={() => router.push("/patient/profile")}
-          >
-            <Text style={styles.linkCodeButtonText}>Ver perfil completo</Text>
-          </Pressable>
-        </View>
+        <PatientAccessCodeCard
+          code={profile?.doctor_access_code}
+          onOpenProfile={() => router.push("/patient/profile")}
+          style={styles.linkCodeCard}
+        />
 
         {/* Menu */}
         <View style={styles.menu}>

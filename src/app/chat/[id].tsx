@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -91,7 +91,7 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchMessages = () => {
+  const fetchMessages = useCallback(() => {
     if (!Number.isFinite(conversationId) || conversationId <= 0) {
       setLoading(false);
       return;
@@ -109,7 +109,7 @@ export default function ChatScreen() {
       })
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
       .finally(() => setLoading(false));
-  };
+  }, [conversationId]);
 
   useEffect(() => {
     fetchMessages();
@@ -117,7 +117,7 @@ export default function ChatScreen() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [conversationId]);
+  }, [conversationId, fetchMessages]);
 
   const handleSend = async () => {
     const text = inputText.trim();

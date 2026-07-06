@@ -16,6 +16,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const isOn = (value: unknown) => Number(value) === 1;
+const isOff = (value: unknown) => Number(value) === 0 || !value;
+
 export default function ExpedienteScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -415,18 +418,18 @@ export default function ExpedienteScreen() {
             <Row>
               <Chip
                 label="Sí"
-                active={record.drugs == 1}
+                active={isOn(record.drugs)}
                 onPress={() => set("drugs", record.drugs ? 0 : 1)}
                 color={MC.error}
               />
               <Chip
                 label="No"
-                active={record.drugs == 0 || !record.drugs}
+                active={isOff(record.drugs)}
                 onPress={() => set("drugs", 0)}
                 color={MC.success}
               />
             </Row>
-            {record.drugs == 1 ? (
+            {isOn(record.drugs) ? (
               <>
                 <Lbl t="DETALLE" />
                 <Input
@@ -515,12 +518,12 @@ export default function ExpedienteScreen() {
             <Row>
               <Chip
                 label="Diagnóstico de salud mental"
-                active={record.mental_health_diagnosis == 1}
+                active={isOn(record.mental_health_diagnosis)}
                 onPress={() => toggle("mental_health_diagnosis")}
                 color={MC.error}
               />
             </Row>
-            {record.mental_health_diagnosis == 1 ? (
+            {isOn(record.mental_health_diagnosis) ? (
               <>
                 <Lbl t="DETALLE" />
                 <Input
@@ -532,12 +535,12 @@ export default function ExpedienteScreen() {
                 <Row>
                   <Chip
                     label="En tratamiento"
-                    active={record.mental_health_treatment == 1}
+                    active={isOn(record.mental_health_treatment)}
                     onPress={() => toggle("mental_health_treatment")}
                     color={MC.success}
                   />
                 </Row>
-                {record.mental_health_treatment == 1 ? (
+                {isOn(record.mental_health_treatment) ? (
                   <>
                     <Lbl t="MEDICACIÓN" />
                     <Input
@@ -564,13 +567,13 @@ export default function ExpedienteScreen() {
             <Row>
               <Chip
                 label="Usa lentes/contactos"
-                active={record.uses_glasses == 1}
+                active={isOn(record.uses_glasses)}
                 onPress={() => toggle("uses_glasses")}
                 color={MC.primary}
               />
               <Chip
                 label="Auxiliar auditivo"
-                active={record.uses_hearing_aid == 1}
+                active={isOn(record.uses_hearing_aid)}
                 onPress={() => toggle("uses_hearing_aid")}
                 color={MC.primary}
               />
@@ -578,7 +581,7 @@ export default function ExpedienteScreen() {
             <Row>
               <Chip
                 label="Usa silla de ruedas"
-                active={record.uses_wheelchair == 1}
+                active={isOn(record.uses_wheelchair)}
                 onPress={() => toggle("uses_wheelchair")}
                 color={MC.primary}
               />

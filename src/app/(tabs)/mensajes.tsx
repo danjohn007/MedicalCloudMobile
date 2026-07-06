@@ -43,7 +43,7 @@ function FadeSlideIn({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [delay, opacity, translateY]);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>

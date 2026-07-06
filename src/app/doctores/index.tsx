@@ -251,6 +251,8 @@ export default function DoctoresScreen() {
     return () => {
       mounted = false;
     };
+    // Resolve initial location once; search changes are handled by the debounce effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

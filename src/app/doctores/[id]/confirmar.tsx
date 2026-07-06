@@ -77,10 +77,10 @@ export default function ConfirmarScreen() {
     return doctor.consultation_fee ?? 0;
   };
 
-  const availableTypes: Array<{
+  const availableTypes: {
     key: "presencial" | "videoconsulta" | "domicilio";
     label: string;
-  }> = [
+  }[] = [
     { key: "presencial", label: "Presencial" },
     ...(doctor?.telemedicine_fee
       ? [{ key: "videoconsulta" as const, label: "Videoconsulta" }]
@@ -137,6 +137,13 @@ export default function ConfirmarScreen() {
             </Text>
           </View>
         </View>
+
+        {error ? (
+          <View style={styles.errorBox}>
+            <Icon name="warning" size={16} color={MC.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.divider} />
 
@@ -348,6 +355,17 @@ const styles = StyleSheet.create({
   doctorPhotoImage: { width: "100%", height: "100%", borderRadius: 32 },
   doctorName: { fontSize: 16, fontWeight: "600", color: MC.textPrimary },
   doctorSpecialty: { fontSize: 13, color: MC.textSecondary, marginTop: 2 },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
+  },
+  errorText: { flex: 1, color: MC.error, fontSize: 13 },
   divider: { height: 1, backgroundColor: MC.border, marginHorizontal: 20 },
 
   detailsSection: { paddingHorizontal: 20, paddingVertical: 16, gap: 14 },

@@ -1,4 +1,5 @@
 import { Icon } from "@/components/Icon";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
@@ -360,20 +361,10 @@ export default function PatientProfileScreen() {
             ) : null}
           </Card>
 
-          <Card
-            icon="shield-check"
-            title="Codigo personal"
-            sub="Compartelo solo con doctores que deban ver tu expediente"
-          >
-            <Banner text="Los doctores independientes necesitan este codigo o una relacion previa para ver tu expediente completo." />
-            <View style={s.codeCard}>
-              <Text style={s.codeLabel}>CODIGO DE ACCESO</Text>
-              <Text style={s.codeValue}>{accessCode || "Pendiente"}</Text>
-              <Text style={s.codeHint}>
-                Si tu ubicacion en tiempo real falla, esta direccion guardada tambien se usa como respaldo para buscar doctores cercanos.
-              </Text>
-            </View>
-          </Card>
+          <PatientAccessCodeCard
+            code={accessCode}
+            hint="Los doctores independientes necesitan este codigo o una cita contigo para ver tu expediente completo."
+          />
 
           <Card
             icon="map-pin"

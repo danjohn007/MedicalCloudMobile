@@ -30,7 +30,7 @@ export default function RecetasScreen() {
                 try {
                     const data = await api.getExpediente();
                     setPrescriptions(data.prescriptions ?? []);
-                } catch (e2: any) {
+                } catch {
                     setError(e.message ?? "Error al cargar recetas");
                 }
             } finally {

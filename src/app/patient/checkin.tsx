@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,11 +18,7 @@ export default function CheckinScreen() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [checkoutCode, setCheckoutCode] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) loadQr();
-  }, [id]);
-
-  const loadQr = async () => {
+  const loadQr = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -33,7 +29,11 @@ export default function CheckinScreen() {
     } catch (e: any) {
       setError(e.message ?? "Error al cargar QR");
     } finally { setLoading(false); }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) loadQr();
+  }, [id, loadQr]);
 
   const handleManualCheckin = async () => {
     const code = manualCode.trim().toUpperCase();

@@ -114,6 +114,31 @@ export interface Appointment {
   pay_deadline?: string | null;
 }
 
+export interface MobileRegisterPayload {
+  role: "doctor" | "patient";
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  cedula?: string;
+  specialty?: string;
+  city?: string;
+  state?: string;
+}
+
+export type MobileRegisterResult =
+  | {
+      ok?: boolean;
+      status: "authenticated";
+      token: string;
+      user: AuthUser;
+    }
+  | {
+      ok?: boolean;
+      status: "pending_approval";
+      message: string;
+    };
+
 export interface AppointmentDetail {
   data: Appointment & {
     date?: string;
@@ -422,6 +447,9 @@ export interface DoctorNoteEntry {
   assessment?: string | null;
   plan_text?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  is_signed?: boolean;
+  signed_at?: string | null;
   scheduled_at?: string | null;
   appt_type?: string | null;
   appt_reason?: string | null;
@@ -435,6 +463,9 @@ export interface DoctorSoapEntry {
   assessment?: string | null;
   plan_text?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  is_signed?: boolean;
+  signed_at?: string | null;
   scheduled_at?: string | null;
   appt_type?: string | null;
   appt_reason?: string | null;
@@ -604,6 +635,19 @@ export interface DoctorSoapPayload {
   rx_medications?: string;
   rx_instructions?: string;
   rx_valid_days?: number;
+}
+
+export interface DoctorSoapAutosaveResult {
+  ok?: boolean;
+  message: string;
+  note: DoctorSoapEntry | null;
+  saved_at?: string | null;
+}
+
+export interface DoctorSignNoteResult {
+  ok?: boolean;
+  message: string;
+  signed_at?: string | null;
 }
 
 export interface DoctorCreateAppointmentPayload {
@@ -839,9 +883,11 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
 export async function completeGoogleRegistration(input: {
   pending_token: string;
   role: "doctor" | "patient";
+  name?: string;
   cedula?: string;
   specialty?: string;
   city?: string;
+  state?: string;
   birth_date?: string;
   gender?: string;
   phone?: string;
@@ -868,15 +914,10 @@ export async function completeGoogleRegistration(input: {
   );
 }
 
-export async function register(
-  name: string,
-  email: string,
-  password: string,
-  phone?: string,
-) {
-  return request<{ token: string; user: AuthUser }>(
+export async function register(input: MobileRegisterPayload) {
+  return request<MobileRegisterResult>(
     "/auth/register",
-    { method: "POST", body: JSON.stringify({ name, email, password, phone }) },
+    { method: "POST", body: JSON.stringify(input) },
     false,
   );
 }
@@ -1504,6 +1545,28 @@ export async function saveDoctorAppointmentSoap(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export async function autosaveDoctorAppointmentSoap(
+  appointmentId: number,
+  payload: Pick<
+    DoctorSoapPayload,
+    "subjective" | "objective" | "assessment" | "plan_text"
+  >,
+) {
+  return request<DoctorSoapAutosaveResult>(
+    `/doctor/appointments/${appointmentId}/soap/autosave`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function signDoctorNote(noteId: number) {
+  return request<DoctorSignNoteResult>(`/doctor/notes/${noteId}/sign`, {
+    method: "POST",
+  });
 }
 
 export async function createDoctorAppointment(

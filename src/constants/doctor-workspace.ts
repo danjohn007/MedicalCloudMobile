@@ -14,9 +14,9 @@ export interface DoctorModule {
 }
 
 export const DOCTOR_BACKEND_BLOCKERS = [
-  "Siguen faltando piezas moviles para asistentes operativos y para la firma clinica final desde notas SOAP.",
+  "Siguen faltando piezas moviles para asistentes operativos con permisos reales y contexto de doctor activo.",
   "La disponibilidad del doctor ya tiene lectura y edicion base, pero todavia no replica todo el manejo avanzado del sistema web.",
-  "La nota clinica movil ya cubre SOAP por cita, recetas, plantillas y borrador local; la firma final sigue dependiendo del backend web.",
+  "La firma clinica movil ya quedo integrada al flujo SOAP, pero depende de aplicar la migracion v55 en el entorno para habilitar `is_signed` y `signed_at`.",
 ];
 
 export const DOCTOR_HOME_MODULES: DoctorModule[] = [
@@ -44,9 +44,9 @@ export const DOCTOR_HOME_MODULES: DoctorModule[] = [
   {
     id: "notes",
     title: "Notas SOAP y recetas",
-    summary: "Formulario de consulta con SOAP por cita, receta vinculada y borrador local; la firma final sigue pendiente.",
+    summary: "Formulario de consulta con SOAP por cita, receta vinculada, autosave remoto y firma final desde la app.",
     icon: "clipboard-text",
-    status: "mobile-shell",
+    status: "available",
   },
 ];
 

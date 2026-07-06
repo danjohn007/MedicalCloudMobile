@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -48,7 +48,9 @@ export default function AgendarScreen() {
   };
 
   const handleSelectDate = useCallback(async (day: number) => {
-    const dateStr = formatDate(day);
+    const m = String(currentMonth + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    const dateStr = `${currentYear}-${m}-${d}`;
     setSelectedDate(dateStr);
     setSelectedTime(null);
     setLoadingSlots(true);

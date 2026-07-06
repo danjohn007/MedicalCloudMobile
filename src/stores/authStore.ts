@@ -28,15 +28,17 @@ interface AuthState {
   loginWithGoogle: () => Promise<'authenticated' | 'pending_profile'>;
   completeGoogleSignup: (payload: {
     role: 'doctor' | 'patient';
+    name?: string;
     cedula?: string;
     specialty?: string;
     city?: string;
+    state?: string;
     birth_date?: string;
     gender?: string;
     phone?: string;
   }) => Promise<'authenticated' | 'pending_approval'>;
   clearPendingGoogleSignup: () => void;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (payload: api.MobileRegisterPayload) => Promise<'authenticated' | 'pending_approval'>;
   logout: () => Promise<void>;
 }
 
@@ -117,11 +119,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ pendingGoogleSignup: null });
   },
 
-  register: async (name, email, password, phone) => {
-    const res = await api.register(name, email, password, phone);
+  register: async (payload) => {
+    const res = await api.register(payload);
+    if (res.status === 'pending_approval') {
+      set({ user: null, isAuthenticated: false, pendingGoogleSignup: null });
+      return 'pending_approval';
+    }
+
     await api.saveToken(res.token);
     await api.saveUser(res.user);
     set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+    return 'authenticated';
   },
 
   logout: async () => {

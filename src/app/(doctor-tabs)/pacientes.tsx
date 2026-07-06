@@ -96,7 +96,7 @@ export default function DoctorPatientsScreen() {
           <Text style={styles.heroEyebrow}>Mis pacientes</Text>
           <Text style={styles.heroTitle}>Base clinica</Text>
           <Text style={styles.heroSubtitle}>
-            Solo aparecen pacientes vinculados contigo por codigo, alta directa o consulta completada.
+            Solo aparecen pacientes vinculados contigo por codigo, alta directa o una cita registrada contigo.
           </Text>
           <View style={styles.heroStats}>
             <HeroStat label="Pacientes" value={String(filteredPatients.length)} />

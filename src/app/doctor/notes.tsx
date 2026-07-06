@@ -282,13 +282,32 @@ export default function DoctorNotesScreen() {
           notes.map((note) => (
             <View key={note.id} style={styles.listCard}>
               <View style={styles.listTop}>
-                <View style={styles.listBadge}>
-                  <Text style={styles.listBadgeText}>
-                    {note.appointment_id ? "Con cita" : "Nota directa"}
-                  </Text>
+                <View style={styles.listBadgeRow}>
+                  <View style={styles.listBadge}>
+                    <Text style={styles.listBadgeText}>
+                      {note.appointment_id ? "Con cita" : "Nota directa"}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.listStateBadge,
+                      note.is_signed ? styles.listStateBadgeSigned : styles.listStateBadgeDraft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.listStateBadgeText,
+                        note.is_signed
+                          ? styles.listStateBadgeTextSigned
+                          : styles.listStateBadgeTextDraft,
+                      ]}
+                    >
+                      {note.is_signed ? "Firmada" : "Borrador"}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.listDate}>
-                  {formatDate(note.scheduled_at || note.created_at)}
+                  {formatDate(note.signed_at || note.updated_at || note.scheduled_at || note.created_at)}
                 </Text>
               </View>
 
@@ -539,6 +558,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
+  listBadgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
   listBadge: {
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -550,6 +570,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: MC.primaryDark,
   },
+  listStateBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  listStateBadgeSigned: { backgroundColor: "#DCFCE7" },
+  listStateBadgeDraft: { backgroundColor: "#FEF3C7" },
+  listStateBadgeText: { fontSize: 12, fontWeight: "700" },
+  listStateBadgeTextSigned: { color: "#047857" },
+  listStateBadgeTextDraft: { color: "#B45309" },
   listDate: { fontSize: 12, color: MC.textMuted },
   listPatient: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   listTitle: { fontSize: 14, fontWeight: "600", color: MC.textPrimary },

@@ -15,6 +15,8 @@ const memoryStore = new Map<string, string>();
 
 let SecureStoreModule: any = null;
 try {
+  // Keep this dynamic so web/local fallbacks still work when SecureStore is unavailable.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   SecureStoreModule = require('expo-secure-store');
 } catch {}
 

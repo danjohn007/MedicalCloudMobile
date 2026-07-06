@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,8 +24,19 @@ type SoapDraftPayload = {
   form: SoapFormState;
   updated_at: string;
 };
+type SoapCorePayload = Pick<
+  api.DoctorSoapPayload,
+  "subjective" | "objective" | "assessment" | "plan_text"
+>;
 
 const SOAP_DRAFT_PREFIX = "doctor-soap-draft:";
+const dateTimeFmt = new Intl.DateTimeFormat("es-MX", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
   {
@@ -128,6 +140,35 @@ function mergeServerSoapWithDraft(
   };
 }
 
+function buildSoapCorePayload(form: SoapFormState): SoapCorePayload {
+  return {
+    subjective: form.subjective,
+    objective: form.objective,
+    assessment: form.assessment,
+    plan_text: form.plan_text,
+  };
+}
+
+function buildSoapCoreFromNote(note?: api.DoctorSoapEntry | null): SoapCorePayload {
+  return {
+    subjective: note?.subjective || "",
+    objective: note?.objective || "",
+    assessment: note?.assessment || "",
+    plan_text: note?.plan_text || "",
+  };
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "Sin fecha";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Sin fecha";
+  return dateTimeFmt.format(parsed);
+}
+
+function soapCoreEqual(left: SoapCorePayload, right: SoapCorePayload) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export default function DoctorSoapScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -136,12 +177,30 @@ export default function DoctorSoapScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [signing, setSigning] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [autosaveState, setAutosaveState] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
+  const [autosaveMessage, setAutosaveMessage] = useState("");
   const [data, setData] = useState<api.DoctorAppointmentSoapData | null>(null);
   const [templateLibrary, setTemplateLibrary] = useState<api.DoctorConsultationTemplate[]>([]);
   const [form, setForm] = useState<SoapFormState>(emptyForm());
+  const formKey = JSON.stringify(form);
   const serverForm = data ? buildFormFromResponse(data) : emptyForm();
+  const serverFormKey = JSON.stringify(serverForm);
+  const appointment = data?.appointment ?? null;
+  const note = data?.note ?? null;
+  const soapCoreServer = buildSoapCoreFromNote(note);
+  const soapCoreServerKey = JSON.stringify(soapCoreServer);
+  const hasAppointment = Boolean(appointment);
+  const noteId = Number(note?.id ?? 0);
+  const noteSigned = Boolean(note?.is_signed);
+  const consultationCompleted = appointment?.status === "completed";
+  const isReadOnly = noteSigned || consultationCompleted;
+  const isDirty = !formsEqual(form, serverForm);
+  const soapCoreDirty = !soapCoreEqual(buildSoapCorePayload(form), soapCoreServer);
 
   useEffect(() => {
     if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
@@ -156,16 +215,21 @@ export default function DoctorSoapScreen() {
       try {
         setLoading(true);
         setError("");
+        setAutosaveState("idle");
+        setAutosaveMessage("");
         restoredDraftRef.current = false;
         const response = await api.getDoctorAppointmentSoap(appointmentId);
         if (cancelled) return;
         setData(response);
         const nextServerForm = buildFormFromResponse(response);
         let nextForm = nextServerForm;
+        const lockedNote = Boolean(response.note?.is_signed) || response.appointment?.status === "completed";
 
         try {
           const savedDraft = parseSoapDraft(await getSecure(soapDraftKey(appointmentId)));
-          if (savedDraft && !formsEqual(savedDraft.form, nextServerForm)) {
+          if (lockedNote && savedDraft) {
+            await removeSecure(soapDraftKey(appointmentId));
+          } else if (savedDraft && !formsEqual(savedDraft.form, nextServerForm)) {
             nextForm = mergeServerSoapWithDraft(nextServerForm, savedDraft.form);
             restoredDraftRef.current = true;
           }
@@ -209,15 +273,20 @@ export default function DoctorSoapScreen() {
   }, [appointmentId]);
 
   useEffect(() => {
-    if (loading || !data || !Number.isFinite(appointmentId) || appointmentId <= 0) {
+    if (loading || !hasAppointment || !Number.isFinite(appointmentId) || appointmentId <= 0) {
+      return;
+    }
+
+    const key = soapDraftKey(appointmentId);
+    if (isReadOnly) {
+      void removeSecure(key);
       return;
     }
 
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const key = soapDraftKey(appointmentId);
-          if (formsEqual(form, serverForm)) {
+          if (formKey === serverFormKey) {
             await removeSecure(key);
             return;
           }
@@ -235,9 +304,59 @@ export default function DoctorSoapScreen() {
     }, 900);
 
     return () => clearTimeout(timer);
-  }, [appointmentId, data, form, loading, serverForm]);
+  }, [appointmentId, form, formKey, hasAppointment, isReadOnly, loading, serverFormKey]);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !hasAppointment ||
+      !Number.isFinite(appointmentId) ||
+      appointmentId <= 0 ||
+      isReadOnly ||
+      !soapCoreDirty
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          setAutosaveState("saving");
+          setAutosaveMessage("Sincronizando el SOAP con el servidor...");
+          const result = await api.autosaveDoctorAppointmentSoap(
+            appointmentId,
+            buildSoapCorePayload(form),
+          );
+          setData((current) =>
+            current
+              ? {
+                  ...current,
+                  note: result.note ?? current.note,
+                }
+              : current,
+          );
+          setAutosaveState("saved");
+          setAutosaveMessage(result.message || "SOAP sincronizado.");
+        } catch (e: any) {
+          setAutosaveState("error");
+          setAutosaveMessage(e?.message || "No se pudo sincronizar el SOAP en segundo plano.");
+        }
+      })();
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [appointmentId, form, hasAppointment, isReadOnly, loading, soapCoreDirty, soapCoreServerKey]);
 
   async function handleSave() {
+    if (isReadOnly) {
+      setError(
+        noteSigned
+          ? "La nota ya esta firmada y no admite cambios."
+          : "La consulta ya esta cerrada y la nota es de solo lectura.",
+      );
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
@@ -248,6 +367,8 @@ export default function DoctorSoapScreen() {
       setData(refreshed);
       setForm(buildFormFromResponse(refreshed));
       await removeSecure(soapDraftKey(appointmentId));
+      setAutosaveState("saved");
+      setAutosaveMessage("SOAP y receta sincronizados correctamente.");
       setSuccess(result.message || "Nota clinica guardada correctamente.");
     } catch (e: any) {
       setError(e?.message || "No se pudo guardar la nota clinica.");
@@ -264,12 +385,52 @@ export default function DoctorSoapScreen() {
     ? templateLibrary
     : FALLBACK_SOAP_TEMPLATES;
 
+  async function handleSignNote() {
+    if (!noteId) {
+      setError("Guarda primero la nota para poder firmarla.");
+      return;
+    }
+
+    if (isDirty) {
+      Alert.alert(
+        "Guarda antes de firmar",
+        "La firma bloquea la nota. Guarda cualquier cambio pendiente y luego firma.",
+      );
+      return;
+    }
+
+    try {
+      setSigning(true);
+      setError("");
+      setSuccess("");
+      const result = await api.signDoctorNote(noteId);
+      await removeSecure(soapDraftKey(appointmentId));
+      const refreshed = await api.getDoctorAppointmentSoap(appointmentId);
+      setData(refreshed);
+      setForm(buildFormFromResponse(refreshed));
+      setAutosaveState("saved");
+      setAutosaveMessage("La nota quedo firmada y el SOAP ya no se puede editar desde movil.");
+      setSuccess(result.message || "Nota firmada correctamente.");
+    } catch (e: any) {
+      setError(e?.message || "No se pudo firmar la nota clinica.");
+    } finally {
+      setSigning(false);
+    }
+  }
+
   async function handleCompleteConsultation() {
+    if (consultationCompleted) {
+      setError("La consulta ya esta completada.");
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
       setSuccess("");
-      await api.saveDoctorAppointmentSoap(appointmentId, form);
+      if (!noteSigned) {
+        await api.saveDoctorAppointmentSoap(appointmentId, form);
+      }
       await removeSecure(soapDraftKey(appointmentId));
       if (appointment?.type === "presential") {
         router.push(`/doctor/appointments/${appointmentId}/complete` as any);
@@ -285,6 +446,8 @@ export default function DoctorSoapScreen() {
   }
 
   function applyTemplate(templateId: number) {
+    if (isReadOnly) return;
+
     const template = availableTemplates.find((item) => item.id === templateId);
     if (!template) return;
 
@@ -306,8 +469,6 @@ export default function DoctorSoapScreen() {
     );
   }
 
-  const appointment = data?.appointment ?? null;
-  const isDirty = !formsEqual(form, serverForm);
   const progress = buildProgress(form);
 
   return (
@@ -379,21 +540,55 @@ export default function DoctorSoapScreen() {
             </View>
             <View style={styles.draftBadge}>
               <Icon
-                name={isDirty ? "warning" : "check-circle"}
+                name={
+                  noteSigned
+                    ? "check-circle"
+                    : autosaveState === "saving"
+                      ? "clock"
+                      : autosaveState === "error" || isDirty
+                        ? "warning"
+                        : "check-circle"
+                }
                 size={14}
-                color={isDirty ? "#B45309" : "#047857"}
+                color={
+                  noteSigned
+                    ? "#047857"
+                    : autosaveState === "error" || isDirty
+                      ? "#B45309"
+                      : "#047857"
+                }
               />
               <Text
                 style={[
                   styles.draftBadgeText,
-                  { color: isDirty ? "#B45309" : "#047857" },
+                  {
+                    color:
+                      noteSigned
+                        ? "#047857"
+                        : autosaveState === "error" || isDirty
+                          ? "#B45309"
+                          : "#047857",
+                  },
                 ]}
               >
-                {isDirty ? "Hay cambios sin guardar" : "Todo lo visible ya esta guardado"}
+                {noteSigned
+                  ? "Nota firmada"
+                  : autosaveState === "saving"
+                    ? "Sincronizando SOAP"
+                    : autosaveState === "error"
+                      ? "Autosave con pendiente"
+                      : isDirty
+                        ? "Hay cambios sin guardar"
+                        : "Todo lo visible ya esta guardado"}
               </Text>
             </View>
             <Text style={styles.draftHint}>
-              Mientras escribes se guarda un borrador local en este dispositivo.
+              {noteSigned
+                ? `Firmada ${formatDateTime(note?.signed_at)}. Solo puedes revisar la informacion desde aqui.`
+                : consultationCompleted
+                  ? "La consulta ya esta cerrada; este resumen queda disponible solo para lectura."
+                  : autosaveMessage ||
+                    "Mientras escribes se guarda un borrador local y el SOAP se sincroniza en segundo plano."}
             </Text>
           </View>
 
@@ -427,8 +622,10 @@ export default function DoctorSoapScreen() {
                 <Pressable
                   key={template.id}
                   onPress={() => applyTemplate(template.id)}
+                  disabled={isReadOnly}
                   style={[
                     styles.templateChip,
+                    isReadOnly && styles.templateChipDisabled,
                     { borderColor: template.tone || "#7C3AED" },
                   ]}
                 >
@@ -454,6 +651,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("subjective", value)}
               placeholder="Sintomas, motivo y percepcion del paciente"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Objetivo"
@@ -461,6 +659,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("objective", value)}
               placeholder="Exploracion, signos y datos observables"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Analisis"
@@ -468,6 +667,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("assessment", value)}
               placeholder="Diagnostico presuntivo o impresion clinica"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Plan"
@@ -475,6 +675,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("plan_text", value)}
               placeholder="Tratamiento, estudios y seguimiento"
               multiline
+              editable={!isReadOnly}
             />
           </Section>
 
@@ -488,6 +689,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("rx_diagnosis", value)}
               placeholder="Motivo medico de la receta"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Medicamentos"
@@ -495,6 +697,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("rx_medications", value)}
               placeholder="Medicamento, dosis y frecuencia"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Indicaciones"
@@ -502,6 +705,7 @@ export default function DoctorSoapScreen() {
               onChangeText={(value) => setField("rx_instructions", value)}
               placeholder="Indicaciones adicionales para el paciente"
               multiline
+              editable={!isReadOnly}
             />
             <Field
               label="Vigencia en dias"
@@ -514,6 +718,7 @@ export default function DoctorSoapScreen() {
               }
               placeholder="30"
               keyboardType="number-pad"
+              editable={!isReadOnly}
             />
           </Section>
 
@@ -541,31 +746,72 @@ export default function DoctorSoapScreen() {
 
           <Pressable
             onPress={handleSave}
-            disabled={saving}
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            disabled={saving || signing || isReadOnly}
+            style={[
+              styles.saveButton,
+              (saving || signing || isReadOnly) && styles.saveButtonDisabled,
+            ]}
           >
             {saving ? (
               <ActivityIndicator color={MC.white} />
             ) : (
               <>
                 <Icon name="check-circle" size={18} color={MC.white} />
-                <Text style={styles.saveButtonText}>Guardar nota y receta</Text>
+                <Text style={styles.saveButtonText}>
+                  {noteSigned
+                    ? "Nota firmada"
+                    : consultationCompleted
+                      ? "Consulta cerrada"
+                      : "Guardar nota y receta"}
+                </Text>
               </>
             )}
           </Pressable>
 
-          <Pressable
-            onPress={handleCompleteConsultation}
-            disabled={saving}
-            style={[styles.finishButton, saving && styles.saveButtonDisabled]}
-          >
-            <Icon name="check-circle" size={18} color={MC.primaryDark} />
-            <Text style={styles.finishButtonText}>
-              {appointment?.type === "presential"
-                ? "Guardar y pasar a cierre"
-                : "Guardar y completar consulta"}
-            </Text>
-          </Pressable>
+          {noteId > 0 && !noteSigned && !consultationCompleted ? (
+            <>
+              <Pressable
+                onPress={handleSignNote}
+                disabled={saving || signing || isDirty}
+                style={[
+                  styles.signButton,
+                  (saving || signing || isDirty) && styles.saveButtonDisabled,
+                ]}
+              >
+                {signing ? (
+                  <ActivityIndicator color={MC.primaryDark} />
+                ) : (
+                  <>
+                    <Icon name="check-circle" size={18} color={MC.primaryDark} />
+                    <Text style={styles.signButtonText}>Firmar nota</Text>
+                  </>
+                )}
+              </Pressable>
+              {isDirty ? (
+                <Text style={styles.signHint}>
+                  Guarda los cambios pendientes antes de firmar para bloquear la version final.
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+
+          {!consultationCompleted ? (
+            <Pressable
+              onPress={handleCompleteConsultation}
+              disabled={saving || signing}
+              style={[
+                styles.finishButton,
+                (saving || signing) && styles.saveButtonDisabled,
+              ]}
+            >
+              <Icon name="check-circle" size={18} color={MC.primaryDark} />
+              <Text style={styles.finishButtonText}>
+                {appointment?.type === "presential"
+                  ? "Guardar y pasar a cierre"
+                  : "Guardar y completar consulta"}
+              </Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -597,6 +843,7 @@ function Field({
   placeholder,
   multiline = false,
   keyboardType,
+  editable = true,
 }: {
   label: string;
   value: string;
@@ -604,6 +851,7 @@ function Field({
   placeholder: string;
   multiline?: boolean;
   keyboardType?: "default" | "number-pad";
+  editable?: boolean;
 }) {
   return (
     <View style={styles.fieldWrap}>
@@ -615,8 +863,13 @@ function Field({
         placeholderTextColor={MC.textMuted}
         keyboardType={keyboardType}
         multiline={multiline}
+        editable={editable}
         textAlignVertical={multiline ? "top" : "center"}
-        style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
+        style={[
+          styles.fieldInput,
+          multiline && styles.fieldInputMultiline,
+          !editable && styles.fieldInputDisabled,
+        ]}
       />
     </View>
   );
@@ -877,6 +1130,7 @@ const styles = StyleSheet.create({
   },
   templateChipBody: { flexShrink: 1, gap: 4 },
   templateChipText: { fontSize: 12, fontWeight: "700", color: MC.textPrimary },
+  templateChipDisabled: { opacity: 0.55 },
   templateChipNote: {
     fontSize: 11,
     lineHeight: 16,
@@ -896,6 +1150,7 @@ const styles = StyleSheet.create({
     color: MC.textPrimary,
   },
   fieldInputMultiline: { minHeight: 116 },
+  fieldInputDisabled: { backgroundColor: "#F8FAFC", color: MC.textMuted },
   contextCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -917,6 +1172,24 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.7 },
   saveButtonText: { fontSize: 15, fontWeight: "700", color: MC.white },
+  signButton: {
+    borderRadius: 16,
+    backgroundColor: "#FEF3C7",
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  signButtonText: { fontSize: 15, fontWeight: "700", color: MC.primaryDark },
+  signHint: {
+    marginTop: -2,
+    fontSize: 12,
+    lineHeight: 18,
+    color: MC.textSecondary,
+  },
   finishButton: {
     borderRadius: 16,
     backgroundColor: "#DDF6F4",

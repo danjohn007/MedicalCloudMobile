@@ -1,4 +1,5 @@
 import { Icon, IconName } from "@/components/Icon";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { resolvePatientSearchLocation } from "@/services/patient-search-location";
@@ -109,7 +110,7 @@ function useAnimatedCounter(target: number, duration = 600) {
     });
 
     return () => animValue.removeListener(listener);
-  }, [target]);
+  }, [animValue, duration, target]);
 
   return display;
 }
@@ -124,7 +125,7 @@ function FadeSlideIn({ children, delay = 0 }: { children: React.ReactNode; delay
       Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [delay, opacity, translateY]);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
@@ -142,6 +143,7 @@ export default function HomeScreen() {
   >([]);
   const [doctors, setDoctors] = useState<api.Doctor[]>([]);
   const [doctorCount, setDoctorCount] = useState(0);
+  const [profile, setProfile] = useState<api.ProfileData | null>(null);
   const [kpis, setKpis] = useState({
     upcoming: 0,
     pendingPayment: 0,
@@ -159,10 +161,11 @@ export default function HomeScreen() {
         const location = await resolvePatientSearchLocation();
 
         // Use dedicated dashboard stats endpoint + specialties + doctors
-        const [specRes, docRes, statsRes] = await Promise.all([
+        const [specRes, docRes, statsRes, profileRes] = await Promise.all([
           api.getSpecialties(),
           api.getDoctors({ page: 1, lat: location.lat, lng: location.lng }),
           api.getDashboardStats(),
+          api.getProfile(),
         ]);
 
         setSpecialties(
@@ -173,6 +176,7 @@ export default function HomeScreen() {
         );
         setDoctorCount(docRes.total ?? docRes.data.length);
         setDoctors(docRes.data.slice(0, 4));
+        setProfile(profileRes);
 
         if (statsRes?.data) {
           setKpis({
@@ -372,6 +376,17 @@ export default function HomeScreen() {
 
         {/* ── KPI Grid ───────────────────────────────────── */}
         <FadeSlideIn delay={200}>
+          <View style={s.sectionBlock}>
+            <PatientAccessCodeCard
+              code={profile?.doctor_access_code}
+              hint="Si un doctor todavia no te tiene vinculado, puede usar este codigo para ver tu expediente sin pedirte de nuevo todos tus datos."
+              onOpenProfile={() => router.push("/patient/profile")}
+              style={s.accessCodeCard}
+            />
+          </View>
+        </FadeSlideIn>
+
+        <FadeSlideIn delay={260}>
           <View style={s.sectionHeaderWrap}>
             <Text style={s.sectionTitle}>Tu actividad</Text>
             <Text style={s.sectionSub}>Indicadores en tiempo real</Text>
@@ -956,6 +971,9 @@ const s = StyleSheet.create({
   },
   sectionBlock: {
     marginTop: 8,
+  },
+  accessCodeCard: {
+    marginHorizontal: 14,
   },
 
   // ── KPI Grid ───────────────────────────────────────────
