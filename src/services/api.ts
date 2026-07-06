@@ -808,7 +808,7 @@ export async function login(email: string, password: string) {
 
 export async function loginWithGoogle(): Promise<GoogleLoginResult> {
   const redirectUri = Linking.createURL("login");
-  const startUrl = `${getWebBaseUrl()}auth/google?mobile=1&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const startUrl = `${getWebBaseUrl()}auth/firebase/mobile?redirect_uri=${encodeURIComponent(redirectUri)}`;
   const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
 
   if (result.type === "cancel" || result.type === "dismiss") {
