@@ -52,7 +52,7 @@ function FadeSlideIn({
   );
 }
 
-export default function MensajesScreen() {
+export default function DoctorMensajesScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState<api.Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,8 +91,8 @@ export default function MensajesScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
-        <Pressable style={styles.newBtn} hitSlop={10}>
-          <Icon name="plus" size={22} color={MC.primary} />
+        <Pressable style={styles.newBtn} hitSlop={10} onPress={loadMessages}>
+          <Icon name="arrow-clockwise" size={20} color={MC.primary} />
         </Pressable>
       </View>
 
@@ -106,7 +106,7 @@ export default function MensajesScreen() {
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar mensajes..."
+            placeholder="Buscar pacientes o mensajes..."
             placeholderTextColor={MC.textMuted}
           />
         </View>
@@ -119,11 +119,10 @@ export default function MensajesScreen() {
               <Icon name="chat-circle-dots" size={28} color={MC.primary} />
             </View>
             <View style={styles.helpBody}>
-              <Text style={styles.helpTitle}>¿Cómo funciona?</Text>
+              <Text style={styles.helpTitle}>Mensajería clínica</Text>
               <Text style={styles.helpText}>
-                Los mensajes aparecen automáticamente cuando un doctor te
-                escribe. Puedes responder y llevar un historial de tu
-                comunicación médica.
+                Tus conversaciones con pacientes vinculados aparecerán aquí.
+                Puedes responder sin salir del flujo de atención.
               </Text>
             </View>
             <Pressable
@@ -156,10 +155,11 @@ export default function MensajesScreen() {
           </View>
           <Text style={styles.emptyTitle}>No tienes mensajes aún</Text>
           <Text style={styles.emptySubtext}>
-            Cuando un doctor te escriba, aparecerá aquí.
+            Cuando un paciente te escriba o abras una conversación, aparecerá
+            aquí.
           </Text>
           <Pressable style={styles.reloadBtn} onPress={loadMessages}>
-            <Icon name="share-network" size={16} color={MC.primary} />
+            <Icon name="arrow-clockwise" size={16} color={MC.primary} />
             <Text style={styles.reloadBtnText}>Recargar</Text>
           </Pressable>
         </View>
@@ -174,8 +174,8 @@ export default function MensajesScreen() {
           }
         >
           {messages.map((m, idx) => {
-            const displayName = m.other_name ?? m.doctor_name ?? "Doctor/a";
-            const displayPhoto = m.other_photo ?? m.doctor_photo ?? "";
+            const displayName = m.other_name ?? "Paciente";
+            const displayPhoto = m.other_photo ?? "";
 
             return (
               <FadeSlideIn key={m.id} delay={idx * 50}>
@@ -196,7 +196,7 @@ export default function MensajesScreen() {
                       />
                     ) : (
                       <Text style={styles.avatarText}>
-                        {displayName.charAt(0) || "D"}
+                        {displayName.charAt(0) || "P"}
                       </Text>
                     )}
                   </View>

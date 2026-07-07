@@ -83,7 +83,7 @@ export default function DoctorSettingsScreen() {
       setLat(typeof doctor?.lat === "number" ? doctor.lat : null);
       setLng(typeof doctor?.lng === "number" ? doctor.lng : null);
     } catch (e: any) {
-      setError(e?.message || "No se pudo cargar la configuracion del doctor.");
+      setError(e?.message || "No se pudo cargar la configuración del doctor.");
     } finally {
       setLoading(false);
     }
@@ -166,10 +166,10 @@ export default function DoctorSettingsScreen() {
         lat,
         lng,
       });
-      setSuccess("Configuracion del doctor actualizada.");
+      setSuccess("Configuración del doctor actualizada.");
       setTimeout(() => setSuccess(""), 3200);
     } catch (e: any) {
-      setError(e?.message || "No se pudo guardar la configuracion.");
+      setError(e?.message || "No se pudo guardar la configuración.");
     } finally {
       setSaving(false);
     }
@@ -194,7 +194,7 @@ export default function DoctorSettingsScreen() {
             <Pressable onPress={() => router.back()} hitSlop={10}>
               <Icon name="arrow-left" size={22} color={MC.textPrimary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Configuracion general</Text>
+            <Text style={styles.headerTitle}>Configuración general</Text>
             <Pressable onPress={() => router.push("/doctor/availability" as any)} hitSlop={10}>
               <Icon name="calendar" size={20} color={MC.primary} />
             </Pressable>
@@ -242,7 +242,7 @@ export default function DoctorSettingsScreen() {
 
           <SectionCard
             icon="user-circle"
-            title="Identidad clinica"
+            title="Identidad clínica"
             subtitle="Lo que ve el paciente y lo que usa tu panel para presentarte."
           >
             <Field label="Nombre visible">
@@ -344,11 +344,11 @@ export default function DoctorSettingsScreen() {
           <SectionCard
             icon="map-pin"
             title="Consultorio"
-            subtitle="Ubicacion y contexto general para pacientes y agenda."
+            subtitle="Ubicación y contexto general para pacientes y agenda."
           >
             <LocationPicker
-              title="Direccion del consultorio"
-              subtitle="Puedes usar tu ubicacion actual como sugerencia, escribir la direccion manualmente o fijarla tocando el mapa."
+              title="Dirección del consultorio"
+              subtitle="Puedes usar tu ubicación actual como sugerencia, escribir la dirección manualmente o fijarla tocando el mapa."
               value={{ address, city, state: stateProv, lat, lng }}
               onChange={(next) => {
                 setAddress(next.address);
@@ -375,7 +375,7 @@ export default function DoctorSettingsScreen() {
             <Text style={styles.cardText}>
               La ficha del doctor ya tiene acceso a pacientes, historial y recetas.
               El siguiente salto natural es subir estudios y mover documentos del
-              expediente desde movil.
+              expediente desde móvil.
             </Text>
             <Pressable
               style={styles.secondaryButton}
@@ -385,6 +385,9 @@ export default function DoctorSettingsScreen() {
               <Text style={styles.secondaryButtonText}>Abrir hub de documentos</Text>
             </Pressable>
           </SectionCard>
+
+          {error ? <ActionStatus tone="error" text={error} /> : null}
+          {success ? <ActionStatus tone="success" text={success} /> : null}
 
           <View style={styles.actions}>
             <Pressable style={styles.cancelButton} onPress={() => router.back()}>
@@ -400,7 +403,7 @@ export default function DoctorSettingsScreen() {
               ) : (
                 <>
                   <Icon name="check-circle" size={16} color={MC.white} />
-                  <Text style={styles.saveButtonText}>Guardar diseno</Text>
+                  <Text style={styles.saveButtonText}>Guardar diseño</Text>
                 </>
               )}
             </Pressable>
@@ -524,6 +527,24 @@ function Input({
       style={styles.input}
       placeholderTextColor={MC.textMuted}
     />
+  );
+}
+
+function ActionStatus({
+  tone,
+  text,
+}: {
+  tone: "success" | "error";
+  text: string;
+}) {
+  const success = tone === "success";
+  return (
+    <View style={[styles.actionStatus, success ? styles.actionStatusOk : styles.actionStatusError]}>
+      <Icon name={success ? "check-circle" : "warning"} size={16} color={success ? MC.success : MC.error} />
+      <Text style={[styles.actionStatusText, { color: success ? MC.success : MC.error }]}>
+        {text}
+      </Text>
+    </View>
   );
 }
 
@@ -707,6 +728,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButtonText: { fontSize: 13, fontWeight: "700", color: MC.primaryDark },
+  actionStatus: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionStatusOk: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#6EE7B7",
+  },
+  actionStatusError: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  actionStatusText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 12 },
   cancelButton: {
     flex: 1,

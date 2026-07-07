@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
+import { useRootBackExit } from "@/hooks/useRootBackExit";
 
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
@@ -15,6 +16,8 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
 }
 
 export default function DoctorTabsLayout() {
+  useRootBackExit();
+
   return (
     <Tabs
       screenOptions={{
@@ -54,6 +57,13 @@ export default function DoctorTabsLayout() {
         options={{
           title: "Consultas",
           tabBarIcon: ({ focused }) => <TabIcon name="calendar" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="mensajes"
+        options={{
+          title: "Mensajes",
+          tabBarIcon: ({ focused }) => <TabIcon name="chat-circle" focused={focused} />,
         }}
       />
       <Tabs.Screen

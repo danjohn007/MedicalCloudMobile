@@ -11,48 +11,126 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
-const dateFmt = new Intl.DateTimeFormat("es-MX", {
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+type FilterKey =
+  | "all"
+  | "unread"
+  | "appointment"
+  | "warning"
+  | "doctor"
+  | "message"
+  | "system";
 
-function formatDate(value?: string | null) {
-  if (!value) return "Sin fecha";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Sin fecha";
-  return dateFmt.format(parsed);
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "Todas" },
+  { key: "unread", label: "Nuevas" },
+  { key: "appointment", label: "Citas" },
+  { key: "warning", label: "Alertas" },
+  { key: "doctor", label: "Doctores" },
+  { key: "message", label: "Mensajes" },
+  { key: "system", label: "Sistema" },
+];
+
+function getTimeMs(value?: string | null) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function notificationMeta(type: api.NotificationItem["type"]) {
-  switch (type) {
-    case "message":
-      return {
-        label: "Mensaje",
-        icon: "chat-circle-dots" as const,
-        bg: "#EEF2FF",
-        fg: "#4338CA",
-      };
-    case "appointment":
-      return {
-        label: "Cita",
-        icon: "calendar" as const,
-        bg: "#ECFDF5",
-        fg: "#047857",
-      };
-    default:
-      return {
-        label: "Sistema",
-        icon: "bell" as const,
-        bg: "#FFF7ED",
-        fg: "#B45309",
-      };
+function formatRelativeTime(value?: string | null) {
+  const time = getTimeMs(value);
+  if (!time) return "Sin fecha";
+
+  const seconds = Math.max(1, Math.floor((Date.now() - time) / 1000));
+  if (seconds < 60) return "hace un momento";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "ayer";
+  if (days < 7) return `hace ${days} días`;
+
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(time));
+}
+
+function getNotificationMeta(item: api.NotificationItem): {
+  filter: Exclude<FilterKey, "all" | "unread">;
+  label: string;
+  icon: IconName;
+  bg: string;
+  fg: string;
+} {
+  if (item.type === "message" || item.source === "chat_message") {
+    return {
+      filter: "message",
+      label: "Mensaje",
+      icon: "chat-circle-dots",
+      bg: "#EEF2FF",
+      fg: "#4338CA",
+    };
   }
+
+  if (item.type === "appointment" || item.related_type === "appointment") {
+    return {
+      filter: "appointment",
+      label: "Cita",
+      icon: "calendar",
+      bg: "#ECFDF5",
+      fg: "#047857",
+    };
+  }
+
+  if (item.type === "doctor" || item.related_type === "doctor") {
+    return {
+      filter: "doctor",
+      label: "Doctor",
+      icon: "user-circle",
+      bg: "#E0F2FE",
+      fg: "#0369A1",
+    };
+  }
+
+  if (item.type === "warning" || item.type === "alert") {
+    return {
+      filter: "warning",
+      label: "Alerta",
+      icon: "warning",
+      bg: "#FEF2F2",
+      fg: "#B91C1C",
+    };
+  }
+
+  return {
+    filter: "system",
+    label: "Sistema",
+    icon: "bell",
+    bg: "#FFF7ED",
+    fg: "#B45309",
+  };
+}
+
+function getNotificationText(item: api.NotificationItem) {
+  const title =
+    item.title?.trim() ||
+    item.related_name?.trim() ||
+    (item.type === "message" ? "Nuevo mensaje" : "Notificación");
+  const body = item.body?.trim() || item.message?.trim() || "";
+
+  return { title, body };
+}
+
+function isUnread(item: api.NotificationItem) {
+  return item.is_read === false;
 }
 
 export default function NotificacionesScreen() {
@@ -61,6 +139,8 @@ export default function NotificacionesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [items, setItems] = useState<api.NotificationItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [markingAll, setMarkingAll] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
     try {
@@ -69,7 +149,10 @@ export default function NotificacionesScreen() {
 
       setError("");
       const response = await api.getNotifications();
-      setItems(response.data || []);
+      const next = [...(response.data || [])].sort(
+        (a, b) => getTimeMs(b.created_at) - getTimeMs(a.created_at),
+      );
+      setItems(next);
     } catch (e: any) {
       setError(e?.message || "No se pudieron cargar las notificaciones.");
     } finally {
@@ -82,14 +165,74 @@ export default function NotificacionesScreen() {
     void load();
   }, [load]);
 
-  const groupedCount = useMemo(
-    () => ({
-      messages: items.filter((item) => item.type === "message").length,
-      appointments: items.filter((item) => item.type === "appointment").length,
-      system: items.filter((item) => item.type === "system").length,
-    }),
-    [items],
-  );
+  const counts = useMemo(() => {
+    const base: Record<FilterKey, number> = {
+      all: items.length,
+      unread: items.filter(isUnread).length,
+      appointment: 0,
+      warning: 0,
+      doctor: 0,
+      message: 0,
+      system: 0,
+    };
+
+    items.forEach((item) => {
+      base[getNotificationMeta(item).filter] += 1;
+    });
+
+    return base;
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    if (activeFilter === "all") return items;
+    if (activeFilter === "unread") return items.filter(isUnread);
+
+    return items.filter((item) => getNotificationMeta(item).filter === activeFilter);
+  }, [activeFilter, items]);
+
+  const markItemRead = async (item: api.NotificationItem) => {
+    if (!isUnread(item)) return;
+
+    setItems((current) =>
+      current.map((next) =>
+        next.source === item.source && next.id === item.id
+          ? { ...next, is_read: true }
+          : next,
+      ),
+    );
+
+    try {
+      await api.markNotificationRead({
+        source: item.source ?? item.type,
+        id: item.id,
+      });
+    } catch {
+      void load(true);
+    }
+  };
+
+  const markAllRead = async () => {
+    if (!counts.unread || markingAll) return;
+
+    setMarkingAll(true);
+    setItems((current) => current.map((item) => ({ ...item, is_read: true })));
+    try {
+      await api.markAllNotificationsRead();
+    } catch (e: any) {
+      setError(e?.message || "No se pudieron marcar las notificaciones.");
+      void load(true);
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const openNotification = (item: api.NotificationItem) => {
+    if ((item.type === "message" || item.source === "chat_message") && item.thread_id) {
+      void markItemRead(item);
+      const name = item.related_name ?? "Contacto";
+      router.push(`/chat/${item.thread_id}?name=${encodeURIComponent(name)}` as any);
+    }
+  };
 
   if (loading) {
     return (
@@ -101,109 +244,189 @@ export default function NotificacionesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.header}>
+        <Pressable
+          style={styles.headerBtn}
+          onPress={() => router.back()}
+          hitSlop={10}
+        >
+          <Icon name="arrow-left" size={23} color={MC.textPrimary} />
+        </Pressable>
+        <Text style={styles.title}>Notificaciones</Text>
+        <Pressable style={styles.headerBtn} onPress={() => load(true)} hitSlop={10}>
+          <Icon name="arrow-clockwise" size={20} color={MC.primary} />
+        </Pressable>
+      </View>
+
+      <View style={styles.summary}>
+        <View style={styles.summaryIcon}>
+          <Icon name="bell-ringing" size={24} color={MC.primary} />
+        </View>
+        <View style={styles.summaryText}>
+          <Text style={styles.summaryTitle}>
+            {counts.unread ? `${counts.unread} sin revisar` : "Todo al día"}
+          </Text>
+          <Text style={styles.summarySub}>
+            Mensajes, citas y avisos recientes en orden cronológico.
+          </Text>
+        </View>
+        {counts.unread ? (
+          <Pressable
+            style={[styles.readAllButton, markingAll && styles.disabledButton]}
+            onPress={markAllRead}
+            disabled={markingAll}
+          >
+            <Text style={styles.readAllText}>
+              {markingAll ? "Marcando..." : "Marcar leídas"}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View style={styles.filtersWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+        >
+          {FILTERS.map((filter) => {
+            const selected = activeFilter === filter.key;
+            return (
+              <Pressable
+                key={filter.key}
+                style={[styles.filterChip, selected && styles.filterChipActive]}
+                onPress={() => setActiveFilter(filter.key)}
+              >
+                <Text
+                  style={[
+                    styles.filterText,
+                    selected && styles.filterTextActive,
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+                {counts[filter.key] > 0 ? (
+                  <View
+                    style={[
+                      styles.filterCount,
+                      selected && styles.filterCountActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterCountText,
+                        selected && styles.filterCountTextActive,
+                      ]}
+                    >
+                      {counts[filter.key]}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Icon name="warning" size={16} color={MC.error} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => load(true)}
             tintColor={MC.primary}
+            colors={[MC.primary]}
           />
         }
       >
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={10}
-          >
-            <Icon name="arrow-left" size={22} color={MC.textPrimary} />
-          </Pressable>
-          <Text style={styles.title}>Notificaciones</Text>
-          <Pressable onPress={() => load(true)} hitSlop={10}>
-            <Icon name="arrow-clockwise" size={20} color={MC.primary} />
-          </Pressable>
-        </View>
+        {filteredItems.length ? (
+          filteredItems.map((item) => {
+            const meta = getNotificationMeta(item);
+            const { title, body } = getNotificationText(item);
+            const unread = isUnread(item);
+            const canOpenChat =
+              (item.type === "message" || item.source === "chat_message") &&
+              Boolean(item.thread_id);
 
-        <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Centro de actividad</Text>
-          <Text style={styles.heroTitle}>{items.length} novedades</Text>
-          <Text style={styles.heroText}>
-            Mensajes, recordatorios de cita y avisos recientes del sistema.
-          </Text>
-          <View style={styles.heroRow}>
-            <HeroPill label="Mensajes" value={groupedCount.messages} tone="#EEF2FF" />
-            <HeroPill
-              label="Citas"
-              value={groupedCount.appointments}
-              tone="#ECFDF5"
-            />
-            <HeroPill label="Sistema" value={groupedCount.system} tone="#FFF7ED" />
-          </View>
-        </View>
-
-        {error ? (
-          <View style={styles.errorBox}>
-            <Icon name="warning" size={16} color={MC.error} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        {items.length ? (
-          <View style={styles.list}>
-            {items.map((item) => {
-              const meta = notificationMeta(item.type);
-              return (
-                <View key={`${item.type}-${item.id}-${item.created_at}`} style={styles.card}>
-                  <View style={[styles.cardIcon, { backgroundColor: meta.bg }]}>
-                    <Icon name={meta.icon} size={18} color={meta.fg} />
+            return (
+              <Pressable
+                key={`${item.source ?? item.type}-${item.id}-${item.created_at}`}
+                style={({ pressed }) => [
+                  styles.notificationRow,
+                  pressed && canOpenChat && styles.notificationPressed,
+                ]}
+                onPress={() => openNotification(item)}
+                disabled={!canOpenChat}
+              >
+                <View style={styles.unreadSlot}>
+                  {unread ? <View style={styles.unreadDot} /> : null}
+                </View>
+                <View style={[styles.itemIcon, { backgroundColor: meta.bg }]}>
+                  <Icon name={meta.icon} size={21} color={meta.fg} />
+                </View>
+                <View style={styles.itemBody}>
+                  <View style={styles.itemTop}>
+                    <Text
+                      style={[styles.itemTitle, unread && styles.itemTitleUnread]}
+                      numberOfLines={1}
+                    >
+                      {title}
+                    </Text>
+                    <Text style={styles.itemTime}>
+                      {formatRelativeTime(item.created_at)}
+                    </Text>
                   </View>
-                  <View style={styles.cardBody}>
-                    <View style={styles.cardTop}>
-                      <Text style={[styles.cardBadge, { color: meta.fg }]}>
-                        {meta.label}
-                      </Text>
-                      <Text style={styles.cardDate}>{formatDate(item.created_at)}</Text>
-                    </View>
-                    <Text style={styles.cardMessage}>{item.message}</Text>
-                    {item.related_name ? (
-                      <Text style={styles.cardMeta}>{item.related_name}</Text>
+                  <Text style={styles.itemMessage} numberOfLines={2}>
+                    {body}
+                  </Text>
+                  <View style={styles.itemFooter}>
+                    <Text style={[styles.itemLabel, { color: meta.fg }]}>
+                      {meta.label}
+                    </Text>
+                    {canOpenChat ? (
+                      <Text style={styles.itemAction}>Abrir conversación</Text>
+                    ) : null}
+                    {unread ? (
+                      <Pressable
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          void markItemRead(item);
+                        }}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.itemAction}>Marcar leída</Text>
+                      </Pressable>
                     ) : null}
                   </View>
                 </View>
-              );
-            })}
-          </View>
+                <Icon
+                  name="dots-three-vertical"
+                  size={18}
+                  color={MC.textMuted}
+                />
+              </Pressable>
+            );
+          })
         ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <Icon name="bell" size={56} color={MC.textMuted} />
+              <Icon name="bell" size={54} color={MC.textMuted} />
             </View>
-            <Text style={styles.emptyText}>No tienes notificaciones</Text>
+            <Text style={styles.emptyTitle}>No hay notificaciones</Text>
             <Text style={styles.emptySubtext}>
-              Cuando haya mensajes nuevos o recordatorios de cita apareceran aqui.
+              Cuando existan avisos de este filtro aparecerán aquí.
             </Text>
           </View>
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function HeroPill({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: string;
-}) {
-  return (
-    <View style={[styles.heroPill, { backgroundColor: tone }]}>
-      <Text style={styles.heroPillValue}>{value}</Text>
-      <Text style={styles.heroPillLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -215,102 +438,194 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: { padding: 16, paddingBottom: 36, gap: 16 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  backBtn: {
+  headerBtn: {
     width: 40,
     height: 40,
-    justifyContent: "center",
+    borderRadius: 20,
     alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: MC.textPrimary,
     flex: 1,
     textAlign: "center",
+    color: MC.textPrimary,
+    fontSize: 22,
+    fontWeight: "800",
   },
-  hero: {
-    borderRadius: 24,
-    padding: 18,
+  summary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 20,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
     borderColor: "#C9ECE8",
-    gap: 8,
   },
-  heroEyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: MC.primaryDark,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  heroTitle: { fontSize: 28, fontWeight: "800", color: MC.textPrimary },
-  heroText: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
-  heroRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  heroPill: {
-    flex: 1,
-    minWidth: 90,
+  summaryIcon: {
+    width: 48,
+    height: 48,
     borderRadius: 16,
-    padding: 12,
+    backgroundColor: MC.white,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  heroPillValue: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
-  heroPillLabel: { fontSize: 11, color: MC.textSecondary, marginTop: 2 },
+  summaryText: { flex: 1 },
+  summaryTitle: { fontSize: 16, fontWeight: "800", color: MC.textPrimary },
+  summarySub: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
+    color: MC.textSecondary,
+  },
+  readAllButton: {
+    borderRadius: 999,
+    backgroundColor: MC.white,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#C9ECE8",
+  },
+  disabledButton: { opacity: 0.65 },
+  readAllText: { fontSize: 11, fontWeight: "800", color: MC.primaryDark },
+  filtersWrap: { paddingBottom: 8 },
+  filters: { paddingHorizontal: 16, gap: 8 },
+  filterChip: {
+    minHeight: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 19,
+    backgroundColor: MC.surface,
+    borderWidth: 1,
+    borderColor: MC.border,
+  },
+  filterChipActive: {
+    backgroundColor: MC.primary,
+    borderColor: MC.primary,
+  },
+  filterText: { fontSize: 13, fontWeight: "700", color: MC.textSecondary },
+  filterTextActive: { color: MC.white },
+  filterCount: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: MC.white,
+  },
+  filterCountActive: { backgroundColor: "rgba(255,255,255,0.22)" },
+  filterCountText: { fontSize: 11, fontWeight: "800", color: MC.primary },
+  filterCountTextActive: { color: MC.white },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
     backgroundColor: "#FEE2E2",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 14,
   },
   errorText: { color: MC.error, fontSize: 13, flex: 1 },
-  list: { gap: 10 },
-  card: {
+  listContent: { paddingBottom: 28 },
+  notificationRow: {
     flexDirection: "row",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: MC.border,
-    borderRadius: 18,
-    padding: 14,
-    backgroundColor: MC.white,
+    alignItems: "flex-start",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 13,
   },
-  cardIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  notificationPressed: { backgroundColor: MC.surface },
+  unreadSlot: {
+    width: 8,
+    height: 46,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
   },
-  cardBody: { flex: 1, gap: 4 },
-  cardTop: {
+  unreadDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: MC.primary,
+  },
+  itemIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemBody: { flex: 1, minWidth: 0 },
+  itemTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: 8,
   },
-  cardBadge: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
-  cardDate: { fontSize: 11, color: MC.textMuted },
-  cardMessage: { fontSize: 14, lineHeight: 20, color: MC.textPrimary },
-  cardMeta: { fontSize: 12, color: MC.textSecondary },
-  empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingTop: 60 },
+  itemTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: MC.textPrimary,
+  },
+  itemTitleUnread: { fontWeight: "900" },
+  itemTime: { fontSize: 11, color: MC.textMuted },
+  itemMessage: {
+    marginTop: 3,
+    color: MC.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  itemFooter: {
+    marginTop: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  itemLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  itemAction: { fontSize: 11, fontWeight: "700", color: MC.primary },
+  empty: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 34,
+    paddingTop: 80,
+    gap: 12,
+  },
   emptyIcon: {
     width: 112,
     height: 112,
     borderRadius: 56,
     backgroundColor: MC.surface,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
-  emptyText: { fontSize: 16, fontWeight: "600", color: MC.textSecondary },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: MC.textPrimary,
+    textAlign: "center",
+  },
   emptySubtext: {
     fontSize: 13,
+    lineHeight: 19,
     color: MC.textMuted,
     textAlign: "center",
-    maxWidth: 260,
   },
 });

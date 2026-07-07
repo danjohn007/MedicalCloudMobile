@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { DatePickerField } from "@/components/DatePickerField";
 import { Icon } from "@/components/Icon";
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
@@ -193,7 +194,7 @@ export default function DoctorLinkPatientScreen() {
                 <Input value={phone} onChangeText={setPhone} placeholder="4421234567" />
               </Field>
               <Field label="Fecha de nacimiento">
-                <Input value={birthDate} onChangeText={setBirthDate} placeholder="YYYY-MM-DD" />
+                <DatePickerField value={birthDate} onChange={setBirthDate} />
               </Field>
 
               <Text style={styles.fieldLabel}>Genero</Text>

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,13 +22,19 @@ import { resolveAppHome } from '@/utils/role-routing';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, loginWithGoogle } = useAuthStore();
+  const { isAuthenticated, login, loginWithGoogle, user } = useAuthStore();
 
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loadingMode, setLoadingMode] = useState<'email' | 'google' | null>(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(resolveAppHome(user?.role));
+    }
+  }, [isAuthenticated, router, user?.role]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -58,7 +64,7 @@ export default function LoginScreen() {
       }
       router.replace(resolveAppHome(useAuthStore.getState().user?.role));
     } catch (e: any) {
-      setError(e.message ?? 'Error al iniciar sesiÃ³n con Google.');
+      setError(e.message ?? 'Error al iniciar sesión con Google.');
     } finally {
       setLoadingMode(null);
     }

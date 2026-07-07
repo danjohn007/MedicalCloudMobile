@@ -177,8 +177,12 @@ export interface AppointmentStripeIntent {
 export interface Message {
   id: number;
   doctor_id: number;
-  doctor_name: string;
+  doctor_name: string | null;
   doctor_photo: string | null;
+  other_user_id?: number;
+  other_name?: string | null;
+  other_photo?: string | null;
+  other_role?: "doctor" | "patient" | string;
   last_message: string | null;
   unread: number;
   updated_at: string;
@@ -809,7 +813,9 @@ export async function login(email: string, password: string) {
 export async function loginWithGoogle(): Promise<GoogleLoginResult> {
   const redirectUri = Linking.createURL("login");
   const startUrl = `${getWebBaseUrl()}auth/firebase/mobile?redirect_uri=${encodeURIComponent(redirectUri)}`;
-  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
+  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri, {
+    preferEphemeralSession: false,
+  });
 
   if (result.type === "cancel" || result.type === "dismiss") {
     throw new Error("Inicio de sesion con Google cancelado.");
@@ -1198,9 +1204,16 @@ export interface SoapNote {
 }
 
 export interface NotificationItem {
-  type: 'message' | 'system' | 'appointment';
+  type: 'message' | 'system' | 'appointment' | 'doctor' | 'warning' | 'info' | string;
+  source?: string;
   id: number;
   message: string;
+  title?: string | null;
+  body?: string | null;
+  link?: string | null;
+  related_type?: string | null;
+  related_id?: number | null;
+  is_read?: boolean;
   created_at: string;
   related_name: string | null;
   thread_id: number | null;
@@ -1261,6 +1274,19 @@ export async function getSoapNotes() {
 
 export async function getNotifications() {
   return request<{ data: NotificationItem[] }>("/notifications");
+}
+
+export async function markNotificationRead(input: { source?: string; id: number }) {
+  return request<{ success: boolean }>("/notifications/read", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function markAllNotificationsRead() {
+  return request<{ success: boolean }>("/notifications/read-all", {
+    method: "POST",
+  });
 }
 
 export async function getSupportTickets() {

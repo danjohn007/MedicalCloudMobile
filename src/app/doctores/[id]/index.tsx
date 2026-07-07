@@ -5,6 +5,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -68,6 +69,20 @@ export default function DoctorProfileScreen() {
   const telemedFee = doctor.telemedicine_fee ? '$' + doctor.telemedicine_fee.toLocaleString('es-MX') : '';
   const homeFee = doctor.home_visit_fee ? '$' + doctor.home_visit_fee.toLocaleString('es-MX') : '';
 
+  const shareDoctor = async () => {
+    const specialty = doctor.specialty ? ` - ${doctor.specialty}` : "";
+    const message = [
+      `Te comparto el perfil de ${doctor.name}${specialty} en Doctor Cloud.`,
+      `doctorcloud://doctores/${doctorId}`,
+      `https://doctorcloud.digital/app/doctors/${doctorId}`,
+    ].join("\n");
+
+    await Share.share({
+      title: `Perfil de ${doctor.name}`,
+      message,
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -76,7 +91,7 @@ export default function DoctorProfileScreen() {
           <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={24} color={MC.textPrimary} />
           </Pressable>
-          <Pressable style={styles.shareBtn} hitSlop={10}>
+          <Pressable style={styles.shareBtn} onPress={shareDoctor} hitSlop={10}>
             <Icon name="share-network" size={22} color={MC.textPrimary} />
           </Pressable>
         </View>

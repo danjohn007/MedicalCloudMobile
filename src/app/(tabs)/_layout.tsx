@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 
 import { Icon, IconName } from '@/components/Icon';
 import { MC } from '@/constants/theme';
+import { useRootBackExit } from '@/hooks/useRootBackExit';
 
 interface TabIconProps {
   name: IconName;
@@ -22,6 +23,8 @@ function TabIcon({ name, focused, badge }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  useRootBackExit();
+
   return (
     <Tabs
       screenOptions={{

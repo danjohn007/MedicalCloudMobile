@@ -615,7 +615,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   quickAction: {
-    width: "47.5%",
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 142,
     borderRadius: 20,
     padding: 14,
     gap: 10,
@@ -634,7 +636,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   kpiCard: {
-    width: "47.5%",
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 150,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,

@@ -79,8 +79,8 @@ export default function ChatScreen() {
     photo?: string;
   }>();
   const conversationId = parseInt(id ?? "0", 10);
-  const doctorName = decodeURIComponent(name || "Doctor/a");
-  const doctorPhoto = decodeURIComponent(photo || "").trim();
+  const contactName = decodeURIComponent(name || "Contacto");
+  const contactPhoto = decodeURIComponent(photo || "").trim();
   const { user } = useAuthStore();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -100,7 +100,7 @@ export default function ChatScreen() {
       .getConversation(conversationId)
       .then((res) => {
         const next = res.data ?? [];
-        // Sort by id ascending to ensure correct order
+        // Orden ascendente para que la conversación conserve su secuencia.
         next.sort((a: ChatMessage, b: ChatMessage) => a.id - b.id);
         setMessages(next);
         setTimeout(() => {
@@ -129,7 +129,7 @@ export default function ChatScreen() {
     setError("");
     try {
       await api.sendMessage(conversationId, text);
-      // Immediate fetch to show the message
+      // Refresca inmediatamente para mostrar el mensaje enviado.
       fetchMessages();
     } catch (e: any) {
       setError(e.message ?? "Error al enviar mensaje");
@@ -152,14 +152,14 @@ export default function ChatScreen() {
           </Pressable>
           <View style={styles.headerInfo}>
             <View style={styles.avatarSmall}>
-              {doctorPhoto ? (
-                <Image source={{ uri: doctorPhoto }} style={styles.avatarImage} resizeMode="cover" />
+              {contactPhoto ? (
+                <Image source={{ uri: contactPhoto }} style={styles.avatarImage} resizeMode="cover" />
               ) : (
-                <Text style={styles.avatarText}>{doctorName?.charAt(0) || "D"}</Text>
+                <Text style={styles.avatarText}>{contactName?.charAt(0) || "C"}</Text>
               )}
             </View>
             <View>
-              <Text style={styles.headerTitle}>{doctorName}</Text>
+              <Text style={styles.headerTitle}>{contactName}</Text>
               <Text style={styles.headerStatus}>En línea</Text>
             </View>
           </View>

@@ -1,4 +1,5 @@
 import { Icon } from "@/components/Icon";
+import { DatePickerField } from "@/components/DatePickerField";
 import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
@@ -255,11 +256,7 @@ export default function PatientProfileScreen() {
             <Row>
               <Col>
                 <Lbl t="FECHA DE NACIMIENTO" />
-                <Input
-                  v={birthDate}
-                  onChangeText={setBirthDate}
-                  ph="YYYY-MM-DD"
-                />
+                <DatePickerField value={birthDate} onChange={setBirthDate} />
                 <Hint t="Necesaria para calcular tu edad." />
               </Col>
               <Col>
@@ -363,7 +360,7 @@ export default function PatientProfileScreen() {
 
           <PatientAccessCodeCard
             code={accessCode}
-            hint="Los doctores independientes necesitan este codigo o una cita contigo para ver tu expediente completo."
+            hint="Los doctores independientes necesitan este código o una cita contigo para ver tu expediente completo."
           />
 
           <Card
@@ -372,8 +369,8 @@ export default function PatientProfileScreen() {
             sub="Tu ubicación para visitas, referencias y búsqueda cercana"
           >
             <LocationPicker
-              title="Ubicacion guardada"
-              subtitle="Busca tu direccion, usa tu ubicacion actual o toca el mapa para guardarla."
+              title="Ubicación guardada"
+              subtitle="Busca tu dirección, usa tu ubicación actual o toca el mapa para guardarla."
               value={{ address, city, state: stateProv, lat, lng }}
               onChange={(next) => {
                 setAddress(next.address);
@@ -411,6 +408,9 @@ export default function PatientProfileScreen() {
               </Col>
             </Row>
           </Card>
+
+          {error ? <ActionStatus tone="error" text={error} /> : null}
+          {success ? <ActionStatus tone="success" text={success} /> : null}
 
           <View style={s.actions}>
             <Pressable style={s.cancelBtn} onPress={() => router.back()}>
@@ -520,6 +520,24 @@ function Banner({
   );
 }
 
+function ActionStatus({
+  tone,
+  text,
+}: {
+  tone: "success" | "error";
+  text: string;
+}) {
+  const success = tone === "success";
+  return (
+    <View style={[s.actionStatus, success ? s.actionStatusOk : s.actionStatusError]}>
+      <Icon name={success ? "check-circle" : "warning"} size={16} color={success ? MC.success : MC.error} />
+      <Text style={[s.actionStatusTxt, { color: success ? MC.success : MC.error }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: MC.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -595,6 +613,24 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   okTxt: { color: MC.success, fontSize: 13, flex: 1 },
+  actionStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  actionStatusOk: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#6EE7B7",
+  },
+  actionStatusError: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  actionStatusTxt: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   sec: {
     backgroundColor: MC.background,
     borderRadius: 16,

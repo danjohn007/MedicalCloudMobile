@@ -307,7 +307,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   shortcutsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   shortcutCard: {
-    width: "48%",
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 150,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,

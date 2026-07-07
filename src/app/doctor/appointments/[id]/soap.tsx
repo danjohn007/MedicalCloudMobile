@@ -618,9 +618,9 @@ export default function DoctorSoapScreen() {
               />
             </View>
             <View style={styles.templateRow}>
-              {availableTemplates.map((template) => (
+              {availableTemplates.map((template, index) => (
                 <Pressable
-                  key={template.id}
+                  key={`${template.id}-${template.label}-${index}`}
                   onPress={() => applyTemplate(template.id)}
                   disabled={isReadOnly}
                   style={[

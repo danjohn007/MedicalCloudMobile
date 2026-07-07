@@ -126,7 +126,7 @@ export default function RegisterDetailsScreen() {
         return;
       }
       if (password.length < 8) {
-        setError("La contrasena debe tener al menos 8 caracteres.");
+        setError("La contraseña debe tener al menos 8 caracteres.");
         return;
       }
     }
@@ -153,7 +153,7 @@ export default function RegisterDetailsScreen() {
 
         if (result === "pending_approval") {
           setPendingApprovalMessage(
-            "Registro completado. Tu cuenta de doctor quedo pendiente de aprobacion.",
+            "Registro completado. Tu cuenta de doctor quedó pendiente de aprobación.",
           );
           return;
         }
@@ -176,7 +176,7 @@ export default function RegisterDetailsScreen() {
 
       if (result === "pending_approval") {
         setPendingApprovalMessage(
-          "Registro completado. Tu cuenta de doctor quedo pendiente de aprobacion.",
+          "Registro completado. Tu cuenta de doctor quedó pendiente de aprobación.",
         );
         return;
       }
@@ -219,7 +219,7 @@ export default function RegisterDetailsScreen() {
               <Text style={styles.successTitle}>Solicitud enviada</Text>
               <Text style={styles.successText}>{pendingApprovalMessage}</Text>
               <Pressable style={styles.btnPrimary} onPress={handlePendingExit}>
-                <Text style={styles.btnText}>Volver a iniciar sesion</Text>
+                <Text style={styles.btnText}>Volver a iniciar sesión</Text>
               </Pressable>
             </View>
           ) : (
@@ -328,7 +328,7 @@ export default function RegisterDetailsScreen() {
                   <View style={styles.patientHintCard}>
                     <Text style={styles.patientHintTitle}>Codigo personal del paciente</Text>
                     <Text style={styles.patientHintText}>
-                      Tu codigo de 8 caracteres se genera automaticamente al terminar el alta y
+                      Tu código de 8 caracteres se genera automáticamente al terminar el alta y
                       luego lo veras en tu perfil y dashboard.
                     </Text>
                   </View>

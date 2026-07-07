@@ -51,7 +51,8 @@
         {
           "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicacion para encontrar doctores cercanos, completar direcciones y validar consultorios."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false,

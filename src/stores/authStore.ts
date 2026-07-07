@@ -9,7 +9,7 @@ function normalizeAuthErrorMessage(error: unknown): string {
         ? error
         : 'Error al iniciar sesión.';
 
-  if (/solo pacientes|solo pacientes y doctores|solo doctores|app movil/i.test(message)) {
+  if (/solo pacientes|solo pacientes y doctores|solo doctores|app móvil|app movil/i.test(message)) {
     return 'Credenciales incorrectas.';
   }
 
@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   completeGoogleSignup: async (payload) => {
     const pending = useAuthStore.getState().pendingGoogleSignup;
     if (!pending) {
-      throw new Error('Tu sesion de registro con Google ya no esta disponible. Intenta de nuevo.');
+      throw new Error('Tu sesión de registro con Google ya no está disponible. Intenta de nuevo.');
     }
 
     try {
