@@ -43,7 +43,7 @@ export default function DoctorLinkPatientScreen() {
 
   async function handleLinkByCode() {
     if (accessCode.trim().replace(/[^a-zA-Z0-9]/g, "").length !== 8) {
-      Alert.alert("Codigo invalido", "Ingresa el codigo personal de 8 caracteres del paciente.");
+      Alert.alert("Código inválido", "Ingresa el código personal de 8 caracteres del paciente.");
       return;
     }
 
@@ -121,7 +121,7 @@ export default function DoctorLinkPatientScreen() {
             <Text style={styles.heroTitle}>Expediente solo con relacion valida</Text>
             <Text style={styles.heroText}>
               Un doctor independiente ya no ve expedientes abiertos por defecto. Puede
-              vincular al paciente con su codigo personal o registrarlo directamente para
+              vincular al paciente con su código personal o registrarlo directamente para
               enviarle sus accesos por correo.
             </Text>
           </View>
@@ -148,9 +148,9 @@ export default function DoctorLinkPatientScreen() {
 
           {mode === "code" ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Ingresar codigo personal</Text>
+              <Text style={styles.cardTitle}>Ingresar código personal</Text>
               <Text style={styles.cardSubtitle}>
-                El paciente te comparte su codigo de acceso y queda vinculado para poder ver
+                El paciente te comparte su código de acceso y queda vinculado para poder ver
                 expediente, recetas y crear citas futuras.
               </Text>
               <TextInput
@@ -171,7 +171,7 @@ export default function DoctorLinkPatientScreen() {
                 ) : (
                   <>
                     <Icon name="shield-check" size={16} color={MC.white} />
-                    <Text style={styles.primaryButtonText}>Vincular con codigo</Text>
+                    <Text style={styles.primaryButtonText}>Vincular con código</Text>
                   </>
                 )}
               </Pressable>
@@ -190,7 +190,7 @@ export default function DoctorLinkPatientScreen() {
               <Field label="Correo">
                 <Input value={email} onChangeText={setEmail} placeholder="correo@ejemplo.com" />
               </Field>
-              <Field label="Telefono">
+              <Field label="Teléfono">
                 <Input value={phone} onChangeText={setPhone} placeholder="4421234567" />
               </Field>
               <Field label="Fecha de nacimiento">

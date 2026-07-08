@@ -818,11 +818,11 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
   });
 
   if (result.type === "cancel" || result.type === "dismiss") {
-    throw new Error("Inicio de sesion con Google cancelado.");
+    throw new Error("Inicio de sesión con Google cancelado.");
   }
 
   if (result.type !== "success" || !result.url) {
-    throw new Error("No se pudo completar el inicio de sesion con Google.");
+    throw new Error("No se pudo completar el inicio de sesión con Google.");
   }
 
   const parsed = Linking.parse(result.url);
@@ -1286,6 +1286,36 @@ export async function markNotificationRead(input: { source?: string; id: number 
 export async function markAllNotificationsRead() {
   return request<{ success: boolean }>("/notifications/read-all", {
     method: "POST",
+  });
+}
+
+export interface AiChatResponse {
+  success: boolean;
+  session_id: string;
+  reply: string;
+  provider?: string;
+}
+
+export async function sendAiChatMessage(input: {
+  message: string;
+  session_id?: string;
+  consultation_context?: string;
+}) {
+  return request<AiChatResponse>("/ai/chat", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getAiBriefing(appointmentId: number) {
+  return request<{
+    success: boolean;
+    briefing: string;
+    appointment_id: number;
+    provider?: string;
+  }>("/ai/briefing", {
+    method: "POST",
+    body: JSON.stringify({ appointment_id: appointmentId }),
   });
 }
 

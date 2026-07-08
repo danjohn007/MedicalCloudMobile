@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, IconName } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
@@ -63,6 +64,11 @@ export default function PerfilScreen() {
       action: () => router.push("/patient/recetas"),
     },
     {
+      icon: "brain",
+      label: "Asistente IA",
+      action: () => router.push("/ai/chat"),
+    },
+    {
       icon: "wallet",
       label: "Historial financiero",
       action: () => router.push("/patient/finanzas"),
@@ -109,9 +115,7 @@ export default function PerfilScreen() {
       <ScrollView>
         {/* Settings button */}
         <View style={styles.header}>
-          <Pressable style={styles.settingsBtn} hitSlop={10}>
-            <Icon name="gear" size={24} color={MC.textPrimary} />
-          </Pressable>
+          <NotificationBellButton />
         </View>
 
         {/* Avatar + Name + info */}
@@ -172,7 +176,7 @@ export default function PerfilScreen() {
               <Icon name="sign-out" size={20} color={MC.error} />
             </View>
             <Text style={[styles.menuLabel, styles.menuLabelDanger]}>
-              Cerrar sesion
+              Cerrar sesión
             </Text>
             <Icon name="caret-right" size={18} color={MC.error} />
           </Pressable>

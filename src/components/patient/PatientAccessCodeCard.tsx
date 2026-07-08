@@ -38,13 +38,13 @@ export function PatientAccessCodeCard({
 
   async function handleShare() {
     if (!safeCode) {
-      Alert.alert("Codigo pendiente", "Tu codigo todavia no esta disponible.");
+      Alert.alert("Código pendiente", "Tu código todavía no está disponible.");
       return;
     }
 
     try {
       await Share.share({
-        message: `Mi codigo personal de Doctor Cloud es: ${safeCode}`,
+        message: `Mi código personal de Doctor Cloud es: ${safeCode}`,
       });
     } catch {
       Alert.alert("No se pudo compartir", "Intenta de nuevo en unos momentos.");
@@ -70,7 +70,7 @@ export function PatientAccessCodeCard({
         <Text style={styles.codeValue}>{displayCode}</Text>
         <Text style={styles.hint}>
           {hint ||
-            "Los doctores independientes necesitan este codigo o una cita contigo para ver tu expediente completo."}
+            "Los doctores independientes necesitan este código o una cita contigo para ver tu expediente completo."}
         </Text>
       </View>
 

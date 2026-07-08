@@ -118,7 +118,7 @@ export function DoctorPatientPicker({
         {!filtered.length ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
-              No encontramos pacientes con esa busqueda.
+              No encontramos pacientes con esa búsqueda.
             </Text>
           </View>
         ) : null}

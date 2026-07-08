@@ -233,7 +233,7 @@ export default function SupportIndexScreen() {
             <View style={styles.emptyIcon}>
               <Icon name="chat-circle-dots" size={44} color={MC.textMuted} />
             </View>
-            <Text style={styles.emptyTitle}>Todavia no tienes tickets</Text>
+            <Text style={styles.emptyTitle}>Todavía no tienes tickets</Text>
             <Text style={styles.emptyText}>
               Si algo falla con una cita, pago, expediente o perfil, abre tu primer
               ticket y el equipo podra responderte aqui mismo.

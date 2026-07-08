@@ -283,7 +283,7 @@ export default function DoctorAvailabilityScreen() {
         await api.saveDoctorAvailabilityOverride({
           date: selectedDate,
           is_off: true,
-          reason: "Bloqueado desde app movil",
+          reason: "Bloqueado desde app móvil",
         });
 
         setOverrides((current) => ({
@@ -293,7 +293,7 @@ export default function DoctorAvailabilityScreen() {
             isOff: true,
             startTime: null,
             endTime: null,
-            reason: "Bloqueado desde app movil",
+            reason: "Bloqueado desde app móvil",
           },
         }));
         setSlots([]);
@@ -675,7 +675,7 @@ export default function DoctorAvailabilityScreen() {
             <EmptyCard
               icon="check-circle"
               title="Dia limpio"
-              text="Todavia no hay consultas ocupando esta fecha."
+              text="Todavía no hay consultas ocupando esta fecha."
             />
           )}
         </Section>

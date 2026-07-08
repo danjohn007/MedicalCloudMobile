@@ -10,6 +10,8 @@ interface TabIconProps {
   badge?: number;
 }
 
+const PATIENT_ROOT_SCREENS = ["index", "citas", "mensajes", "perfil"];
+
 function TabIcon({ name, focused, badge }: TabIconProps) {
   const color = focused ? MC.primary : MC.textMuted;
   return (
@@ -23,7 +25,7 @@ function TabIcon({ name, focused, badge }: TabIconProps) {
 }
 
 export default function TabsLayout() {
-  useRootBackExit();
+  useRootBackExit("(tabs)", PATIENT_ROOT_SCREENS);
 
   return (
     <Tabs

@@ -106,7 +106,7 @@ export default function DoctorAppointmentCompleteScreen() {
           <Text style={styles.heroTitle}>{appointment?.patient_name || "Paciente"}</Text>
           <Text style={styles.heroSubtitle}>
             {isPresential
-              ? "Para citas presenciales, valida el codigo de cierre del paciente antes de marcarla completada."
+              ? "Para citas presenciales, valida el código de cierre del paciente antes de marcarla completada."
               : "En consultas virtuales puedes cerrarla directamente desde la app."}
           </Text>
         </View>
@@ -149,7 +149,7 @@ export default function DoctorAppointmentCompleteScreen() {
               ) : (
                 <>
                   <Icon name="check-circle" size={18} color={MC.white} />
-                  <Text style={styles.primaryButtonText}>Validar codigo y cerrar</Text>
+                  <Text style={styles.primaryButtonText}>Validar código y cerrar</Text>
                 </>
               )}
             </Pressable>
@@ -160,7 +160,7 @@ export default function DoctorAppointmentCompleteScreen() {
               style={[styles.secondaryButton, saving && styles.buttonDisabled]}
             >
               <Icon name="warning" size={18} color="#B45309" />
-              <Text style={styles.secondaryButtonText}>Forzar cierre sin codigo</Text>
+              <Text style={styles.secondaryButtonText}>Forzar cierre sin código</Text>
             </Pressable>
           </>
         ) : (

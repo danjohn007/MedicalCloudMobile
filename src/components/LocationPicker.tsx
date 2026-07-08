@@ -129,7 +129,7 @@ export function LocationPicker({
       if (!permission.granted) {
         Alert.alert(
           "Permiso requerido",
-          "Necesitamos acceso a tu ubicacion para sugerir la direccion mas cercana.",
+          "Necesitamos acceso a tu ubicación para sugerir la dirección más cercana.",
         );
         return;
       }
@@ -154,7 +154,7 @@ export function LocationPicker({
     } catch {
       Alert.alert(
         "Ubicacion no disponible",
-        "No se pudo obtener tu ubicacion actual. Puedes buscar la direccion manualmente o elegirla en el mapa.",
+        "No se pudo obtener tu ubicación actual. Puedes buscar la dirección manualmente o elegirla en el mapa.",
       );
     } finally {
       setLoadingCurrent(false);
@@ -216,7 +216,7 @@ export function LocationPicker({
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Busca una direccion o toca el mapa"
+          placeholder="Busca una dirección o toca el mapa"
           placeholderTextColor={MC.textMuted}
           style={styles.searchInput}
         />
@@ -274,7 +274,7 @@ export function LocationPicker({
           ) : null}
         </MapView>
         <Text style={styles.mapHint}>
-          Toca el mapa para fijar el punto exacto de la direccion.
+          Toca el mapa para fijar el punto exacto de la dirección.
         </Text>
       </View>
 
@@ -283,14 +283,14 @@ export function LocationPicker({
         <View style={styles.warningBox}>
           <Icon name="warning" size={16} color="#B45309" />
           <Text style={styles.warningText}>
-            La direccion seleccionada esta a {Math.round(distanceFromCurrent)} m de tu
+            La dirección seleccionada está a {Math.round(distanceFromCurrent)} m de tu
             ubicacion actual. Puedes continuar si tu consultorio esta en otro punto.
           </Text>
         </View>
       ) : null}
 
       <View style={styles.summary}>
-        <SummaryRow label="Direccion" value={value.address || "Sin direccion"} />
+        <SummaryRow label="Dirección" value={value.address || "Sin dirección"} />
         <SummaryRow label="Ciudad" value={value.city || "Sin ciudad"} />
         <SummaryRow label="Estado" value={value.state || "Sin estado"} />
         <SummaryRow

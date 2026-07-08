@@ -219,7 +219,7 @@ export default function DoctorConsultationTemplatesScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Biblioteca clinica</Text>
+          <Text style={styles.heroEyebrow}>Biblioteca clínica</Text>
           <Text style={styles.heroTitle}>Deja listas tus notas frecuentes</Text>
           <Text style={styles.heroText}>
             Crea bases reutilizables para SOAP, plan terapeutico y receta. Las
@@ -251,7 +251,7 @@ export default function DoctorConsultationTemplatesScreen() {
               <TemplatePreviewCard key={`${template.source}-${template.id}-${template.label}`} template={template} />
             ))
           ) : (
-            <EmptyCard text="Todavia no hay plantillas activas." />
+            <EmptyCard text="Todavía no hay plantillas activas." />
           )}
         </Section>
 
@@ -395,7 +395,7 @@ export default function DoctorConsultationTemplatesScreen() {
             <Input
               value={form.assessment}
               onChangeText={(value) => setField("assessment", value)}
-              placeholder="Impresion clinica base."
+              placeholder="Impresión clínica base."
               multiline
             />
           </Field>
@@ -409,7 +409,7 @@ export default function DoctorConsultationTemplatesScreen() {
             />
           </Field>
 
-          <Field label="Diagnostico para receta">
+          <Field label="Diagnóstico para receta">
             <Input
               value={form.diagnosis}
               onChangeText={(value) => setField("diagnosis", value)}

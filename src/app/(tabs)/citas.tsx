@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -315,13 +316,16 @@ export default function CitasScreen() {
     <SafeAreaView style={s.ct} edges={["top"]}>
       <View style={s.hdr}>
         <Text style={s.hdrTitle}>Mis Citas</Text>
-        <Pressable
-          onPress={() => router.push("/doctores" as any)}
-          style={s.hdrAdd}
-        >
-          <Icon name="plus" size={18} color={MC.white} />
-          <Text style={s.hdrAddText}>Nueva</Text>
-        </Pressable>
+        <View style={s.hdrActions}>
+          <NotificationBellButton />
+          <Pressable
+            onPress={() => router.push("/doctores" as any)}
+            style={s.hdrAdd}
+          >
+            <Icon name="plus" size={18} color={MC.white} />
+            <Text style={s.hdrAddText}>Nueva</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -331,7 +335,7 @@ export default function CitasScreen() {
           onPress={() => setTab("upcoming")}
         >
           <Text style={[s.tabText, tab === "upcoming" && s.tabTextActive]}>
-            Proximas
+            Próximas
           </Text>
           {tab === "upcoming" && <View style={s.tabLine} />}
         </Pressable>
@@ -354,7 +358,7 @@ export default function CitasScreen() {
           contentContainerStyle={s.statRow}
         >
           <StatChip
-            label={tab === "upcoming" ? "Proximas" : "Total"}
+            label={tab === "upcoming" ? "Próximas" : "Total"}
             value={counts.all}
             color={MC.primary}
             icon="calendar"
@@ -469,8 +473,8 @@ export default function CitasScreen() {
           </View>
           <Text style={s.emptyTitle}>
             {filter === "all"
-              ? "No tienes citas proximas"
-              : "Sin citas en esta categoria"}
+              ? "No tienes citas próximas"
+              : "Sin citas en esta categoría"}
           </Text>
           <Text style={s.emptySub}>
             {filter === "all"
@@ -869,6 +873,11 @@ const s = StyleSheet.create({
     fontWeight: "800",
     color: MC.textPrimary,
     letterSpacing: -0.5,
+  },
+  hdrActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   hdrAdd: {
     flexDirection: "row",

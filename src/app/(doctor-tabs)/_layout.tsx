@@ -15,8 +15,10 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   );
 }
 
+const DOCTOR_ROOT_SCREENS = ["index", "pacientes", "citas", "mensajes", "perfil"];
+
 export default function DoctorTabsLayout() {
-  useRootBackExit();
+  useRootBackExit("(doctor-tabs)", DOCTOR_ROOT_SCREENS);
 
   return (
     <Tabs

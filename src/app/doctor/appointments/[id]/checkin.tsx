@@ -65,7 +65,7 @@ export default function DoctorAppointmentCheckinScreen() {
   async function handleCheckin() {
     const normalized = code.trim().toUpperCase();
     if (normalized.length < 4) {
-      Alert.alert("Codigo requerido", "Ingresa el codigo de check-in del paciente.");
+      Alert.alert("Código requerido", "Ingresa el código de check-in del paciente.");
       return;
     }
 
@@ -107,7 +107,7 @@ export default function DoctorAppointmentCheckinScreen() {
           <Text style={styles.heroEyebrow}>Consulta presencial</Text>
           <Text style={styles.heroTitle}>{appointment?.patient_name || "Paciente"}</Text>
           <Text style={styles.heroSubtitle}>
-            Pide al paciente el codigo que ve en su app para registrar su llegada e iniciar la consulta.
+            Pide al paciente el código que ve en su app para registrar su llegada e iniciar la consulta.
           </Text>
         </View>
 
@@ -124,7 +124,7 @@ export default function DoctorAppointmentCheckinScreen() {
             1. El paciente abre su modulo de check-in.
           </Text>
           <Text style={styles.infoText}>
-            2. Te comparte el codigo de 6 caracteres.
+            2. Te comparte el código de 6 caracteres.
           </Text>
           <Text style={styles.infoText}>
             3. Tu lo capturas aqui y la cita pasa a en consulta.

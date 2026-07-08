@@ -159,7 +159,7 @@ Pendientes no bloqueantes:
 
 ## Plan siguiente - Asistente IA en app movil
 
-Estado: analizado, no implementado todavia.
+Estado: primer corte implementado el 2026-07-08.
 
 Como funciona hoy en web:
 - La vista general esta en `/ai/chat` y usa `AiController@chat`.
@@ -169,21 +169,23 @@ Como funciona hoy en web:
 - Para pacientes, funciona como orientacion general de salud sin diagnosticar.
 - Tambien existe `/api/ai/briefing` para doctores, pensado para briefing pre-consulta por cita.
 
-Propuesta movil:
-- Agregar pantalla compartida `src/app/ai/chat.tsx` para paciente y doctor con UI tipo chat.
-- Agregar accesos en dashboard/menu de paciente y doctor solo si el backend indica feature `ai_assistant`.
-- Crear endpoints moviles JWT en `MobileApiController`, por ejemplo:
+Implementado:
+- Pantalla compartida `src/app/ai/chat.tsx` para paciente y doctor con UI tipo chat.
+- Accesos en dashboard/perfil de paciente y dashboard/perfil de doctor.
+- Endpoints moviles JWT en `MobileApiController`:
   - `POST /api/mobile/ai/chat` para chat normal.
   - `POST /api/mobile/ai/briefing` para briefing de doctores por cita.
-- Evitar depender de CSRF/sesion web en app; usar JWT como el resto de la API movil.
-- En movil conviene empezar sin streaming real si React Native/SSE complica Expo Go: respuesta JSON completa primero, y luego evaluar streaming incremental.
-- Reutilizar la misma logica de contexto del `AiController` para no crear dos cerebros distintos entre web y app.
+- Boton `Generar briefing IA` en detalle de cita del doctor, mostrando el resumen dentro de la pantalla.
+- Se evita depender de CSRF/sesion web en app; usa JWT como el resto de la API movil.
+- Primera version sin streaming real: respuesta JSON completa para mayor estabilidad en Expo/React Native.
+- Se reutiliza la misma idea de contexto de `AiController`: doctor con estadisticas/notas/recetas, paciente con perfil/citas y orientacion general.
+- Se mantiene logging y rate-limit best-effort en `ai_assistant_logs` si la tabla existe.
 
-Decisiones antes de implementar:
-- Si quieres streaming en tiempo real tipo web desde el primer intento, o respuesta completa mas estable para primera version movil.
-- Si el acceso IA debe aparecer para todos o solo cuando `features.ai_assistant` venga activo.
-- Si el briefing IA debe vivir dentro del detalle de cita/SOAP o como boton separado en la pantalla de citas.
-- Si se guardara historial local de conversaciones en app o solo se usara `ai_assistant_logs` del backend.
+Pendiente para siguiente iteracion:
+- Mostrar/ocultar accesos segun feature `ai_assistant` enviada explicitamente por API; por ahora el backend bloquea si no hay permiso.
+- Opcional: agregar otro acceso de briefing dentro de SOAP si se quiere usarlo durante captura de nota, no solo desde detalle de cita.
+- Evaluar streaming incremental en movil si se quiere experiencia identica a web.
+- Agregar historial persistente de conversaciones en app si se desea ver chats anteriores, no solo logs backend.
 
 ## Riesgos / notas
 

@@ -82,7 +82,7 @@ export default function GoogleRegisterScreen() {
         <View style={styles.roleGrid}>
           <RoleCard
             title="Soy Paciente"
-            description="Agendo citas, comparto mi codigo y reviso mi expediente."
+            description="Agendo citas, comparto mi código y reviso mi expediente."
             icon="heart"
             active={role === "patient"}
             onPress={() => setRole("patient")}

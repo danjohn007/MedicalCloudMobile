@@ -70,6 +70,13 @@ const QUICK_ACTIONS: {
     bg: "#F5F3FF",
   },
   {
+    label: "Asistente IA",
+    icon: "brain",
+    route: "/ai/chat",
+    color: "#0F766E",
+    bg: "#F0FDFA",
+  },
+  {
     label: "Recetas",
     icon: "pill",
     route: "/patient/recetas",
@@ -379,7 +386,7 @@ export default function HomeScreen() {
           <View style={s.sectionBlock}>
             <PatientAccessCodeCard
               code={profile?.doctor_access_code}
-              hint="Si un doctor todavia no te tiene vinculado, puede usar este codigo para ver tu expediente sin pedirte de nuevo todos tus datos."
+              hint="Si un doctor todavía no te tiene vinculado, puede usar este código para ver tu expediente sin pedirte de nuevo todos tus datos."
               onOpenProfile={() => router.push("/patient/profile")}
               style={s.accessCodeCard}
             />

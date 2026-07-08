@@ -44,6 +44,8 @@ export default function DoctorAppointmentDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState("");
   const [error, setError] = useState("");
+  const [aiBriefing, setAiBriefing] = useState("");
+  const [aiBriefingLoading, setAiBriefingLoading] = useState(false);
   const [detail, setDetail] = useState<api.DoctorAppointmentDetailData | null>(null);
 
   useEffect(() => {
@@ -130,6 +132,23 @@ export default function DoctorAppointmentDetailScreen() {
       Alert.alert("No se pudo abrir la videollamada", e?.message || "Intenta de nuevo.");
     } finally {
       setBusyAction("");
+    }
+  }
+
+  async function handleGenerateAiBriefing() {
+    if (!Number.isFinite(appointmentId) || appointmentId <= 0 || aiBriefingLoading) {
+      return;
+    }
+
+    try {
+      setAiBriefingLoading(true);
+      setError("");
+      const response = await api.getAiBriefing(appointmentId);
+      setAiBriefing(response.briefing || "La IA no devolvio contenido para esta cita.");
+    } catch (e: any) {
+      setError(e?.message || "No se pudo generar el briefing con IA.");
+    } finally {
+      setAiBriefingLoading(false);
     }
   }
 
@@ -221,7 +240,7 @@ export default function DoctorAppointmentDetailScreen() {
                     </Text>
                     <Text style={styles.flowText}>
                       {primaryFlow?.text ||
-                        "La cita ya termino. Puedes revisar la nota clinica o volver a la ficha del paciente."}
+                        "La cita ya terminó. Puedes revisar la nota clínica o volver a la ficha del paciente."}
                     </Text>
                   </View>
                 </View>
@@ -309,7 +328,7 @@ export default function DoctorAppointmentDetailScreen() {
             <Section title="Datos de la consulta">
               <InfoRow label="Motivo" value={appointment.reason || "Sin motivo registrado"} />
               <InfoRow label="Ubicacion" value={appointment.location || "Sin ubicacion"} />
-              <InfoRow label="Telefono paciente" value={appointment.patient_phone || "Sin telefono"} />
+              <InfoRow label="Teléfono paciente" value={appointment.patient_phone || "Sin teléfono"} />
               <InfoRow label="Correo paciente" value={appointment.patient_email || "Sin correo"} />
               <InfoRow
                 label="Check-in"
@@ -334,9 +353,41 @@ export default function DoctorAppointmentDetailScreen() {
             </Section>
 
             <Section title="Briefing rapido">
+              <Pressable
+                style={[styles.aiBriefingButton, aiBriefingLoading && styles.aiBriefingButtonDisabled]}
+                onPress={handleGenerateAiBriefing}
+                disabled={aiBriefingLoading}
+              >
+                <View style={styles.aiBriefingIcon}>
+                  {aiBriefingLoading ? (
+                    <ActivityIndicator size="small" color={MC.primary} />
+                  ) : (
+                    <Icon name="brain" size={18} color={MC.primary} />
+                  )}
+                </View>
+                <View style={styles.aiBriefingButtonBody}>
+                  <Text style={styles.aiBriefingButtonTitle}>
+                    {aiBriefing ? "Actualizar briefing IA" : "Generar briefing IA"}
+                  </Text>
+                  <Text style={styles.aiBriefingButtonText}>
+                    Resume datos clave, alertas, última visita y sugerencias para la consulta.
+                  </Text>
+                </View>
+              </Pressable>
+
+              {aiBriefing ? (
+                <View style={styles.aiBriefingResult}>
+                  <View style={styles.aiBriefingResultHeader}>
+                    <Icon name="brain" size={16} color={MC.primaryDark} />
+                    <Text style={styles.aiBriefingResultTitle}>Resumen generado por IA</Text>
+                  </View>
+                  <Text style={styles.aiBriefingResultText}>{aiBriefing}</Text>
+                </View>
+              ) : null}
+
               <BriefingCard
                 icon="warning"
-                title="Alertas clinicas"
+                title="Alertas clínicas"
                 text={
                   appointment.patient_allergies
                     ? appointment.patient_allergies
@@ -356,7 +407,7 @@ export default function DoctorAppointmentDetailScreen() {
             <Section title="Estado de trabajo clinico">
               <StatusCard
                 icon="clipboard-text"
-                title="Nota clinica"
+                title="Nota clínica"
                 status={appointment.note ? "Creada" : "Pendiente"}
                 description={
                   appointment.note
@@ -367,7 +418,7 @@ export default function DoctorAppointmentDetailScreen() {
                           "",
                         140,
                       ) || "La nota ya tiene contenido guardado."
-                    : "Esta consulta aun no tiene nota asociada en movil."
+                    : "Esta consulta aún no tiene nota asociada en móvil."
                 }
               />
               <StatusCard
@@ -383,7 +434,7 @@ export default function DoctorAppointmentDetailScreen() {
                           "",
                         140,
                       ) || "La receta ya existe para esta cita."
-                    : "Todavia no hay receta vinculada a esta consulta."
+                    : "Todavía no hay receta vinculada a esta consulta."
                 }
               />
             </Section>
@@ -528,6 +579,7 @@ function ActionButton({
   icon:
     | "check-circle"
     | "pulse"
+    | "brain"
     | "check"
     | "x"
     | "warning"
@@ -614,7 +666,7 @@ function normalizePaymentStatus(status: string) {
 
 function buildProfileLine(appointment: api.DoctorAppointmentDetailData["data"]) {
   const parts = [
-    appointment.patient_age != null ? `${appointment.patient_age} anos` : "",
+    appointment.patient_age != null ? `${appointment.patient_age} años` : "",
     appointment.patient_gender || "",
     appointment.patient_blood_type || "",
   ].filter(Boolean);
@@ -690,7 +742,7 @@ function getPrimaryFlowAction(
       color: "#047857",
       backgroundColor: "#ECFDF5",
       title: "Primero confirma la cita",
-      text: "Deja resuelta la aprobacion antes de pasar a check-in o a la nota clinica.",
+      text: "Deja resuelta la aprobación antes de pasar a check-in o a la nota clínica.",
       buttonLabel: "Confirmar consulta",
     };
   }
@@ -732,7 +784,7 @@ function getPrimaryFlowAction(
       icon: "clipboard-text",
       color: "#075985",
       backgroundColor: "#E0F2FE",
-      title: "Captura la nota clinica",
+      title: "Captura la nota clínica",
       text: "Usa la nota SOAP, la receta y el cierre de consulta desde este mismo flujo.",
       buttonLabel: "Abrir SOAP",
     };
@@ -920,6 +972,45 @@ const styles = StyleSheet.create({
   statusTitle: { fontSize: 13, fontWeight: "700", color: MC.textPrimary },
   statusSubtitle: { fontSize: 12, fontWeight: "700", color: MC.primaryDark },
   statusText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
+  aiBriefingButton: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#BFE7E3",
+    backgroundColor: "#F0FDFA",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  aiBriefingButtonDisabled: { opacity: 0.7 },
+  aiBriefingIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    backgroundColor: MC.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#CDEDEA",
+  },
+  aiBriefingButtonBody: { flex: 1, gap: 3 },
+  aiBriefingButtonTitle: { fontSize: 14, fontWeight: "800", color: MC.primaryDark },
+  aiBriefingButtonText: { fontSize: 12, lineHeight: 17, color: MC.textSecondary },
+  aiBriefingResult: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#CDEDEA",
+    backgroundColor: MC.white,
+    padding: 14,
+    gap: 10,
+  },
+  aiBriefingResultHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aiBriefingResultTitle: { fontSize: 13, fontWeight: "800", color: MC.primaryDark },
+  aiBriefingResultText: { fontSize: 13, lineHeight: 20, color: MC.textPrimary },
   briefingCard: {
     borderRadius: 16,
     borderWidth: 1,

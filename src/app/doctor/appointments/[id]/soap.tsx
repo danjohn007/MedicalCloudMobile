@@ -44,12 +44,12 @@ const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
     label: "Respiratoria",
     tone: "#2563EB",
     subjective:
-      "Paciente refiere cuadro respiratorio de inicio reciente con sintomas de via aerea superior y malestar general.",
+      "Paciente refiere cuadro respiratorio de inicio reciente con síntomas de vía aérea superior y malestar general.",
     objective:
-      "Signos vitales clinicamente estables, exploracion dirigida sin datos de alarma inmediata.",
+      "Signos vitales clínicamente estables, exploración dirigida sin datos de alarma inmediata.",
     assessment: "Infeccion respiratoria alta no complicada.",
     plan:
-      "Manejo sintomatico, hidratacion oral, vigilancia de signos de alarma y reevaluacion por evolucion.",
+      "Manejo sintomático, hidratación oral, vigilancia de signos de alarma y reevaluación por evolución.",
     diagnosis: "Infeccion respiratoria alta no complicada",
     usage_notes:
       "Base breve para cuadros respiratorios no complicados, con ajuste clinico final segun exploracion.",
@@ -63,7 +63,7 @@ const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
     subjective:
       "Paciente refiere molestias gastrointestinales recientes sin datos iniciales de compromiso grave.",
     objective:
-      "Exploracion clinica registrada sin datos de irritacion peritoneal y con estabilidad general.",
+      "Exploración clínica registrada sin datos de irritación peritoneal y con estabilidad general.",
     assessment: "Cuadro gastrointestinal no complicado.",
     plan:
       "Reposicion de liquidos, dieta progresiva, vigilancia de deshidratacion y seguimiento clinico.",
@@ -257,7 +257,7 @@ export default function DoctorSoapScreen() {
         }
       } catch (e: any) {
         if (cancelled) return;
-        setError(e?.message || "No se pudo cargar la nota clinica.");
+        setError(e?.message || "No se pudo cargar la nota clínica.");
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -369,9 +369,9 @@ export default function DoctorSoapScreen() {
       await removeSecure(soapDraftKey(appointmentId));
       setAutosaveState("saved");
       setAutosaveMessage("SOAP y receta sincronizados correctamente.");
-      setSuccess(result.message || "Nota clinica guardada correctamente.");
+      setSuccess(result.message || "Nota clínica guardada correctamente.");
     } catch (e: any) {
-      setError(e?.message || "No se pudo guardar la nota clinica.");
+      setError(e?.message || "No se pudo guardar la nota clínica.");
     } finally {
       setSaving(false);
     }
@@ -409,10 +409,10 @@ export default function DoctorSoapScreen() {
       setData(refreshed);
       setForm(buildFormFromResponse(refreshed));
       setAutosaveState("saved");
-      setAutosaveMessage("La nota quedo firmada y el SOAP ya no se puede editar desde movil.");
+      setAutosaveMessage("La nota quedó firmada y el SOAP ya no se puede editar desde móvil.");
       setSuccess(result.message || "Nota firmada correctamente.");
     } catch (e: any) {
-      setError(e?.message || "No se pudo firmar la nota clinica.");
+      setError(e?.message || "No se pudo firmar la nota clínica.");
     } finally {
       setSigning(false);
     }
@@ -475,21 +475,21 @@ export default function DoctorSoapScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Pressable onPress={() => router.back()} hitSlop={10}>
               <Icon name="arrow-left" size={22} color={MC.textPrimary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Nota clinica</Text>
+            <Text style={styles.headerTitle}>Nota clínica</Text>
             <View style={styles.headerSpacer} />
           </View>
 
           {appointment ? (
             <View style={styles.hero}>
               <Text style={styles.heroEyebrow}>
-                {appointment.status === "in_consultation" ? "En consulta" : "Consulta clinica"}
+                {appointment.status === "in_consultation" ? "En consulta" : "Consulta clínica"}
               </Text>
               <Text style={styles.heroTitle}>{appointment.patient_name}</Text>
               <Text style={styles.heroSubtitle}>
@@ -665,7 +665,7 @@ export default function DoctorSoapScreen() {
               label="Analisis"
               value={form.assessment}
               onChangeText={(value) => setField("assessment", value)}
-              placeholder="Diagnostico presuntivo o impresion clinica"
+              placeholder="Diagnóstico presuntivo o impresión clínica"
               multiline
               editable={!isReadOnly}
             />
@@ -684,10 +684,10 @@ export default function DoctorSoapScreen() {
             subtitle="Deja clara la indicacion medica para que el paciente la entienda y la pueda seguir."
           >
             <Field
-              label="Diagnostico"
+              label="Diagnóstico"
               value={form.rx_diagnosis}
               onChangeText={(value) => setField("rx_diagnosis", value)}
-              placeholder="Motivo medico de la receta"
+              placeholder="Motivo médico de la receta"
               multiline
               editable={!isReadOnly}
             />
@@ -966,7 +966,7 @@ function buildProgress(form: SoapFormState) {
       label: "Resumen del paciente",
       done: Boolean(form.subjective.trim()),
       detail: form.subjective.trim()
-        ? "Ya hay motivo y narrativa clinica."
+        ? "Ya hay motivo y narrativa clínica."
         : "Falta capturar lo que el paciente refiere.",
     },
     {
@@ -975,7 +975,7 @@ function buildProgress(form: SoapFormState) {
       detail:
         form.objective.trim() && form.assessment.trim()
           ? "Objetivo y analisis ya estan documentados."
-          : "Completa observaciones y la impresion clinica.",
+          : "Completa observaciones y la impresión clínica.",
     },
     {
       label: "Plan de manejo",

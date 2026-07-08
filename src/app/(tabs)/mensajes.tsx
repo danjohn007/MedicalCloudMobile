@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -91,9 +92,7 @@ export default function MensajesScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
-        <Pressable style={styles.newBtn} hitSlop={10}>
-          <Icon name="plus" size={22} color={MC.primary} />
-        </Pressable>
+        <NotificationBellButton />
       </View>
 
       <View style={styles.searchWrap}>

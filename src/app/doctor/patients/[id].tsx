@@ -153,7 +153,7 @@ export default function DoctorPatientDetailScreen() {
                 <Text style={styles.heroTitle}>{patient.name}</Text>
                 <Text style={styles.heroSubtitle}>{patient.email}</Text>
                 <View style={styles.heroChips}>
-                  <MetaChip icon="clock" label={patient.age != null ? `${patient.age} anos` : "Edad s/d"} />
+                  <MetaChip icon="clock" label={patient.age != null ? `${patient.age} años` : "Edad s/d"} />
                   <MetaChip icon="drop" label={patient.blood_type || "Sangre s/d"} />
                   <MetaChip icon="user-circle" label={patient.gender || "Genero s/d"} />
                 </View>
@@ -190,7 +190,7 @@ export default function DoctorPatientDetailScreen() {
             </View>
 
             <Section title="Resumen clinico">
-              <InfoRow label="Telefono" value={patient.phone || "Sin telefono"} />
+              <InfoRow label="Teléfono" value={patient.phone || "Sin teléfono"} />
               <InfoRow label="Ciudad" value={patient.city || "Sin ciudad"} />
               <InfoRow label="Ocupacion" value={patient.occupation || "Sin dato"} />
               <InfoRow
@@ -218,7 +218,7 @@ export default function DoctorPatientDetailScreen() {
               />
               <InfoRow
                 label="Direccion"
-                value={pickFirst(patient.address, patient.state) || "Sin direccion"}
+                value={pickFirst(patient.address, patient.state) || "Sin dirección"}
               />
             </Section>
 
@@ -243,7 +243,7 @@ export default function DoctorPatientDetailScreen() {
               />
             </Section>
 
-            <Section title="Documentos y carga clinica">
+            <Section title="Documentos y carga clínica">
               <AlertBox
                 title="Documentos disponibles"
                 text="Desde esta ficha ya puedes abrir la seccion de documentos del paciente para revisar estudios y archivos ligados a su expediente."
@@ -266,7 +266,7 @@ export default function DoctorPatientDetailScreen() {
                   />
                 ))
               ) : (
-                <EmptyState text="Todavia no hay notas clinicas para este paciente." />
+                <EmptyState text="Todavía no hay notas clínicas para este paciente." />
               )}
             </Section>
 

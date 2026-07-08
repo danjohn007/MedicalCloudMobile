@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -91,9 +92,12 @@ export default function DoctorMensajesScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
-        <Pressable style={styles.newBtn} hitSlop={10} onPress={loadMessages}>
-          <Icon name="arrow-clockwise" size={20} color={MC.primary} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.newBtn} hitSlop={10} onPress={loadMessages}>
+            <Icon name="arrow-clockwise" size={20} color={MC.primary} />
+          </Pressable>
+          <NotificationBellButton />
+        </View>
       </View>
 
       <View style={styles.searchWrap}>
@@ -241,6 +245,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   title: { fontSize: 22, fontWeight: "700", color: MC.textPrimary },
   newBtn: { padding: 4 },

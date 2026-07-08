@@ -50,7 +50,7 @@ export default function ConfirmacionScreen() {
         <Text style={styles.title}>{isConfirmed ? "Cita confirmada" : "Cita registrada"}</Text>
         <Text style={styles.subtitle}>
           {isConfirmed
-            ? "Hemos enviado los detalles de tu cita a tu correo y a tu telefono."
+            ? "Hemos enviado los detalles de tu cita a tu correo y a tu teléfono."
             : "Tu cita esta pendiente de pago. Tienes 2 horas para completar el pago desde la seccion de Citas."}
         </Text>
 

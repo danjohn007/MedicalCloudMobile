@@ -117,7 +117,7 @@ export default function DoctorPrescriptionsScreen() {
     if (!diagnosis.trim() || !medications.trim()) {
       Alert.alert(
         "Datos incompletos",
-        "Diagnostico y medicamentos son obligatorios.",
+        "Diagnóstico y medicamentos son obligatorios.",
       );
       return;
     }
@@ -225,7 +225,7 @@ export default function DoctorPrescriptionsScreen() {
           ) : null}
 
           <Field
-            label="Diagnostico"
+            label="Diagnóstico"
             placeholder="Escribe el diagnostico principal."
             value={diagnosis}
             onChangeText={setDiagnosis}
@@ -323,7 +323,7 @@ export default function DoctorPrescriptionsScreen() {
         ) : (
           <EmptyCard
             icon="pill"
-            title="Todavia no hay recetas"
+            title="Todavía no hay recetas"
             text="La primera receta que guardes aparecera aqui con acceso rapido al paciente."
           />
         )}

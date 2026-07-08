@@ -339,7 +339,7 @@ export default function DoctorDocumentsScreen() {
         ) : (
           <EmptyCard
             icon="file"
-            title="Todavia no hay documentos"
+            title="Todavía no hay documentos"
             text="Cuando este paciente tenga archivos en su expediente apareceran aqui."
           />
         )}

@@ -91,7 +91,7 @@ export default function RegisterScreen() {
           <View style={styles.roleGrid}>
             <RoleCard
               title="Soy Paciente"
-              description="Agenda citas, comparte tu codigo y guarda tu historial clinico."
+              description="Agenda citas, comparte tu código y guarda tu historial clínico."
               icon="heart"
               active={role === "patient"}
               onPress={() => setRole("patient")}
@@ -152,7 +152,7 @@ export default function RegisterScreen() {
           <View style={styles.footer}>
             <Text style={styles.footerText}>Ya tienes cuenta? </Text>
             <Pressable onPress={() => router.replace("/(auth)/login")}>
-              <Text style={styles.footerLink}>Inicia sesion</Text>
+              <Text style={styles.footerLink}>Inicia sesión</Text>
             </Pressable>
           </View>
         </ScrollView>

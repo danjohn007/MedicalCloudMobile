@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -94,15 +95,18 @@ export default function DoctorHomeScreen() {
                 <Text style={styles.heroAvatarText}>{firstName.charAt(0).toUpperCase()}</Text>
               )}
             </View>
-            <Pressable
-              onPress={() => router.push("/(doctor-tabs)/perfil" as any)}
-              style={styles.heroGear}
-            >
-              <Icon name="gear" size={18} color={MC.primaryDark} />
-            </Pressable>
+            <View style={styles.heroActions}>
+              <Pressable
+                onPress={() => router.push("/(doctor-tabs)/perfil" as any)}
+                style={styles.heroGear}
+              >
+                <Icon name="gear" size={18} color={MC.primaryDark} />
+              </Pressable>
+              <NotificationBellButton />
+            </View>
           </View>
 
-          <Text style={styles.heroEyebrow}>Workspace doctor</Text>
+          <Text style={styles.heroEyebrow}>Panel médico</Text>
           <Text style={styles.heroTitle}>Hola, {firstName}</Text>
           <Text style={styles.heroSubtitle}>{doctorSpecialty}</Text>
 
@@ -160,7 +164,7 @@ export default function DoctorHomeScreen() {
           />
           <QuickAction
             icon="gear"
-            label="Config"
+            label="Config."
             toneBg="#F5F3FF"
             toneFg="#7C3AED"
             onPress={() => router.push("/doctor/settings" as any)}
@@ -178,6 +182,13 @@ export default function DoctorHomeScreen() {
             toneBg="#E0F2FE"
             toneFg="#075985"
             onPress={() => router.push("/doctor/notes" as any)}
+          />
+          <QuickAction
+            icon="brain"
+            label="IA"
+            toneBg="#F0FDFA"
+            toneFg="#0F766E"
+            onPress={() => router.push("/ai/chat" as any)}
           />
           <QuickAction
             icon="list"
@@ -294,7 +305,7 @@ export default function DoctorHomeScreen() {
                     <MiniTag
                       label={
                         patient.last_appointment
-                          ? `Ultima ${dateTime.format(new Date(patient.last_appointment))}`
+                          ? `Última ${dateTime.format(new Date(patient.last_appointment))}`
                           : "Sin cita previa"
                       }
                     />
@@ -309,7 +320,7 @@ export default function DoctorHomeScreen() {
 
         <Section
           title="Paridad operativa"
-          subtitle="Los huecos grandes contra la web ya quedaron concentrados por modulo."
+          subtitle="Los huecos grandes contra la web ya quedaron concentrados por módulo."
         >
           <View style={styles.parityRow}>
             <QuickAction
@@ -539,6 +550,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  heroActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   heroAvatar: {
     width: 60,

@@ -165,8 +165,8 @@ export default function DoctorFinancesScreen() {
           ) : (
             <EmptyCard
               icon="wallet"
-              title="Todavia no hay cobros"
-              text="Los pagos de consultas apareceran aqui cuando el backend movil sincronice esos movimientos."
+              title="Todavía no hay cobros"
+              text="Los pagos de consultas aparecerán aquí cuando el backend móvil sincronice esos movimientos."
             />
           )}
         </Section>

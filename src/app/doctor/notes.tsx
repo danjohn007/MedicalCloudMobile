@@ -176,7 +176,7 @@ export default function DoctorNotesScreen() {
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={22} color={MC.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Notas clinicas</Text>
+          <Text style={styles.headerTitle}>Notas clínicas</Text>
           <Pressable onPress={() => loadScreen(true)} hitSlop={10}>
             <Icon name="arrow-clockwise" size={20} color={MC.primary} />
           </Pressable>
@@ -244,7 +244,7 @@ export default function DoctorNotesScreen() {
           />
           <Field
             label="Valoracion"
-            placeholder="Diagnostico o impresion clinica."
+            placeholder="Diagnóstico o impresión clínica."
             value={assessment}
             onChangeText={setAssessment}
             multiline
@@ -349,7 +349,7 @@ export default function DoctorNotesScreen() {
         ) : (
           <EmptyCard
             icon="clipboard-text"
-            title="Todavia no hay notas"
+            title="Todavía no hay notas"
             text="La primera nota que guardes aparecera aqui con acceso rapido al paciente."
           />
         )}

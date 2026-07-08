@@ -301,7 +301,7 @@ export default function DoctorCreateAppointmentScreen() {
         <StepCard
           step="01"
           title="Paciente"
-          subtitle="Muestra primero tus pacientes mas frecuentes y recientes. Puedes expandir o buscar por nombre o telefono."
+          subtitle="Muestra primero tus pacientes más frecuentes y recientes. Puedes expandir o buscar por nombre o teléfono."
         >
           {selectedPatient ? (
             <View style={styles.selectedPatientCard}>
@@ -324,7 +324,7 @@ export default function DoctorCreateAppointmentScreen() {
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Buscar por nombre o telefono"
+              placeholder="Buscar por nombre o teléfono"
               placeholderTextColor={MC.textMuted}
               style={styles.searchInput}
             />
@@ -353,7 +353,7 @@ export default function DoctorCreateAppointmentScreen() {
                     </Text>
                     <Text style={styles.patientHint}>
                       {patient.last_appointment
-                        ? `Ultima ${formatShortDate(patient.last_appointment)}`
+                        ? `Última ${formatShortDate(patient.last_appointment)}`
                         : "Sin citas recientes"}
                     </Text>
                   </Pressable>
@@ -361,7 +361,7 @@ export default function DoctorCreateAppointmentScreen() {
               })}
             </View>
           ) : (
-            <EmptyCard text="No hay pacientes vinculados. Agrega uno con su codigo personal o registralo desde esta misma seccion." />
+            <EmptyCard text="No hay pacientes vinculados. Agrega uno con su código personal o regístralo desde esta misma sección." />
           )}
 
           {!search.trim() && sortedPatients.length > 6 ? (

@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -30,7 +31,7 @@ const money = new Intl.NumberFormat("es-MX", {
 
 const FILTERS: { label: string; value: api.DoctorAppointmentScope }[] = [
   { label: "Hoy", value: "today" },
-  { label: "Proximas", value: "upcoming" },
+  { label: "Próximas", value: "upcoming" },
   { label: "En consulta", value: "in_consultation" },
   { label: "Completadas", value: "completed" },
 ];
@@ -93,7 +94,10 @@ export default function DoctorAppointmentsScreen() {
         }
       >
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Agenda clinica</Text>
+          <View style={styles.heroTop}>
+            <Text style={styles.heroEyebrow}>Agenda clínica</Text>
+            <NotificationBellButton />
+          </View>
           <Text style={styles.heroTitle}>Consultas</Text>
           <Text style={styles.heroSubtitle}>
             Gestiona el estado de cada cita y entra directo al flujo de consulta.
@@ -341,8 +345,8 @@ function getScopeSummary(
     return {
       icon: "clock" as const,
       color: "#7C3AED",
-      title: "Proximas por preparar",
-      text: "Deja listas las consultas futuras: confirma, valida pago y revisa motivo antes del dia de atencion.",
+      title: "Próximas por preparar",
+      text: "Deja listas las consultas futuras: confirma, valida pago y revisa motivo antes del día de atención.",
       priorityCount,
     };
   }
@@ -352,7 +356,7 @@ function getScopeSummary(
       icon: "pulse" as const,
       color: "#075985",
       title: "Consultas en curso",
-      text: "Desde aqui lo importante es abrir la nota clinica, revisar alertas del paciente y cerrar bien la consulta.",
+      text: "Desde aquí lo importante es abrir la nota clínica, revisar alertas del paciente y cerrar bien la consulta.",
       priorityCount: appointments.length,
     };
   }
@@ -361,7 +365,7 @@ function getScopeSummary(
     icon: "check-circle" as const,
     color: "#047857",
     title: "Consultas cerradas",
-    text: "Usa esta vista para seguimiento clinico, repasar notas emitidas y abrir rapido la ficha del paciente.",
+    text: "Usa esta vista para seguimiento clínico, repasar notas emitidas y abrir rápido la ficha del paciente.",
     priorityCount: appointments.length,
   };
 }
@@ -384,7 +388,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
       icon: "credit-card" as const,
       color: "#B45309",
       title: "Siguiente paso: revisar cobro",
-      text: "Espera pago, condona si aplica o confirma cuando el backend la deje lista para atencion.",
+      text: "Espera pago, condona si aplica o confirma cuando el backend la deje lista para atención.",
       tone: "warning" as const,
     };
   }
@@ -398,7 +402,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
       icon: "shield-check" as const,
       color: "#2563EB",
       title: "Siguiente paso: check-in del paciente",
-      text: "Pide el codigo de llegada y cambia la cita a en consulta desde tablet o telefono.",
+      text: "Pide el código de llegada y cambia la cita a en consulta desde tablet o teléfono.",
       tone: "info" as const,
     };
   }
@@ -418,7 +422,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
       icon: "clipboard-text" as const,
       color: "#075985",
       title: "Siguiente paso: capturar SOAP",
-      text: "La consulta ya esta activa. Abre la nota clinica, receta y cierre de visita.",
+      text: "La consulta ya está activa. Abre la nota clínica, receta y cierre de visita.",
       tone: "info" as const,
     };
   }
@@ -466,6 +470,11 @@ const styles = StyleSheet.create({
     borderColor: "#C9ECE8",
     padding: 18,
     gap: 8,
+  },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   heroEyebrow: { fontSize: 12, fontWeight: "700", color: MC.primaryDark },
   heroTitle: { fontSize: 28, fontWeight: "700", color: MC.textPrimary },

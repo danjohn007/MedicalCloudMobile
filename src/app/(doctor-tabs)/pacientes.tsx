@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -93,10 +94,13 @@ export default function DoctorPatientsScreen() {
         }
       >
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Mis pacientes</Text>
-          <Text style={styles.heroTitle}>Base clinica</Text>
+          <View style={styles.heroTop}>
+            <Text style={styles.heroEyebrow}>Mis pacientes</Text>
+            <NotificationBellButton />
+          </View>
+          <Text style={styles.heroTitle}>Base clínica</Text>
           <Text style={styles.heroSubtitle}>
-            Solo aparecen pacientes vinculados contigo por codigo, alta directa o una cita registrada contigo.
+            Solo aparecen pacientes vinculados contigo por código, alta directa o una cita registrada contigo.
           </Text>
           <View style={styles.heroStats}>
             <HeroStat label="Pacientes" value={String(filteredPatients.length)} />
@@ -158,19 +162,19 @@ export default function DoctorPatientsScreen() {
                 </View>
 
                 <View style={styles.infoRow}>
-                  <InfoChip icon="phone" value={patient.phone || "Sin telefono"} />
+                  <InfoChip icon="phone" value={patient.phone || "Sin teléfono"} />
                   <InfoChip icon="drop" value={patient.blood_type || "Sangre s/d"} />
                   <InfoChip
                     icon="calendar"
                     value={
                       patient.last_appointment
-                        ? `Ultima ${dateFmt.format(new Date(patient.last_appointment))}`
+                        ? `Última ${dateFmt.format(new Date(patient.last_appointment))}`
                         : "Sin citas"
                     }
                   />
                   <InfoChip
                     icon="clock"
-                    value={patient.age != null ? `${patient.age} anos` : "Edad s/d"}
+                    value={patient.age != null ? `${patient.age} años` : "Edad s/d"}
                   />
                 </View>
 
@@ -185,7 +189,7 @@ export default function DoctorPatientsScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>
-                No hay pacientes vinculados con esa busqueda. Puedes agregarlos con su codigo personal o registrarlos directamente.
+                No hay pacientes vinculados con esa búsqueda. Puedes agregarlos con su código personal o registrarlos directamente.
               </Text>
             </View>
           )}
@@ -235,6 +239,11 @@ const styles = StyleSheet.create({
     borderColor: "#DDD6FE",
     padding: 18,
     gap: 8,
+  },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   heroEyebrow: { fontSize: 12, fontWeight: "700", color: "#6D28D9" },
   heroTitle: { fontSize: 28, fontWeight: "700", color: MC.textPrimary },

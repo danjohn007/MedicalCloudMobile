@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -73,6 +74,9 @@ export default function DoctorProfileScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <NotificationBellButton />
+          </View>
           <View style={styles.heroAvatar}>
             {doctor?.avatar_url ? (
               <Image source={{ uri: doctor.avatar_url }} style={styles.heroAvatarImage} />
@@ -97,7 +101,7 @@ export default function DoctorProfileScreen() {
         <View style={styles.metricsRow}>
           <MetricCard
             icon="star"
-            label="Calificacion"
+            label="Calificación"
             value={`${(stats?.avg_rating ?? 0).toFixed(1)}`}
           />
           <MetricCard
@@ -130,8 +134,14 @@ export default function DoctorProfileScreen() {
             <ShortcutCard
               icon="clipboard-text"
               title="Notas"
-              summary="Crear y revisar notas clinicas."
+              summary="Crear y revisar notas clínicas."
               onPress={() => router.push("/doctor/notes" as any)}
+            />
+            <ShortcutCard
+              icon="brain"
+              title="Asistente IA"
+              summary="Apoyo clinico con contexto de tus consultas."
+              onPress={() => router.push("/ai/chat" as any)}
             />
             <ShortcutCard
               icon="list"
@@ -160,7 +170,7 @@ export default function DoctorProfileScreen() {
             <ShortcutCard
               icon="gear"
               title="Perfil"
-              summary="Tarifas, direccion y datos base."
+              summary="Tarifas, dirección y datos base."
               onPress={() => router.push("/doctor/settings" as any)}
             />
             <ShortcutCard
@@ -180,7 +190,7 @@ export default function DoctorProfileScreen() {
 
         <Pressable style={styles.logoutButton} onPress={() => void handleLogout()}>
           <Icon name="sign-out" size={18} color={MC.error} />
-          <Text style={styles.logoutText}>Cerrar sesion</Text>
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -254,6 +264,11 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
     gap: 6,
+  },
+  heroTop: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   heroAvatar: {
     width: 82,
