@@ -145,6 +145,21 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
         </Text>
       ) : null}
 
+      {doctor.search_terms?.length ? (
+        <View style={styles.termRow}>
+          {doctor.search_terms.slice(0, 4).map((term) => (
+            <View key={term.id} style={styles.termBadge}>
+              <Text style={styles.termBadgeText}>{term.name}</Text>
+            </View>
+          ))}
+          {doctor.search_terms.length > 4 ? (
+            <View style={styles.termBadgeMuted}>
+              <Text style={styles.termBadgeMutedText}>+{doctor.search_terms.length - 4}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={styles.feeRow}>
         <FeeChip label="Consulta" value={formatMoney(doctor.consultation_fee)} />
         {doctor.telemedicine_fee ? (
@@ -819,6 +834,38 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     lineHeight: 17,
+    color: MC.textSecondary,
+  },
+  termRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+  termBadge: {
+    borderRadius: 999,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: "#BFE7E4",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  termBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
+  termBadgeMuted: {
+    borderRadius: 999,
+    backgroundColor: MC.surface,
+    borderWidth: 1,
+    borderColor: MC.border,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  termBadgeMutedText: {
+    fontSize: 11,
+    fontWeight: "800",
     color: MC.textSecondary,
   },
   feeRow: {

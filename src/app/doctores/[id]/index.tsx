@@ -209,6 +209,20 @@ export default function DoctorProfileScreen() {
             </View>
           ) : null}
 
+          {doctor.search_terms?.length ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Atiende principalmente</Text>
+              <View style={styles.termGrid}>
+                {doctor.search_terms.map((term) => (
+                  <View key={term.id} style={styles.termBadge}>
+                    <Icon name="first-aid" size={13} color={MC.primaryDark} />
+                    <Text style={styles.termBadgeText}>{term.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           {/* Reviews */}
           {reviews.length > 0 ? (
             <View style={styles.section}>
@@ -332,6 +346,19 @@ const styles = StyleSheet.create({
   section: { marginTop: 24 },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: MC.textPrimary, marginBottom: 10 },
   bioText: { fontSize: 14, color: MC.textSecondary, lineHeight: 20 },
+  termGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  termBadge: {
+    borderRadius: 999,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: '#BFE7E4',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  termBadgeText: { fontSize: 12, fontWeight: '700', color: MC.primaryDark },
   emptyReviews: { fontSize: 13, color: MC.textMuted, fontStyle: 'italic' },
 
   reviewCard: { backgroundColor: MC.surface, borderRadius: 12, padding: 14, marginBottom: 10 },

@@ -36,8 +36,8 @@ type ScreenStep =
   | "checking_payment";
 
 const FALLBACK_METHODS = {
-  stripe_card: true,
-  paypal: true,
+  stripe_card: false,
+  paypal: false,
 };
 
 export default function PagoScreen() {
@@ -86,6 +86,8 @@ export default function PagoScreen() {
 
   const effectiveMethods = paymentInfo?.methods ?? FALLBACK_METHODS;
   const stripePublishableKey = paymentInfo?.stripe_publishable_key?.trim() ?? "";
+  const stripeAccountId =
+    paymentInfo?.doctor_payment_destination?.stripe_account_id?.trim() ?? "";
   const summary = useMemo(
     () =>
       buildSummary({
@@ -235,7 +237,7 @@ export default function PagoScreen() {
       setSelectedMethod("paypal");
       return;
     }
-    setSelectedMethod("stripe_card");
+    setSelectedMethod("paypal");
   }, [effectiveMethods.paypal, effectiveMethods.stripe_card, stripePublishableKey]);
 
   useEffect(() => {
@@ -388,6 +390,7 @@ export default function PagoScreen() {
                   stripePublishableKey ? (
                     <StripeProvider
                       publishableKey={stripePublishableKey}
+                      stripeAccountId={stripeAccountId || undefined}
                       setReturnUrlSchemeOnAndroid
                       urlScheme="doctorcloud"
                     >
@@ -543,6 +546,11 @@ function StripeCardSection(props: {
 
       if (error) {
         throw new Error(error.message ?? "Stripe no pudo confirmar el pago.");
+      }
+
+      const paymentIntentId = intent.client_secret.split("_secret_")[0];
+      if (paymentIntentId) {
+        await api.confirmAppointmentStripePayment(appointmentId, paymentIntentId);
       }
 
       await onPaymentSettled(appointmentId);

@@ -37,6 +37,15 @@ const TYPE_OPTIONS: { label: string; value: "presential" | "virtual" }[] = [
   { label: "Videoconsulta", value: "virtual" },
 ];
 
+type PriceAdjustmentType = "none" | "fixed" | "percent_discount" | "percent_increase";
+
+const PRICE_ADJUSTMENT_OPTIONS: { label: string; value: PriceAdjustmentType }[] = [
+  { label: "Normal", value: "none" },
+  { label: "Monto exacto", value: "fixed" },
+  { label: "Descuento %", value: "percent_discount" },
+  { label: "Aumento %", value: "percent_increase" },
+];
+
 const money = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
@@ -69,6 +78,9 @@ export default function DoctorCreateAppointmentScreen() {
   const [slots, setSlots] = useState<string[]>([]);
   const [type, setType] = useState<"presential" | "virtual">("presential");
   const [waivePayment, setWaivePayment] = useState(false);
+  const [priceAdjustmentType, setPriceAdjustmentType] = useState<PriceAdjustmentType>("none");
+  const [priceAdjustmentValue, setPriceAdjustmentValue] = useState("");
+  const [priceAdjustmentNote, setPriceAdjustmentNote] = useState("");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -186,8 +198,14 @@ export default function DoctorCreateAppointmentScreen() {
     sortedPatients.find((patient) => patient.id === patientId) || null;
 
   const feePreview = useMemo(() => {
-    return resolveDoctorFee(doctorProfile, type, waivePayment);
-  }, [doctorProfile, type, waivePayment]);
+    return resolveDoctorFee(
+      doctorProfile,
+      type,
+      waivePayment,
+      priceAdjustmentType,
+      Number(priceAdjustmentValue || 0),
+    );
+  }, [doctorProfile, type, waivePayment, priceAdjustmentType, priceAdjustmentValue]);
 
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
@@ -238,6 +256,9 @@ export default function DoctorCreateAppointmentScreen() {
         reason: reason.trim(),
         notes: notes.trim(),
         waive_payment: waivePayment,
+        price_adjustment_type: priceAdjustmentType,
+        price_adjustment_value: Number(priceAdjustmentValue || 0),
+        price_adjustment_note: priceAdjustmentNote.trim(),
       });
 
       Alert.alert(
@@ -538,6 +559,47 @@ export default function DoctorCreateAppointmentScreen() {
             </View>
           </Pressable>
 
+          {!waivePayment ? (
+            <>
+              <View style={styles.adjustmentGrid}>
+                {PRICE_ADJUSTMENT_OPTIONS.map((option) => {
+                  const active = option.value === priceAdjustmentType;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setPriceAdjustmentType(option.value)}
+                      style={[styles.adjustmentChip, active && styles.adjustmentChipActive]}
+                    >
+                      <Text style={[styles.adjustmentChipText, active && styles.adjustmentChipTextActive]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {priceAdjustmentType !== "none" ? (
+                <>
+                  <TextInput
+                    value={priceAdjustmentValue}
+                    onChangeText={setPriceAdjustmentValue}
+                    keyboardType="decimal-pad"
+                    placeholder={priceAdjustmentType === "fixed" ? "Monto a cobrar, ej. 300" : "Porcentaje, ej. 55"}
+                    placeholderTextColor={MC.textMuted}
+                    style={styles.fieldInput}
+                  />
+                  <TextInput
+                    value={priceAdjustmentNote}
+                    onChangeText={setPriceAdjustmentNote}
+                    placeholder="Nota del ajuste (opcional)"
+                    placeholderTextColor={MC.textMuted}
+                    style={styles.fieldInput}
+                  />
+                </>
+              ) : null}
+            </>
+          ) : null}
+
           <View style={styles.summaryCard}>
             <SummaryRow label="Paciente" value={selectedPatient?.name || "Sin seleccionar"} />
             <SummaryRow label="Fecha" value={selectedDate || "Sin fecha"} />
@@ -668,17 +730,22 @@ function resolveDoctorFee(
   profile: api.Doctor | null,
   type: "presential" | "virtual",
   waivePayment: boolean,
+  adjustmentType: PriceAdjustmentType = "none",
+  adjustmentValue = 0,
 ) {
   if (!profile || waivePayment) return 0;
 
   const consultationFee = Number(profile.consultation_fee || 0);
   const telemedicineFee = Number(profile.telemedicine_fee || 0);
 
-  if (type === "virtual") {
-    return telemedicineFee > 0 ? telemedicineFee : consultationFee;
-  }
+  const baseFee = type === "virtual" && telemedicineFee > 0 ? telemedicineFee : consultationFee;
+  const value = Number.isFinite(adjustmentValue) && adjustmentValue > 0 ? adjustmentValue : 0;
 
-  return consultationFee;
+  if (adjustmentType === "fixed") return value;
+  if (adjustmentType === "percent_discount") return Math.max(0, baseFee - (baseFee * Math.min(value, 100)) / 100);
+  if (adjustmentType === "percent_increase") return baseFee + (baseFee * value) / 100;
+
+  return baseFee;
 }
 
 function normalizeText(value: string) {
@@ -980,6 +1047,25 @@ const styles = StyleSheet.create({
   paymentBody: { flex: 1, gap: 3 },
   paymentTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   paymentText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
+  adjustmentGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  adjustmentChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.white,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  adjustmentChipActive: {
+    borderColor: MC.primary,
+    backgroundColor: MC.primaryLight,
+  },
+  adjustmentChipText: { fontSize: 12, fontWeight: "800", color: MC.textSecondary },
+  adjustmentChipTextActive: { color: MC.primaryDark },
   summaryCard: {
     borderRadius: 20,
     borderWidth: 1,

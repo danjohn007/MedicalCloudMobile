@@ -58,6 +58,19 @@ export type GoogleLoginResult =
       pending: PendingGoogleRegistration;
     };
 
+export interface MedicalSearchTerm {
+  id: number;
+  name: string;
+  slug: string;
+  term_type: string;
+  aliases?: string;
+  description?: string;
+  priority?: string;
+  specialties?: string;
+  is_primary_match?: boolean;
+  is_specialty_match?: boolean;
+}
+
 export interface Doctor {
   id: number;
   name: string;
@@ -82,6 +95,17 @@ export interface Doctor {
   avatar_url?: string | null;
   email?: string;
   cedula?: string | null;
+  search_terms?: MedicalSearchTerm[];
+  selected_search_terms?: MedicalSearchTerm[];
+  available_search_terms?: MedicalSearchTerm[];
+  search_keywords_text?: string;
+  consultation_payment_method?: "manual_only" | "paypal" | "stripe" | "both" | string;
+  consultation_payments_enabled?: boolean;
+  paypal_email?: string;
+  paypal_merchant_id?: string;
+  stripe_connect_account_id?: string;
+  stripe_connect_account_status?: string;
+  stripe_connect_charges_enabled?: boolean;
 }
 
 export interface Appointment {
@@ -163,12 +187,19 @@ export interface AppointmentPaymentInfo {
     stripe_card: boolean;
     paypal: boolean;
   };
+  doctor_payment_destination?: {
+    type: string;
+    enabled: boolean;
+    method: string;
+    stripe_account_id?: string;
+  };
 }
 
 export interface AppointmentStripeIntent {
   ok?: boolean;
   publishable_key: string;
   client_secret: string;
+  stripe_account_id?: string;
   payment_method: string;
   amount: number;
   appt_id: number;
@@ -300,6 +331,12 @@ export interface DoctorAppointmentItem {
   status: string;
   reason?: string | null;
   fee: number;
+  base_fee?: number;
+  price_adjustment_type?: "none" | "fixed" | "percent_discount" | "percent_increase" | "waived" | string;
+  price_adjustment_value?: number | null;
+  price_adjustment_note?: string | null;
+  manual_paid_total?: number;
+  manual_paid_at?: string | null;
   payment_status?: string | null;
   patient_name: string;
   patient_avatar?: string | null;
@@ -376,6 +413,8 @@ export interface DoctorAvailabilityScheduleEntry {
   is_active?: number;
   break_start?: string | null;
   break_end?: string | null;
+  home_visit_enabled?: number;
+  home_visit_daily_limit?: number;
 }
 
 export interface DoctorAvailabilityOverrideEntry {
@@ -662,6 +701,9 @@ export interface DoctorCreateAppointmentPayload {
   reason: string;
   notes?: string;
   waive_payment?: boolean;
+  price_adjustment_type?: "none" | "fixed" | "percent_discount" | "percent_increase";
+  price_adjustment_value?: number;
+  price_adjustment_note?: string;
 }
 
 export interface DoctorCreateAppointmentResult {
@@ -690,6 +732,20 @@ export interface DoctorAppointmentCompleteResult {
   status: string;
 }
 
+export interface DoctorManualPaymentPayload {
+  amount: number;
+  method?: "cash" | "transfer" | "card" | "other";
+  note?: string;
+}
+
+export interface DoctorManualPaymentResult {
+  ok?: boolean;
+  message: string;
+  manual_paid_total: number;
+  payment_status: string;
+  status: string;
+}
+
 export interface DoctorAvailabilitySavePayload {
   schedule: {
     day: number;
@@ -699,6 +755,8 @@ export interface DoctorAvailabilitySavePayload {
     duration?: number;
     break_start?: string | null;
     break_end?: string | null;
+    home_visit_enabled?: boolean;
+    home_visit_daily_limit?: number;
   }[];
 }
 
@@ -964,7 +1022,17 @@ export async function getDoctorProfile(id: number) {
 }
 
 export async function getDoctorAvailability(id: number, date: string) {
-  return request<{ date: string; slots: string[] }>(
+  return request<{
+    date: string;
+    slots: string[];
+    home_visit?: {
+      enabled: boolean;
+      limit: number;
+      booked: number;
+      remaining: number;
+      scheduled_after?: string | null;
+    };
+  }>(
     `/doctors/${id}/availability?date=${date}`,
     {},
     false,
@@ -1001,7 +1069,7 @@ export async function getAppointmentPaymentInfo(id: number) {
 export async function createAppointment(data: {
   doctor_id: number;
   date: string;
-  time: string;
+  time?: string;
   type: "presencial" | "videoconsulta" | "domicilio";
   reason?: string;
   notes?: string;
@@ -1450,10 +1518,23 @@ export async function updateDoctorProfile(
     state: string;
     lat: number | null;
     lng: number | null;
+    search_term_ids: number[];
+    search_keywords_text: string;
+    consultation_payment_method: "manual_only" | "paypal" | "stripe" | "both";
+    consultation_payments_enabled: boolean;
+    paypal_email: string;
+    paypal_merchant_id: string;
   }>,
 ) {
   return request<{ ok?: boolean; message: string }>("/doctor/profile", {
     method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function suggestDoctorSearchTerm(data: { name: string; notes?: string }) {
+  return request<{ ok?: boolean; message: string }>("/doctor/search-terms/suggest", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 }
@@ -1634,6 +1715,19 @@ export async function createDoctorAppointment(
   });
 }
 
+export async function recordDoctorAppointmentManualPayment(
+  appointmentId: number,
+  payload: DoctorManualPaymentPayload,
+) {
+  return request<DoctorManualPaymentResult>(
+    `/doctor/appointments/${appointmentId}/manual-payment`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 export async function doctorCheckinAppointment(
   appointmentId: number,
   code: string,
@@ -1693,6 +1787,19 @@ export async function createAppointmentStripeIntent(appointmentId: number) {
     {
       method: "POST",
       body: JSON.stringify({ payment_method: "card" }),
+    },
+  );
+}
+
+export async function confirmAppointmentStripePayment(
+  appointmentId: number,
+  paymentIntentId: string,
+) {
+  return request<{ ok?: boolean; message: string; confirmed?: boolean }>(
+    `/appointments/${appointmentId}/stripe/confirm`,
+    {
+      method: "POST",
+      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
     },
   );
 }

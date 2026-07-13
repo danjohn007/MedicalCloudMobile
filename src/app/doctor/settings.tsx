@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TextInputProps,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,6 +49,18 @@ export default function DoctorSettingsScreen() {
   const [stateProv, setStateProv] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  const [availableTerms, setAvailableTerms] = useState<api.MedicalSearchTerm[]>([]);
+  const [selectedTermIds, setSelectedTermIds] = useState<number[]>([]);
+  const [searchKeywordsText, setSearchKeywordsText] = useState("");
+  const [suggestionName, setSuggestionName] = useState("");
+  const [suggestionNotes, setSuggestionNotes] = useState("");
+  const [sendingSuggestion, setSendingSuggestion] = useState(false);
+  const [consultationPaymentsEnabled, setConsultationPaymentsEnabled] = useState(false);
+  const [consultationPaymentMethod, setConsultationPaymentMethod] =
+    useState<"manual_only" | "paypal" | "stripe" | "both">("manual_only");
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [paypalMerchantId, setPaypalMerchantId] = useState("");
+  const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
 
   useEffect(() => {
     void loadDoctor();
@@ -82,6 +95,22 @@ export default function DoctorSettingsScreen() {
       setStateProv(doctor?.state || "");
       setLat(typeof doctor?.lat === "number" ? doctor.lat : null);
       setLng(typeof doctor?.lng === "number" ? doctor.lng : null);
+      setAvailableTerms(doctor?.available_search_terms || []);
+      setSelectedTermIds(
+        (doctor?.selected_search_terms || doctor?.search_terms || []).map((term) => term.id),
+      );
+      setSearchKeywordsText(doctor?.search_keywords_text || "");
+      setConsultationPaymentsEnabled(Boolean(doctor?.consultation_payments_enabled));
+      setConsultationPaymentMethod(
+        ["manual_only", "paypal", "stripe", "both"].includes(
+          String(doctor?.consultation_payment_method || ""),
+        )
+          ? (doctor.consultation_payment_method as "manual_only" | "paypal" | "stripe" | "both")
+          : "manual_only",
+      );
+      setPaypalEmail(doctor?.paypal_email || "");
+      setPaypalMerchantId(doctor?.paypal_merchant_id || "");
+      setStripeChargesEnabled(Boolean(doctor?.stripe_connect_charges_enabled));
     } catch (e: any) {
       setError(e?.message || "No se pudo cargar la configuración del doctor.");
     } finally {
@@ -100,6 +129,18 @@ export default function DoctorSettingsScreen() {
       formatted: item.value > 0 ? money.format(item.value) : "Sin definir",
     }));
   }, [consultationFee, telemedicineFee, homeVisitFee]);
+
+  const selectedTermsCount = selectedTermIds.length;
+  const specialtyTerms = availableTerms.filter((term) => term.is_specialty_match);
+  const otherTerms = availableTerms.filter((term) => !term.is_specialty_match);
+
+  function toggleTerm(termId: number) {
+    setSelectedTermIds((current) =>
+      current.includes(termId)
+        ? current.filter((id) => id !== termId)
+        : [...current, termId],
+    );
+  }
 
   async function pickAvatar() {
     try {
@@ -165,6 +206,12 @@ export default function DoctorSettingsScreen() {
         state: stateProv.trim() || undefined,
         lat,
         lng,
+        search_term_ids: selectedTermIds,
+        search_keywords_text: searchKeywordsText.trim(),
+        consultation_payments_enabled: consultationPaymentsEnabled,
+        consultation_payment_method: consultationPaymentMethod,
+        paypal_email: paypalEmail.trim(),
+        paypal_merchant_id: paypalMerchantId.trim(),
       });
       setSuccess("Configuración del doctor actualizada.");
       setTimeout(() => setSuccess(""), 3200);
@@ -172,6 +219,31 @@ export default function DoctorSettingsScreen() {
       setError(e?.message || "No se pudo guardar la configuración.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSuggestTerm() {
+    const nameValue = suggestionName.trim();
+    if (!nameValue) {
+      Alert.alert("Falta el término", "Escribe la enfermedad, síntoma o tratamiento que quieres sugerir.");
+      return;
+    }
+
+    try {
+      setSendingSuggestion(true);
+      setError("");
+      await api.suggestDoctorSearchTerm({
+        name: nameValue,
+        notes: suggestionNotes.trim() || undefined,
+      });
+      setSuggestionName("");
+      setSuggestionNotes("");
+      setSuccess("Sugerencia enviada para revisión.");
+      setTimeout(() => setSuccess(""), 3200);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo enviar la sugerencia.");
+    } finally {
+      setSendingSuggestion(false);
     }
   }
 
@@ -278,6 +350,88 @@ export default function DoctorSettingsScreen() {
           </SectionCard>
 
           <SectionCard
+            icon="first-aid"
+            title="Enfermedades y tratamientos"
+            subtitle="Selecciona del catálogo lo que atiendes. Esto se muestra al paciente y mejora el buscador."
+          >
+            <View style={styles.termSummary}>
+              <Text style={styles.termSummaryValue}>{selectedTermsCount}</Text>
+              <Text style={styles.termSummaryText}>
+                {selectedTermsCount === 1
+                  ? "término visible seleccionado"
+                  : "términos visibles seleccionados"}
+              </Text>
+            </View>
+
+            {specialtyTerms.length > 0 ? (
+              <>
+                <Text style={styles.subLabel}>Sugeridos para tu especialidad</Text>
+                <TermChipList
+                  terms={specialtyTerms}
+                  selectedIds={selectedTermIds}
+                  onToggle={toggleTerm}
+                />
+              </>
+            ) : (
+              <Banner
+                icon="info"
+                tone="info"
+                text="Cuando el catálogo esté disponible en el servidor, aquí aparecerán términos ligados a tu especialidad."
+              />
+            )}
+
+            {otherTerms.length > 0 ? (
+              <>
+                <Text style={styles.subLabel}>Otros términos del catálogo</Text>
+                <TermChipList
+                  terms={otherTerms}
+                  selectedIds={selectedTermIds}
+                  onToggle={toggleTerm}
+                />
+              </>
+            ) : null}
+
+            <Field label="Palabras privadas para búsqueda">
+              <MultilineInput
+                value={searchKeywordsText}
+                onChangeText={setSearchKeywordsText}
+                placeholder="Ej. cefalea tensional, rehabilitación, dolor crónico. No se muestra al paciente."
+              />
+            </Field>
+
+            <View style={styles.suggestionBox}>
+              <Text style={styles.suggestionTitle}>¿No aparece algo que atiendes?</Text>
+              <Text style={styles.suggestionText}>
+                Sugiere un término para que superadmin lo revise y lo agregue al catálogo.
+              </Text>
+              <Input
+                value={suggestionName}
+                onChangeText={setSuggestionName}
+                placeholder="Ej. cefalea tensional"
+              />
+              <MultilineInput
+                value={suggestionNotes}
+                onChangeText={setSuggestionNotes}
+                placeholder="Notas opcionales: especialidad, alias o contexto clínico."
+              />
+              <Pressable
+                style={[styles.secondaryButton, sendingSuggestion && { opacity: 0.7 }]}
+                onPress={handleSuggestTerm}
+                disabled={sendingSuggestion}
+              >
+                {sendingSuggestion ? (
+                  <ActivityIndicator color={MC.primaryDark} size="small" />
+                ) : (
+                  <>
+                    <Icon name="plus" size={16} color={MC.primaryDark} />
+                    <Text style={styles.secondaryButtonText}>Sugerir al catálogo</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </SectionCard>
+
+          <SectionCard
             icon="wallet"
             title="Tarifas y duracion"
             subtitle="Precios base del consultorio para cada modalidad de cita."
@@ -338,6 +492,87 @@ export default function DoctorSettingsScreen() {
                   <Text style={styles.previewValue}>{item.formatted}</Text>
                 </View>
               ))}
+            </View>
+          </SectionCard>
+
+          <SectionCard
+            icon="credit-card"
+            title="Cobro de consultas"
+            subtitle="Pagos en linea que llegan directo a tu cuenta de PayPal o Stripe."
+          >
+            <Pressable
+              style={[styles.toggleRow, consultationPaymentsEnabled && styles.toggleRowActive]}
+              onPress={() => setConsultationPaymentsEnabled((current) => !current)}
+            >
+              <View>
+                <Text style={styles.toggleTitle}>Recibir pagos directos</Text>
+                <Text style={styles.toggleText}>
+                  {consultationPaymentsEnabled ? "Activo para consultas" : "Desactivado"}
+                </Text>
+              </View>
+              <View style={[styles.toggleKnob, consultationPaymentsEnabled && styles.toggleKnobActive]}>
+                <Icon
+                  name={consultationPaymentsEnabled ? "check" : "x"}
+                  size={16}
+                  color={consultationPaymentsEnabled ? MC.white : MC.textMuted}
+                />
+              </View>
+            </Pressable>
+
+            <Text style={styles.subLabel}>Metodo de cobro</Text>
+            <View style={styles.chipRow}>
+              {[
+                { value: "manual_only", label: "Manual" },
+                { value: "paypal", label: "PayPal" },
+                { value: "stripe", label: "Stripe" },
+                { value: "both", label: "Ambos" },
+              ].map((option) => {
+                const active = consultationPaymentMethod === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() =>
+                      setConsultationPaymentMethod(
+                        option.value as "manual_only" | "paypal" | "stripe" | "both",
+                      )
+                    }
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Field label="Correo PayPal">
+              <Input
+                value={paypalEmail}
+                onChangeText={setPaypalEmail}
+                placeholder="doctor@paypal.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </Field>
+            <Field label="Merchant ID PayPal">
+              <Input
+                value={paypalMerchantId}
+                onChangeText={setPaypalMerchantId}
+                placeholder="Opcional"
+                autoCapitalize="characters"
+              />
+            </Field>
+
+            <View style={styles.paymentStatusBox}>
+              <Icon
+                name={stripeChargesEnabled ? "check-circle" : "info"}
+                size={18}
+                color={stripeChargesEnabled ? MC.success : MC.textMuted}
+              />
+              <Text style={styles.paymentStatusText}>
+                Stripe Connect: {stripeChargesEnabled ? "listo para tarjeta" : "pendiente desde web"}
+              </Text>
             </View>
           </SectionCard>
 
@@ -484,6 +719,40 @@ function HeroPill({
   );
 }
 
+function TermChipList({
+  terms,
+  selectedIds,
+  onToggle,
+}: {
+  terms: api.MedicalSearchTerm[];
+  selectedIds: number[];
+  onToggle: (termId: number) => void;
+}) {
+  return (
+    <View style={styles.termChipRow}>
+      {terms.map((term) => {
+        const active = selectedIds.includes(term.id);
+        return (
+          <Pressable
+            key={term.id}
+            style={[styles.termChip, active && styles.termChipActive]}
+            onPress={() => onToggle(term.id)}
+          >
+            <Icon
+              name={active ? "check-circle" : "plus"}
+              size={14}
+              color={active ? MC.white : MC.primaryDark}
+            />
+            <Text style={[styles.termChipText, active && styles.termChipTextActive]}>
+              {term.name}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 function Field({
   label,
   children,
@@ -512,11 +781,12 @@ function Input({
   onChangeText,
   placeholder,
   keyboardType,
+  ...rest
 }: {
   value: string;
   onChangeText: (value: string) => void;
   placeholder: string;
-  keyboardType?: "default" | "numeric";
+  keyboardType?: TextInputProps["keyboardType"];
 }) {
   return (
     <TextInput
@@ -526,6 +796,7 @@ function Input({
       keyboardType={keyboardType}
       style={styles.input}
       placeholderTextColor={MC.textMuted}
+      {...rest}
     />
   );
 }
@@ -694,6 +965,111 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 12, fontWeight: "600", color: MC.textSecondary },
   chipTextActive: { color: MC.primaryDark },
+  toggleRow: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 18,
+    backgroundColor: MC.surface,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  toggleRowActive: {
+    borderColor: "#BFE7E4",
+    backgroundColor: MC.primaryLight,
+  },
+  toggleTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: MC.textPrimary,
+  },
+  toggleText: {
+    marginTop: 3,
+    fontSize: 12,
+    color: MC.textSecondary,
+  },
+  toggleKnob: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E2E8F0",
+  },
+  toggleKnobActive: {
+    backgroundColor: MC.primary,
+  },
+  paymentStatusBox: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 16,
+    backgroundColor: "#FCFDFE",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  paymentStatusText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.textSecondary,
+  },
+  termSummary: {
+    borderRadius: 18,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: "#BFE7E4",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  termSummaryValue: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: MC.primaryDark,
+  },
+  termSummaryText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
+  termChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  termChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#BFE7E4",
+    backgroundColor: "#F8FEFD",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  termChipActive: {
+    borderColor: MC.primary,
+    backgroundColor: MC.primary,
+  },
+  termChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
+  termChipTextActive: { color: MC.white },
+  suggestionBox: {
+    gap: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.surface,
+    padding: 12,
+  },
+  suggestionTitle: { fontSize: 14, fontWeight: "800", color: MC.textPrimary },
+  suggestionText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
   previewGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   previewCard: {
     flex: 1,

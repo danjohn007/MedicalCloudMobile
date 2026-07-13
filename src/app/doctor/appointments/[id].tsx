@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -31,6 +32,13 @@ const money = new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 0,
 });
 
+const MANUAL_METHODS: { label: string; value: "cash" | "transfer" | "card" | "other" }[] = [
+  { label: "Efectivo", value: "cash" },
+  { label: "Transferencia", value: "transfer" },
+  { label: "Tarjeta externa", value: "card" },
+  { label: "Otro", value: "other" },
+];
+
 function fetchAppointmentDetail(appointmentId: number) {
   return api.getDoctorAppointmentDetail(appointmentId);
 }
@@ -47,6 +55,9 @@ export default function DoctorAppointmentDetailScreen() {
   const [aiBriefing, setAiBriefing] = useState("");
   const [aiBriefingLoading, setAiBriefingLoading] = useState(false);
   const [detail, setDetail] = useState<api.DoctorAppointmentDetailData | null>(null);
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualMethod, setManualMethod] = useState<"cash" | "transfer" | "card" | "other">("cash");
+  const [manualNote, setManualNote] = useState("");
 
   useEffect(() => {
     if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
@@ -149,6 +160,32 @@ export default function DoctorAppointmentDetailScreen() {
       setError(e?.message || "No se pudo generar el briefing con IA.");
     } finally {
       setAiBriefingLoading(false);
+    }
+  }
+
+  async function handleManualPayment() {
+    const amount = Number(manualAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Alert.alert("Monto requerido", "Ingresa el monto que recibiste para esta cita.");
+      return;
+    }
+
+    try {
+      setBusyAction("manual-payment");
+      setError("");
+      const result = await api.recordDoctorAppointmentManualPayment(appointmentId, {
+        amount,
+        method: manualMethod,
+        note: manualNote.trim(),
+      });
+      setManualAmount("");
+      setManualNote("");
+      await loadData();
+      Alert.alert("Pago registrado", result.message || "El pago manual quedó guardado.");
+    } catch (e: any) {
+      setError(e?.message || "No se pudo registrar el pago manual.");
+    } finally {
+      setBusyAction("");
     }
   }
 
@@ -334,6 +371,76 @@ export default function DoctorAppointmentDetailScreen() {
                 label="Check-in"
                 value={appointment.checked_in_at ? formatDate(appointment.checked_in_at) : "Pendiente"}
               />
+            </Section>
+
+            <Section title="Cobro y pagos">
+              <View style={styles.paymentSummaryCard}>
+                <InfoRow label="Tarifa base" value={money.format(appointment.base_fee ?? appointment.fee ?? 0)} />
+                <InfoRow label="Cargo actual" value={money.format(appointment.fee || 0)} />
+                <InfoRow
+                  label="Registrado manualmente"
+                  value={money.format(appointment.manual_paid_total || 0)}
+                />
+                <InfoRow
+                  label="Restante"
+                  value={money.format(Math.max(0, (appointment.fee || 0) - (appointment.manual_paid_total || 0)))}
+                />
+                {appointment.price_adjustment_type && appointment.price_adjustment_type !== "none" ? (
+                  <Text style={styles.paymentHelp}>
+                    Ajuste aplicado: {normalizePriceAdjustment(appointment.price_adjustment_type)}
+                    {appointment.price_adjustment_note ? ` · ${appointment.price_adjustment_note}` : ""}
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={styles.manualForm}>
+                <Text style={styles.manualFormTitle}>Registrar pago recibido fuera de la plataforma</Text>
+                <TextInput
+                  value={manualAmount}
+                  onChangeText={setManualAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="Monto recibido"
+                  placeholderTextColor={MC.textMuted}
+                  style={styles.manualInput}
+                />
+                <View style={styles.methodGrid}>
+                  {MANUAL_METHODS.map((method) => {
+                    const active = method.value === manualMethod;
+                    return (
+                      <Pressable
+                        key={method.value}
+                        onPress={() => setManualMethod(method.value)}
+                        style={[styles.methodChip, active && styles.methodChipActive]}
+                      >
+                        <Text style={[styles.methodChipText, active && styles.methodChipTextActive]}>
+                          {method.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <TextInput
+                  value={manualNote}
+                  onChangeText={setManualNote}
+                  placeholder="Nota opcional"
+                  placeholderTextColor={MC.textMuted}
+                  style={styles.manualInput}
+                />
+                <Pressable
+                  onPress={handleManualPayment}
+                  disabled={busyAction === "manual-payment"}
+                  style={[styles.manualSubmit, busyAction === "manual-payment" && styles.manualSubmitDisabled]}
+                >
+                  {busyAction === "manual-payment" ? (
+                    <ActivityIndicator color={MC.white} />
+                  ) : (
+                    <>
+                      <Icon name="check-circle" size={18} color={MC.white} />
+                      <Text style={styles.manualSubmitText}>Guardar pago manual</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
             </Section>
 
             <Section title="Contexto clinico">
@@ -664,6 +771,17 @@ function normalizePaymentStatus(status: string) {
   return map[status] || status;
 }
 
+function normalizePriceAdjustment(type: string) {
+  const map: Record<string, string> = {
+    fixed: "monto exacto",
+    percent_discount: "descuento porcentual",
+    percent_increase: "aumento porcentual",
+    waived: "sin cobro",
+  };
+
+  return map[type] || type;
+}
+
 function buildProfileLine(appointment: api.DoctorAppointmentDetailData["data"]) {
   const parts = [
     appointment.patient_age != null ? `${appointment.patient_age} años` : "",
@@ -951,6 +1069,60 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 11, fontWeight: "700", color: MC.textMuted },
   infoValue: { fontSize: 14, lineHeight: 20, color: MC.textPrimary },
+  paymentSummaryCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#BFE7E3",
+    backgroundColor: "#F0FDFA",
+    padding: 10,
+    gap: 8,
+  },
+  paymentHelp: { fontSize: 12, lineHeight: 18, color: MC.textSecondary, paddingHorizontal: 4 },
+  manualForm: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.white,
+    padding: 14,
+    gap: 10,
+  },
+  manualFormTitle: { fontSize: 14, fontWeight: "800", color: MC.textPrimary },
+  manualInput: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: MC.textPrimary,
+  },
+  methodGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  methodChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  methodChipActive: {
+    borderColor: MC.primary,
+    backgroundColor: MC.primaryLight,
+  },
+  methodChipText: { fontSize: 12, fontWeight: "800", color: MC.textSecondary },
+  methodChipTextActive: { color: MC.primaryDark },
+  manualSubmit: {
+    borderRadius: 16,
+    backgroundColor: MC.primary,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  manualSubmitDisabled: { opacity: 0.7 },
+  manualSubmitText: { fontSize: 14, fontWeight: "800", color: MC.white },
   statusCard: {
     borderRadius: 16,
     borderWidth: 1,

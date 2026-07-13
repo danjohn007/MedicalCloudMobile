@@ -2,7 +2,7 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useMemo, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
@@ -69,23 +69,48 @@ export function DatePickerField({
         </View>
       </Pressable>
 
-      {open ? (
+      {open && Platform.OS === "android" ? (
         <View style={styles.pickerWrap}>
           <DateTimePicker
             value={selectedDate}
             mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
+            display="default"
             minimumDate={minDate}
             maximumDate={adultMaxDate}
             onChange={handleChange}
           />
-          {Platform.OS === "ios" ? (
-            <Pressable style={styles.doneButton} onPress={() => setOpen(false)}>
-              <Text style={styles.doneText}>Listo</Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={open && Platform.OS === "ios"}
+        onRequestClose={() => setOpen(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
+          <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+                <Text style={styles.modalCancel}>Cancelar</Text>
+              </Pressable>
+              <Text style={styles.modalTitle}>Fecha de nacimiento</Text>
+              <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+                <Text style={styles.modalDone}>Listo</Text>
+              </Pressable>
+            </View>
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="spinner"
+              minimumDate={minDate}
+              maximumDate={adultMaxDate}
+              onChange={handleChange}
+              style={styles.iosPicker}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -131,4 +156,32 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primary,
   },
   doneText: { color: MC.white, fontWeight: "800" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.38)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: MC.white,
+    paddingBottom: 18,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    minHeight: 54,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: MC.border,
+  },
+  modalTitle: { fontSize: 16, fontWeight: "800", color: MC.textPrimary },
+  modalCancel: { fontSize: 14, fontWeight: "700", color: MC.textSecondary },
+  modalDone: { fontSize: 14, fontWeight: "800", color: MC.primary },
+  iosPicker: {
+    width: "100%",
+    height: 216,
+  },
 });
