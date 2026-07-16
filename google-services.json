@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1085913898548",
+    "project_id": "doctorcloud-4b105",
+    "storage_bucket": "doctorcloud-4b105.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1085913898548:android:8c8264b7d64d352b5b7461",
+        "android_client_info": {
+          "package_name": "com.doctorcloud.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1085913898548-41hl49foqh4q8r1rfroovtqcet78d07n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChbsHVh4KcliQm0Wv4qYWwUSmyEYabyt4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1085913898548-41hl49foqh4q8r1rfroovtqcet78d07n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

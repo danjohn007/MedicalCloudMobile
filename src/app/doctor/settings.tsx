@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -49,18 +50,16 @@ export default function DoctorSettingsScreen() {
   const [stateProv, setStateProv] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [availableTerms, setAvailableTerms] = useState<api.MedicalSearchTerm[]>([]);
-  const [selectedTermIds, setSelectedTermIds] = useState<number[]>([]);
+  const [publicExpertiseText, setPublicExpertiseText] = useState("");
   const [searchKeywordsText, setSearchKeywordsText] = useState("");
-  const [suggestionName, setSuggestionName] = useState("");
-  const [suggestionNotes, setSuggestionNotes] = useState("");
-  const [sendingSuggestion, setSendingSuggestion] = useState(false);
   const [consultationPaymentsEnabled, setConsultationPaymentsEnabled] = useState(false);
   const [consultationPaymentMethod, setConsultationPaymentMethod] =
     useState<"manual_only" | "paypal" | "stripe" | "both">("manual_only");
   const [paypalEmail, setPaypalEmail] = useState("");
   const [paypalMerchantId, setPaypalMerchantId] = useState("");
   const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState("");
+  const [stripeConnecting, setStripeConnecting] = useState(false);
 
   useEffect(() => {
     void loadDoctor();
@@ -95,10 +94,7 @@ export default function DoctorSettingsScreen() {
       setStateProv(doctor?.state || "");
       setLat(typeof doctor?.lat === "number" ? doctor.lat : null);
       setLng(typeof doctor?.lng === "number" ? doctor.lng : null);
-      setAvailableTerms(doctor?.available_search_terms || []);
-      setSelectedTermIds(
-        (doctor?.selected_search_terms || doctor?.search_terms || []).map((term) => term.id),
-      );
+      setPublicExpertiseText(doctor?.public_expertise_text || "");
       setSearchKeywordsText(doctor?.search_keywords_text || "");
       setConsultationPaymentsEnabled(Boolean(doctor?.consultation_payments_enabled));
       setConsultationPaymentMethod(
@@ -111,6 +107,7 @@ export default function DoctorSettingsScreen() {
       setPaypalEmail(doctor?.paypal_email || "");
       setPaypalMerchantId(doctor?.paypal_merchant_id || "");
       setStripeChargesEnabled(Boolean(doctor?.stripe_connect_charges_enabled));
+      setStripeStatus(doctor?.stripe_connect_account_status || "");
     } catch (e: any) {
       setError(e?.message || "No se pudo cargar la configuración del doctor.");
     } finally {
@@ -129,18 +126,6 @@ export default function DoctorSettingsScreen() {
       formatted: item.value > 0 ? money.format(item.value) : "Sin definir",
     }));
   }, [consultationFee, telemedicineFee, homeVisitFee]);
-
-  const selectedTermsCount = selectedTermIds.length;
-  const specialtyTerms = availableTerms.filter((term) => term.is_specialty_match);
-  const otherTerms = availableTerms.filter((term) => !term.is_specialty_match);
-
-  function toggleTerm(termId: number) {
-    setSelectedTermIds((current) =>
-      current.includes(termId)
-        ? current.filter((id) => id !== termId)
-        : [...current, termId],
-    );
-  }
 
   async function pickAvatar() {
     try {
@@ -206,7 +191,7 @@ export default function DoctorSettingsScreen() {
         state: stateProv.trim() || undefined,
         lat,
         lng,
-        search_term_ids: selectedTermIds,
+        public_expertise_text: publicExpertiseText.trim(),
         search_keywords_text: searchKeywordsText.trim(),
         consultation_payments_enabled: consultationPaymentsEnabled,
         consultation_payment_method: consultationPaymentMethod,
@@ -222,28 +207,29 @@ export default function DoctorSettingsScreen() {
     }
   }
 
-  async function handleSuggestTerm() {
-    const nameValue = suggestionName.trim();
-    if (!nameValue) {
-      Alert.alert("Falta el término", "Escribe la enfermedad, síntoma o tratamiento que quieres sugerir.");
-      return;
-    }
-
+  async function handleStripeConnect() {
     try {
-      setSendingSuggestion(true);
+      setStripeConnecting(true);
       setError("");
-      await api.suggestDoctorSearchTerm({
-        name: nameValue,
-        notes: suggestionNotes.trim() || undefined,
-      });
-      setSuggestionName("");
-      setSuggestionNotes("");
-      setSuccess("Sugerencia enviada para revisión.");
-      setTimeout(() => setSuccess(""), 3200);
+      setSuccess("");
+      const result = await api.connectDoctorStripe();
+      if (!result.url) {
+        throw new Error("Stripe no devolvio una liga de conexion.");
+      }
+      await WebBrowser.openBrowserAsync(result.url);
+      const synced = await api.syncDoctorStripe();
+      setStripeChargesEnabled(Boolean(synced.charges_enabled));
+      setStripeStatus(synced.status || result.status || "");
+      setConsultationPaymentsEnabled(true);
+      setConsultationPaymentMethod((current) =>
+        current === "paypal" || current === "both" ? "both" : "stripe",
+      );
+      setSuccess(synced.message || "Stripe Connect sincronizado.");
+      setTimeout(() => setSuccess(""), 3600);
     } catch (e: any) {
-      setError(e?.message || "No se pudo enviar la sugerencia.");
+      setError(e?.message || "No se pudo conectar Stripe.");
     } finally {
-      setSendingSuggestion(false);
+      setStripeConnecting(false);
     }
   }
 
@@ -352,83 +338,23 @@ export default function DoctorSettingsScreen() {
           <SectionCard
             icon="first-aid"
             title="Enfermedades y tratamientos"
-            subtitle="Selecciona del catálogo lo que atiendes. Esto se muestra al paciente y mejora el buscador."
+            subtitle="Escribe terminos separados por coma. Los publicos se muestran al paciente; los privados solo ayudan al buscador."
           >
-            <View style={styles.termSummary}>
-              <Text style={styles.termSummaryValue}>{selectedTermsCount}</Text>
-              <Text style={styles.termSummaryText}>
-                {selectedTermsCount === 1
-                  ? "término visible seleccionado"
-                  : "términos visibles seleccionados"}
-              </Text>
-            </View>
-
-            {specialtyTerms.length > 0 ? (
-              <>
-                <Text style={styles.subLabel}>Sugeridos para tu especialidad</Text>
-                <TermChipList
-                  terms={specialtyTerms}
-                  selectedIds={selectedTermIds}
-                  onToggle={toggleTerm}
-                />
-              </>
-            ) : (
-              <Banner
-                icon="info"
-                tone="info"
-                text="Cuando el catálogo esté disponible en el servidor, aquí aparecerán términos ligados a tu especialidad."
+            <Field label="Experto en">
+              <MultilineInput
+                value={publicExpertiseText}
+                onChangeText={setPublicExpertiseText}
+                placeholder="Ej. migrana, epilepsia, temblor, enfermedades desmielinizantes"
               />
-            )}
-
-            {otherTerms.length > 0 ? (
-              <>
-                <Text style={styles.subLabel}>Otros términos del catálogo</Text>
-                <TermChipList
-                  terms={otherTerms}
-                  selectedIds={selectedTermIds}
-                  onToggle={toggleTerm}
-                />
-              </>
-            ) : null}
+            </Field>
 
             <Field label="Palabras privadas para búsqueda">
               <MultilineInput
                 value={searchKeywordsText}
                 onChangeText={setSearchKeywordsText}
-                placeholder="Ej. cefalea tensional, rehabilitación, dolor crónico. No se muestra al paciente."
+                placeholder="Ej. cefalea tensional, dolor cronico, EM. No se muestra al paciente."
               />
             </Field>
-
-            <View style={styles.suggestionBox}>
-              <Text style={styles.suggestionTitle}>¿No aparece algo que atiendes?</Text>
-              <Text style={styles.suggestionText}>
-                Sugiere un término para que superadmin lo revise y lo agregue al catálogo.
-              </Text>
-              <Input
-                value={suggestionName}
-                onChangeText={setSuggestionName}
-                placeholder="Ej. cefalea tensional"
-              />
-              <MultilineInput
-                value={suggestionNotes}
-                onChangeText={setSuggestionNotes}
-                placeholder="Notas opcionales: especialidad, alias o contexto clínico."
-              />
-              <Pressable
-                style={[styles.secondaryButton, sendingSuggestion && { opacity: 0.7 }]}
-                onPress={handleSuggestTerm}
-                disabled={sendingSuggestion}
-              >
-                {sendingSuggestion ? (
-                  <ActivityIndicator color={MC.primaryDark} size="small" />
-                ) : (
-                  <>
-                    <Icon name="plus" size={16} color={MC.primaryDark} />
-                    <Text style={styles.secondaryButtonText}>Sugerir al catálogo</Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
           </SectionCard>
 
           <SectionCard
@@ -571,9 +497,25 @@ export default function DoctorSettingsScreen() {
                 color={stripeChargesEnabled ? MC.success : MC.textMuted}
               />
               <Text style={styles.paymentStatusText}>
-                Stripe Connect: {stripeChargesEnabled ? "listo para tarjeta" : "pendiente desde web"}
+                Stripe Connect: {stripeChargesEnabled ? "listo para tarjeta" : stripeStatus || "sin conectar"}
               </Text>
             </View>
+            <Pressable
+              style={[styles.secondaryButton, stripeConnecting && { opacity: 0.7 }]}
+              onPress={handleStripeConnect}
+              disabled={stripeConnecting}
+            >
+              {stripeConnecting ? (
+                <ActivityIndicator color={MC.primaryDark} size="small" />
+              ) : (
+                <>
+                  <Icon name={stripeChargesEnabled ? "arrow-clockwise" : "credit-card"} size={16} color={MC.primaryDark} />
+                  <Text style={styles.secondaryButtonText}>
+                    {stripeChargesEnabled ? "Revisar Stripe Connect" : "Conectar Stripe Connect"}
+                  </Text>
+                </>
+              )}
+            </Pressable>
           </SectionCard>
 
           <SectionCard
@@ -719,40 +661,6 @@ function HeroPill({
   );
 }
 
-function TermChipList({
-  terms,
-  selectedIds,
-  onToggle,
-}: {
-  terms: api.MedicalSearchTerm[];
-  selectedIds: number[];
-  onToggle: (termId: number) => void;
-}) {
-  return (
-    <View style={styles.termChipRow}>
-      {terms.map((term) => {
-        const active = selectedIds.includes(term.id);
-        return (
-          <Pressable
-            key={term.id}
-            style={[styles.termChip, active && styles.termChipActive]}
-            onPress={() => onToggle(term.id)}
-          >
-            <Icon
-              name={active ? "check-circle" : "plus"}
-              size={14}
-              color={active ? MC.white : MC.primaryDark}
-            />
-            <Text style={[styles.termChipText, active && styles.termChipTextActive]}>
-              {term.name}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function Field({
   label,
   children,
@@ -787,6 +695,7 @@ function Input({
   onChangeText: (value: string) => void;
   placeholder: string;
   keyboardType?: TextInputProps["keyboardType"];
+  autoCapitalize?: TextInputProps["autoCapitalize"];
 }) {
   return (
     <TextInput
@@ -1017,59 +926,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: MC.textSecondary,
   },
-  termSummary: {
-    borderRadius: 18,
-    backgroundColor: MC.primaryLight,
-    borderWidth: 1,
-    borderColor: "#BFE7E4",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  termSummaryValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: MC.primaryDark,
-  },
-  termSummaryText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "700",
-    color: MC.primaryDark,
-  },
-  termChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  termChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#BFE7E4",
-    backgroundColor: "#F8FEFD",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  termChipActive: {
-    borderColor: MC.primary,
-    backgroundColor: MC.primary,
-  },
-  termChipText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: MC.primaryDark,
-  },
-  termChipTextActive: { color: MC.white },
-  suggestionBox: {
-    gap: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: MC.border,
-    backgroundColor: MC.surface,
-    padding: 12,
-  },
-  suggestionTitle: { fontSize: 14, fontWeight: "800", color: MC.textPrimary },
-  suggestionText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
   previewGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   previewCard: {
     flex: 1,

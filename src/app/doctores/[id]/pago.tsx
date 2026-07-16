@@ -415,7 +415,8 @@ export default function PagoScreen() {
                   )
                 ) : (
                   <InfoNotice kind="muted">
-                    Stripe no esta habilitado para este contexto segun la configuracion actual.
+                    {paymentInfo?.unavailable_reasons?.stripe_card ||
+                      "Stripe no esta habilitado para este contexto segun la configuracion actual."}
                   </InfoNotice>
                 )
               ) : null}
@@ -453,7 +454,8 @@ export default function PagoScreen() {
                   </View>
                 ) : (
                   <InfoNotice kind="muted">
-                    PayPal no esta habilitado para esta cita segun la configuracion actual.
+                    {paymentInfo?.unavailable_reasons?.paypal ||
+                      "PayPal no esta habilitado para esta cita segun la configuracion actual."}
                   </InfoNotice>
                 )
               ) : null}

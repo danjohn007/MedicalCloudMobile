@@ -98,6 +98,8 @@ export interface Doctor {
   search_terms?: MedicalSearchTerm[];
   selected_search_terms?: MedicalSearchTerm[];
   available_search_terms?: MedicalSearchTerm[];
+  public_expertise_text?: string;
+  public_expertise_tags?: string[];
   search_keywords_text?: string;
   consultation_payment_method?: "manual_only" | "paypal" | "stripe" | "both" | string;
   consultation_payments_enabled?: boolean;
@@ -186,6 +188,10 @@ export interface AppointmentPaymentInfo {
   methods: {
     stripe_card: boolean;
     paypal: boolean;
+  };
+  unavailable_reasons?: {
+    stripe_card?: string;
+    paypal?: string;
   };
   doctor_payment_destination?: {
     type: string;
@@ -1357,6 +1363,25 @@ export async function markAllNotificationsRead() {
   });
 }
 
+export async function registerPushToken(input: {
+  token: string;
+  platform: "ios" | "android" | "web" | "unknown" | string;
+  device_id?: string | null;
+  app_version?: string | null;
+}) {
+  return request<{ success: boolean }>("/push/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function unregisterPushToken(token: string) {
+  return request<{ success: boolean }>("/push/unregister", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
 export interface AiChatResponse {
   success: boolean;
   session_id: string;
@@ -1519,6 +1544,7 @@ export async function updateDoctorProfile(
     lat: number | null;
     lng: number | null;
     search_term_ids: number[];
+    public_expertise_text: string;
     search_keywords_text: string;
     consultation_payment_method: "manual_only" | "paypal" | "stripe" | "both";
     consultation_payments_enabled: boolean;
@@ -1536,6 +1562,38 @@ export async function suggestDoctorSearchTerm(data: { name: string; notes?: stri
   return request<{ ok?: boolean; message: string }>("/doctor/search-terms/suggest", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function getDoctorSearchSuggestions(q: string) {
+  return request<{ ok?: boolean; data: string[] }>(
+    `/search-suggestions?q=${encodeURIComponent(q)}`,
+    {},
+    false,
+  );
+}
+
+export async function connectDoctorStripe() {
+  return request<{
+    ok?: boolean;
+    url: string;
+    account_id: string;
+    status: string;
+    charges_enabled: boolean;
+  }>("/doctor/stripe/connect", {
+    method: "POST",
+  });
+}
+
+export async function syncDoctorStripe() {
+  return request<{
+    ok?: boolean;
+    account_id: string;
+    status: string;
+    charges_enabled: boolean;
+    message: string;
+  }>("/doctor/stripe/sync", {
+    method: "POST",
   });
 }
 

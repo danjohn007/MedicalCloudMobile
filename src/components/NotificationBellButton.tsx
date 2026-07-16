@@ -1,11 +1,30 @@
-import { useRouter } from "expo-router";
-import { Pressable, StyleSheet } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
+import * as api from "@/services/api";
+import { setAppNotificationBadgeCount } from "@/services/push-notifications";
 
 export function NotificationBellButton({ light = false }: { light?: boolean }) {
   const router = useRouter();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const response = await api.getNotifications();
+      const count = (response.data || []).filter((item) => item.is_read === false).length;
+      setUnreadCount(count);
+      void setAppNotificationBadgeCount(count);
+    } catch {}
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadUnreadCount();
+    }, [loadUnreadCount]),
+  );
 
   return (
     <Pressable
@@ -16,6 +35,11 @@ export function NotificationBellButton({ light = false }: { light?: boolean }) {
       accessibilityLabel="Abrir notificaciones"
     >
       <Icon name="bell" size={21} color={light ? MC.white : MC.primaryDark} />
+      {unreadCount > 0 ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -34,5 +58,24 @@ const styles = StyleSheet.create({
   buttonLight: {
     backgroundColor: "rgba(255,255,255,0.16)",
     borderColor: "rgba(255,255,255,0.22)",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EF4444",
+    borderWidth: 2,
+    borderColor: MC.white,
+  },
+  badgeText: {
+    color: MC.white,
+    fontSize: 9,
+    fontWeight: "900",
   },
 });

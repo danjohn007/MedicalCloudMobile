@@ -209,14 +209,14 @@ export default function DoctorProfileScreen() {
             </View>
           ) : null}
 
-          {doctor.search_terms?.length ? (
+          {doctor.public_expertise_tags?.length ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Atiende principalmente</Text>
               <View style={styles.termGrid}>
-                {doctor.search_terms.map((term) => (
-                  <View key={term.id} style={styles.termBadge}>
+                {doctor.public_expertise_tags.map((term) => (
+                  <View key={term} style={styles.termBadge}>
                     <Icon name="first-aid" size={13} color={MC.primaryDark} />
-                    <Text style={styles.termBadgeText}>{term.name}</Text>
+                    <Text style={styles.termBadgeText}>{term}</Text>
                   </View>
                 ))}
               </View>

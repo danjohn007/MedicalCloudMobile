@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as api from '@/services/api';
+import { registerDeviceForPushNotifications, unregisterDeviceForPushNotifications } from '@/services/push-notifications';
 
 function normalizeAuthErrorMessage(error: unknown): string {
   const message =
@@ -53,6 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const [token, user] = await Promise.all([api.getToken(), api.getSavedUser()]);
       if (token && user) {
         set({ user, isAuthenticated: true, isLoading: false });
+        void registerDeviceForPushNotifications().catch(() => {});
       } else {
         set({ isLoading: false });
       }
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.saveToken(res.token);
       await api.saveUser(res.user);
       set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+      void registerDeviceForPushNotifications().catch(() => {});
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
     }
@@ -83,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.saveToken(res.token);
       await api.saveUser(res.user);
       set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+      void registerDeviceForPushNotifications().catch(() => {});
       return 'authenticated';
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
@@ -109,6 +113,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.saveToken(res.token);
       await api.saveUser(res.user);
       set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+      void registerDeviceForPushNotifications().catch(() => {});
       return 'authenticated';
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
@@ -129,10 +134,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     await api.saveToken(res.token);
     await api.saveUser(res.user);
     set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+    void registerDeviceForPushNotifications().catch(() => {});
     return 'authenticated';
   },
 
   logout: async () => {
+    await unregisterDeviceForPushNotifications().catch(() => {});
     await api.clearToken();
     set({ user: null, isAuthenticated: false, pendingGoogleSignup: null });
   },

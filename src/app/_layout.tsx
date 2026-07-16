@@ -1,7 +1,93 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useRef } from "react";
+
+import {
+  addPushResponseListener,
+  getLastPushResponseData,
+  registerDeviceForPushNotifications,
+  type PushNotificationData,
+} from "@/services/push-notifications";
+import { useAuthStore } from "@/stores/authStore";
+
+function textValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function numberValue(value: unknown): number {
+  const parsed = Number.parseInt(textValue(value), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function routeFromPushData(data: PushNotificationData, role?: string | null): string {
+  const source = textValue(data.source).toLowerCase();
+  const type = textValue(data.type).toLowerCase();
+  const relatedType = textValue(data.related_type).toLowerCase();
+  const route = textValue(data.route).toLowerCase();
+  const threadId =
+    numberValue(data.thread_id) ||
+    (relatedType === "chat_thread" ? numberValue(data.related_id) : 0);
+
+  if ((route === "chat" || source.includes("chat") || type.includes("message")) && threadId > 0) {
+    return `/chat/${threadId}`;
+  }
+
+  const appointmentId =
+    numberValue(data.appointment_id) ||
+    (relatedType === "appointment" ? numberValue(data.related_id) : 0);
+
+  if ((route === "appointment" || relatedType === "appointment" || type.includes("appointment")) && appointmentId > 0) {
+    return role === "doctor" ? `/doctor/appointments/${appointmentId}` : `/(tabs)/citas?appointmentId=${appointmentId}`;
+  }
+
+  if (relatedType === "support_ticket" && numberValue(data.related_id) > 0) {
+    return `/soporte/${numberValue(data.related_id)}`;
+  }
+
+  const highlight = textValue(data.notification_id) || `${source || type || "notification"}-${textValue(data.related_id) || ""}`;
+  return `/notificaciones?highlight=${encodeURIComponent(highlight)}`;
+}
 
 export default function RootLayout() {
+  const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userRole = useAuthStore((state) => state.user?.role);
+  const handledLastPushRef = useRef(false);
+
+  const openFromPush = useCallback(
+    (data: PushNotificationData) => {
+      router.push(routeFromPushData(data, userRole) as any);
+    },
+    [router, userRole],
+  );
+
+  useEffect(() => {
+    const subscription = addPushResponseListener(openFromPush);
+
+    return () => subscription.remove();
+  }, [openFromPush]);
+
+  useEffect(() => {
+    if (!isAuthenticated || handledLastPushRef.current) {
+      return;
+    }
+
+    handledLastPushRef.current = true;
+    void getLastPushResponseData().then((data) => {
+      if (data) {
+        setTimeout(() => openFromPush(data), 250);
+      }
+    });
+  }, [isAuthenticated, openFromPush]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void registerDeviceForPushNotifications().catch(() => {});
+    }
+  }, [isAuthenticated]);
+
   return (
     <>
       <StatusBar style="dark" />

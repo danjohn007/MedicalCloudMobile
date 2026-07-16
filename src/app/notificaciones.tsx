@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { setAppNotificationBadgeCount } from "@/services/push-notifications";
+import { useAuthStore } from "@/stores/authStore";
 
 type FilterKey =
   | "all"
@@ -133,8 +135,44 @@ function isUnread(item: api.NotificationItem) {
   return item.is_read === false;
 }
 
+function notificationKey(item: api.NotificationItem) {
+  return `${item.source ?? item.type}-${item.id}`;
+}
+
+function routeForNotification(item: api.NotificationItem, userRole?: string | null): string | null {
+  const relatedType = (item.related_type ?? "").toLowerCase();
+  const source = (item.source ?? "").toLowerCase();
+  const type = (item.type ?? "").toLowerCase();
+
+  if ((type === "message" || source.includes("chat")) && item.thread_id) {
+    const name = item.related_name ?? "Contacto";
+    return `/chat/${item.thread_id}?name=${encodeURIComponent(name)}`;
+  }
+
+  const appointmentId =
+    relatedType === "appointment" && item.related_id
+      ? item.related_id
+      : type === "appointment" || source === "appointment"
+        ? item.id
+        : 0;
+
+  if (appointmentId) {
+    return userRole === "doctor"
+      ? `/doctor/appointments/${appointmentId}`
+      : `/(tabs)/citas?appointmentId=${appointmentId}`;
+  }
+
+  if (relatedType === "support_ticket" && item.related_id) {
+    return `/soporte/${item.related_id}`;
+  }
+
+  return null;
+}
+
 export default function NotificacionesScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ highlight?: string }>();
+  const userRole = useAuthStore((state) => state.user?.role);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -153,6 +191,7 @@ export default function NotificacionesScreen() {
         (a, b) => getTimeMs(b.created_at) - getTimeMs(a.created_at),
       );
       setItems(next);
+      void setAppNotificationBadgeCount(next.filter(isUnread).length);
     } catch (e: any) {
       setError(e?.message || "No se pudieron cargar las notificaciones.");
     } finally {
@@ -194,11 +233,15 @@ export default function NotificacionesScreen() {
     if (!isUnread(item)) return;
 
     setItems((current) =>
-      current.map((next) =>
-        next.source === item.source && next.id === item.id
-          ? { ...next, is_read: true }
-          : next,
-      ),
+      {
+        const nextItems = current.map((next) =>
+          next.source === item.source && next.id === item.id
+            ? { ...next, is_read: true }
+            : next,
+        );
+        void setAppNotificationBadgeCount(nextItems.filter(isUnread).length);
+        return nextItems;
+      },
     );
 
     try {
@@ -216,6 +259,7 @@ export default function NotificacionesScreen() {
 
     setMarkingAll(true);
     setItems((current) => current.map((item) => ({ ...item, is_read: true })));
+    void setAppNotificationBadgeCount(0);
     try {
       await api.markAllNotificationsRead();
     } catch (e: any) {
@@ -227,10 +271,10 @@ export default function NotificacionesScreen() {
   };
 
   const openNotification = (item: api.NotificationItem) => {
-    if ((item.type === "message" || item.source === "chat_message") && item.thread_id) {
-      void markItemRead(item);
-      const name = item.related_name ?? "Contacto";
-      router.push(`/chat/${item.thread_id}?name=${encodeURIComponent(name)}` as any);
+    void markItemRead(item);
+    const route = routeForNotification(item, userRole);
+    if (route) {
+      router.push(route as any);
     }
   };
 
@@ -351,19 +395,20 @@ export default function NotificacionesScreen() {
             const meta = getNotificationMeta(item);
             const { title, body } = getNotificationText(item);
             const unread = isUnread(item);
-            const canOpenChat =
-              (item.type === "message" || item.source === "chat_message") &&
-              Boolean(item.thread_id);
+            const targetRoute = routeForNotification(item, userRole);
+            const highlighted =
+              params.highlight === notificationKey(item) ||
+              params.highlight === String(item.id);
 
             return (
               <Pressable
                 key={`${item.source ?? item.type}-${item.id}-${item.created_at}`}
                 style={({ pressed }) => [
                   styles.notificationRow,
-                  pressed && canOpenChat && styles.notificationPressed,
+                  highlighted && styles.notificationHighlighted,
+                  pressed && targetRoute && styles.notificationPressed,
                 ]}
                 onPress={() => openNotification(item)}
-                disabled={!canOpenChat}
               >
                 <View style={styles.unreadSlot}>
                   {unread ? <View style={styles.unreadDot} /> : null}
@@ -390,7 +435,7 @@ export default function NotificacionesScreen() {
                     <Text style={[styles.itemLabel, { color: meta.fg }]}>
                       {meta.label}
                     </Text>
-                    {canOpenChat ? (
+                    {targetRoute ? (
                       <Text style={styles.itemAction}>Abrir conversación</Text>
                     ) : null}
                     {unread ? (
@@ -547,6 +592,11 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 13,
+  },
+  notificationHighlighted: {
+    backgroundColor: "#ECFEFF",
+    borderLeftWidth: 3,
+    borderLeftColor: MC.primary,
   },
   notificationPressed: { backgroundColor: MC.surface },
   unreadSlot: {

@@ -145,16 +145,16 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
         </Text>
       ) : null}
 
-      {doctor.search_terms?.length ? (
+      {doctor.public_expertise_tags?.length ? (
         <View style={styles.termRow}>
-          {doctor.search_terms.slice(0, 4).map((term) => (
-            <View key={term.id} style={styles.termBadge}>
-              <Text style={styles.termBadgeText}>{term.name}</Text>
+          {doctor.public_expertise_tags.slice(0, 4).map((term) => (
+            <View key={term} style={styles.termBadge}>
+              <Text style={styles.termBadgeText}>{term}</Text>
             </View>
           ))}
-          {doctor.search_terms.length > 4 ? (
+          {doctor.public_expertise_tags.length > 4 ? (
             <View style={styles.termBadgeMuted}>
-              <Text style={styles.termBadgeMutedText}>+{doctor.search_terms.length - 4}</Text>
+              <Text style={styles.termBadgeMutedText}>+{doctor.public_expertise_tags.length - 4}</Text>
             </View>
           ) : null}
         </View>
@@ -200,6 +200,7 @@ export default function DoctoresScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [searchLocation, setSearchLocation] = useState<PatientSearchLocation>({ source: "none" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoaded = useRef(false);
@@ -296,6 +297,15 @@ export default function DoctoresScreen() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchDoctors(1, search, selSpec);
+      const q = search.trim();
+      if (q.length >= 2) {
+        void api
+          .getDoctorSearchSuggestions(q)
+          .then((res) => setSuggestions(res.data ?? []))
+          .catch(() => setSuggestions([]));
+      } else {
+        setSuggestions([]);
+      }
     }, 420);
 
     return () => {
@@ -369,6 +379,23 @@ export default function DoctoresScreen() {
             <Icon name="magnifying-glass" size={16} color={MC.white} />
           </Pressable>
         </View>
+        {suggestions.length > 0 ? (
+          <View style={styles.suggestionRail}>
+            {suggestions.slice(0, 6).map((item) => (
+              <Pressable
+                key={item}
+                style={styles.suggestionChip}
+                onPress={() => {
+                  setSearch(item);
+                  setSuggestions([]);
+                  fetchDoctors(1, item, selSpec);
+                }}
+              >
+                <Text style={styles.suggestionChipText}>{item}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.searchMeta}>
           <Text style={styles.searchMetaText}>{resultLabel}</Text>
@@ -543,6 +570,25 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primary,
     justifyContent: "center",
     alignItems: "center",
+  },
+  suggestionRail: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  suggestionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#BFE7E4",
+    backgroundColor: "#F8FEFD",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  suggestionChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.primaryDark,
   },
   searchMeta: {
     flexDirection: "row",
