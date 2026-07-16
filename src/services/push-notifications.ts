@@ -122,7 +122,7 @@ export function addPushResponseListener(onOpen: (data: PushNotificationData) => 
   });
 }
 
-export async function getLastPushResponseData(): Promise<PushNotificationData | null> {
+export async function getLastPushResponseData(maxAgeMs = 15000): Promise<PushNotificationData | null> {
   const Notifications = getNotificationsModule();
   if (!Notifications) {
     return null;
@@ -130,7 +130,19 @@ export async function getLastPushResponseData(): Promise<PushNotificationData | 
 
   try {
     const response = await Notifications.getLastNotificationResponseAsync();
-    return response?.notification.request.content.data ?? null;
+    if (!response) {
+      return null;
+    }
+
+    const rawDate = Number((response.notification as any).date ?? 0);
+    const receivedAt = rawDate > 0 && rawDate < 1000000000000 ? rawDate * 1000 : rawDate;
+    const isRecent = receivedAt > 0 && Date.now() - receivedAt <= maxAgeMs;
+
+    if (typeof (Notifications as any).clearLastNotificationResponseAsync === "function") {
+      await (Notifications as any).clearLastNotificationResponseAsync();
+    }
+
+    return isRecent ? response.notification.request.content.data ?? null : null;
   } catch {
     return null;
   }

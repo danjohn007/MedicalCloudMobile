@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +12,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import MapView, { Marker, type MapPressEvent, type Region } from "react-native-maps";
 
 import { MC } from "@/constants/theme";
 import { Icon } from "@/components/Icon";
@@ -28,7 +29,7 @@ interface Suggestion extends LocationDraft {
   label: string;
 }
 
-const DEFAULT_REGION: Region = {
+const DEFAULT_REGION = {
   latitude: 20.5888,
   longitude: -100.3899,
   latitudeDelta: 0.08,
@@ -154,37 +155,35 @@ export function LocationPicker({
     } catch {
       Alert.alert(
         "Ubicacion no disponible",
-        "No se pudo obtener tu ubicación actual. Puedes buscar la dirección manualmente o elegirla en el mapa.",
+        "No se pudo obtener tu ubicacion actual. Puedes buscar la direccion manualmente.",
       );
     } finally {
       setLoadingCurrent(false);
     }
   }
 
-  async function handleMapPress(event: MapPressEvent) {
-    const latitude = event.nativeEvent.coordinate.latitude;
-    const longitude = event.nativeEvent.coordinate.longitude;
-
-    try {
-      const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
-      const next = toDraft({ latitude, longitude, reverse });
-      onChange(next);
-      setQuery(formatQuery(next));
-    } catch {
-      onChange({
-        ...value,
-        lat: latitude,
-        lng: longitude,
-      });
-    }
-  }
-
-  const selectedRegion: Region = {
+  const selectedPoint = {
     latitude: value.lat ?? currentLocation?.lat ?? DEFAULT_REGION.latitude,
     longitude: value.lng ?? currentLocation?.lng ?? DEFAULT_REGION.longitude,
-    latitudeDelta: 0.012,
-    longitudeDelta: 0.012,
   };
+
+  async function openExternalMap() {
+    const label = encodeURIComponent(formatQuery(value) || "DoctorCloud");
+    const latitude = selectedPoint.latitude;
+    const longitude = selectedPoint.longitude;
+    const url =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`
+        : Platform.OS === "android"
+          ? `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`
+          : `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Mapa no disponible", "No se pudo abrir la aplicacion de mapas.");
+    }
+  }
 
   const distanceFromCurrent =
     currentLocation?.lat != null &&
@@ -216,7 +215,7 @@ export function LocationPicker({
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Busca una dirección o toca el mapa"
+          placeholder="Busca una direccion o usa tu ubicacion"
           placeholderTextColor={MC.textMuted}
           style={styles.searchInput}
         />
@@ -263,18 +262,22 @@ export function LocationPicker({
       ) : null}
 
       <View style={styles.mapShell}>
-        <MapView
-          key={`${selectedRegion.latitude}-${selectedRegion.longitude}`}
-          style={styles.map}
-          initialRegion={selectedRegion}
-          onPress={handleMapPress}
-        >
-          {value.lat != null && value.lng != null ? (
-            <Marker coordinate={{ latitude: value.lat, longitude: value.lng }} />
-          ) : null}
-        </MapView>
+        <View style={styles.mapFallback}>
+          <View style={styles.mapFallbackIcon}>
+            <Icon name="map-pin" size={24} color={MC.primaryDark} />
+          </View>
+          <Text style={styles.mapFallbackTitle}>Punto de ubicacion</Text>
+          <Text style={styles.mapFallbackText}>
+            Usa la busqueda o tu ubicacion actual para guardar la direccion. Puedes abrir
+            el punto en Maps para verificarlo.
+          </Text>
+          <Pressable style={styles.openMapsButton} onPress={openExternalMap}>
+            <Icon name="map-trifold" size={16} color={MC.white} />
+            <Text style={styles.openMapsText}>Abrir en Maps</Text>
+          </Pressable>
+        </View>
         <Text style={styles.mapHint}>
-          Toca el mapa para fijar el punto exacto de la dirección.
+          Coordenadas: {selectedPoint.latitude.toFixed(5)}, {selectedPoint.longitude.toFixed(5)}
         </Text>
       </View>
 
@@ -435,7 +438,44 @@ const styles = StyleSheet.create({
     borderColor: MC.border,
     backgroundColor: MC.surface,
   },
-  map: { width: "100%", height: 240 },
+  mapFallback: {
+    minHeight: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    gap: 10,
+  },
+  mapFallbackIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: MC.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapFallbackTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: MC.textPrimary,
+    textAlign: "center",
+  },
+  mapFallbackText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: MC.textSecondary,
+    textAlign: "center",
+  },
+  openMapsButton: {
+    marginTop: 4,
+    borderRadius: 14,
+    backgroundColor: MC.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  openMapsText: { fontSize: 13, fontWeight: "800", color: MC.white },
   mapHint: {
     paddingHorizontal: 12,
     paddingVertical: 10,

@@ -222,6 +222,20 @@ export default function NotificacionesScreen() {
     return base;
   }, [items]);
 
+  const visibleFilters = useMemo(
+    () =>
+      userRole === "doctor"
+        ? FILTERS.filter((filter) => filter.key !== "doctor")
+        : FILTERS,
+    [userRole],
+  );
+
+  useEffect(() => {
+    if (userRole === "doctor" && activeFilter === "doctor") {
+      setActiveFilter("all");
+    }
+  }, [activeFilter, userRole]);
+
   const filteredItems = useMemo(() => {
     if (activeFilter === "all") return items;
     if (activeFilter === "unread") return items.filter(isUnread);
@@ -333,7 +347,7 @@ export default function NotificacionesScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filters}
         >
-          {FILTERS.map((filter) => {
+          {visibleFilters.map((filter) => {
             const selected = activeFilter === filter.key;
             return (
               <Pressable
