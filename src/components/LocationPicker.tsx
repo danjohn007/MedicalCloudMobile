@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,10 +11,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { WebView, type WebViewMessageEvent } from "react-native-webview";
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  type MapPressEvent,
+  type Region,
+} from "react-native-maps";
 
-import { MC } from "@/constants/theme";
 import { Icon } from "@/components/Icon";
+import { MC } from "@/constants/theme";
 
 export interface LocationDraft {
   address: string;
@@ -28,7 +34,7 @@ interface Suggestion extends LocationDraft {
   label: string;
 }
 
-const DEFAULT_REGION = {
+const DEFAULT_REGION: Region = {
   latitude: 20.5888,
   longitude: -100.3899,
   latitudeDelta: 0.08,
@@ -50,18 +56,24 @@ export function LocationPicker({
   allowCurrentLocation?: boolean;
   distanceWarningThresholdMeters?: number;
 }) {
+  const mapRef = useRef<MapView>(null);
   const [query, setQuery] = useState(formatQuery(value));
   const [loadingCurrent, setLoadingCurrent] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [loadingPoint, setLoadingPoint] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationDraft | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState(false);
   const lastSearchRef = useRef(0);
-  const webViewRef = useRef<WebView>(null);
   const selectedAddress = value.address;
   const selectedCity = value.city;
   const selectedState = value.state;
+
+  const selectedRegion: Region = {
+    latitude: value.lat ?? currentLocation?.lat ?? DEFAULT_REGION.latitude,
+    longitude: value.lng ?? currentLocation?.lng ?? DEFAULT_REGION.longitude,
+    latitudeDelta: 0.012,
+    longitudeDelta: 0.012,
+  };
 
   useEffect(() => {
     setQuery(formatQuery({ address: selectedAddress, city: selectedCity, state: selectedState }));
@@ -85,6 +97,19 @@ export function LocationPicker({
 
     return () => clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    if (value.lat == null || value.lng == null) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: value.lat,
+        longitude: value.lng,
+        latitudeDelta: 0.012,
+        longitudeDelta: 0.012,
+      },
+      350,
+    );
+  }, [value.lat, value.lng]);
 
   async function loadSuggestions(search: string, searchId: number) {
     try {
@@ -125,63 +150,9 @@ export function LocationPicker({
     }
   }
 
-  async function useCurrentLocation() {
-    try {
-      setLoadingCurrent(true);
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "Permiso requerido",
-          "Necesitamos acceso a tu ubicación para sugerir la dirección más cercana.",
-        );
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const reverse = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-
-      const next = toDraft({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        reverse,
-      });
-
-      setCurrentLocation(next);
-      onChange(next);
-      setQuery(formatQuery(next));
-    } catch {
-      Alert.alert(
-        "Ubicacion no disponible",
-        "No se pudo obtener tu ubicacion actual. Puedes buscar la direccion manualmente.",
-      );
-    } finally {
-      setLoadingCurrent(false);
-    }
-  }
-
-  const selectedPoint = {
-    latitude: value.lat ?? currentLocation?.lat ?? DEFAULT_REGION.latitude,
-    longitude: value.lng ?? currentLocation?.lng ?? DEFAULT_REGION.longitude,
-  };
-
-  useEffect(() => {
-    if (!mapReady || mapError) return;
-    webViewRef.current?.postMessage(
-      JSON.stringify({
-        type: "center",
-        lat: selectedPoint.latitude,
-        lng: selectedPoint.longitude,
-      }),
-    );
-  }, [mapReady, mapError, selectedPoint.latitude, selectedPoint.longitude]);
-
   async function selectCoordinates(latitude: number, longitude: number, fallbackLabel?: string) {
     try {
+      setLoadingPoint(true);
       const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
       const next = toDraft({ latitude, longitude, reverse, fallbackLabel });
       onChange(next);
@@ -195,49 +166,52 @@ export function LocationPicker({
       };
       onChange(next);
       setQuery(formatQuery(next));
+    } finally {
+      setLoadingPoint(false);
     }
   }
 
-  function handleMapMessage(event: WebViewMessageEvent) {
+  async function useCurrentLocation() {
     try {
-      const payload = JSON.parse(event.nativeEvent.data) as {
-        type?: string;
-        lat?: number;
-        lng?: number;
-      };
-      if (payload.type !== "select") return;
-      const latitude = Number(payload.lat);
-      const longitude = Number(payload.lng);
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-      void selectCoordinates(latitude, longitude, "Punto seleccionado en mapa");
-    } catch {}
-  }
-
-  function centerMapOnCurrentSelection() {
-    if (mapError) return;
-    webViewRef.current?.postMessage(
-      JSON.stringify({
-        type: "center",
-        lat: selectedPoint.latitude,
-        lng: selectedPoint.longitude,
-      }),
-    );
-  }
-
-  function pickMapCenter() {
-    if (mapError) return;
-    webViewRef.current?.injectJavaScript(`
-      if (window.__doctorCloudSelectCenter) {
-        window.__doctorCloudSelectCenter();
+      setLoadingCurrent(true);
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitamos acceso a tu ubicacion para sugerir la direccion mas cercana.",
+        );
+        return;
       }
-      true;
-    `);
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const next = await draftFromCoordinates(
+        position.coords.latitude,
+        position.coords.longitude,
+        "Ubicacion actual",
+      );
+      setCurrentLocation(next);
+      onChange(next);
+      setQuery(formatQuery(next));
+    } catch {
+      Alert.alert(
+        "Ubicacion no disponible",
+        "No se pudo obtener tu ubicacion actual. Puedes buscar la direccion manualmente o tocar el mapa.",
+      );
+    } finally {
+      setLoadingCurrent(false);
+    }
   }
 
-  function resetMapError() {
-    if (mapError) {
-      setMapError(false);
-    }
+  function handleMapPress(event: MapPressEvent) {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    void selectCoordinates(latitude, longitude, "Punto seleccionado en mapa");
+  }
+
+  function centerOnSelectedPoint() {
+    mapRef.current?.animateToRegion(selectedRegion, 350);
   }
 
   const distanceFromCurrent =
@@ -270,7 +244,7 @@ export function LocationPicker({
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Busca una direccion o usa tu ubicacion"
+          placeholder="Busca una direccion o toca el mapa"
           placeholderTextColor={MC.textMuted}
           style={styles.searchInput}
         />
@@ -318,54 +292,41 @@ export function LocationPicker({
 
       <View style={styles.mapShell}>
         <View style={styles.mapToolbar}>
-          <Pressable style={styles.mapToolButton} onPress={centerMapOnCurrentSelection}>
+          <Pressable style={styles.mapToolButton} onPress={centerOnSelectedPoint}>
             <Icon name="map-trifold" size={14} color={MC.primaryDark} />
-            <Text style={styles.mapToolText}>Centrar</Text>
+            <Text style={styles.mapToolText}>Centrar punto</Text>
           </Pressable>
-          <Pressable style={styles.mapToolButton} onPress={pickMapCenter}>
-            <Icon name="map-pin" size={14} color={MC.primaryDark} />
-            <Text style={styles.mapToolText}>Usar centro</Text>
-          </Pressable>
-        </View>
-        {mapError ? (
-          <View style={styles.mapFallback}>
-            <View style={styles.mapFallbackIcon}>
-              <Icon name="map-pin" size={24} color={MC.primaryDark} />
+          {loadingPoint ? (
+            <View style={styles.mapToolStatus}>
+              <ActivityIndicator size="small" color={MC.primary} />
+              <Text style={styles.mapToolStatusText}>Leyendo direccion...</Text>
             </View>
-            <Text style={styles.mapFallbackTitle}>Mapa no disponible</Text>
-            <Text style={styles.mapFallbackText}>
-              Revisa tu conexion o usa la busqueda/ubicacion actual para guardar el punto.
-            </Text>
-            <Pressable style={styles.openMapsButton} onPress={resetMapError}>
-              <Icon name="arrow-clockwise" size={16} color={MC.white} />
-              <Text style={styles.openMapsText}>Reintentar mapa</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.webMapWrap}>
-            {!mapReady ? (
-              <View style={styles.mapLoading}>
-                <ActivityIndicator size="small" color={MC.primary} />
-                <Text style={styles.mapLoadingText}>Cargando mapa...</Text>
-              </View>
-            ) : null}
-            <WebView
-              ref={webViewRef}
-              originWhitelist={["*"]}
-              source={{ html: mapHtml(selectedPoint.latitude, selectedPoint.longitude) }}
-              style={styles.webMap}
-              javaScriptEnabled
-              domStorageEnabled
-              onLoadEnd={() => setMapReady(true)}
-              onError={() => setMapError(true)}
-              onMessage={handleMapMessage}
-              scrollEnabled={false}
+          ) : null}
+        </View>
+        <MapView
+          ref={mapRef}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          style={styles.map}
+          initialRegion={selectedRegion}
+          onPress={handleMapPress}
+          showsUserLocation={allowCurrentLocation}
+          showsMyLocationButton={false}
+          toolbarEnabled={false}
+        >
+          {value.lat != null && value.lng != null ? (
+            <Marker
+              coordinate={{ latitude: value.lat, longitude: value.lng }}
+              draggable
+              onDragEnd={(event) => {
+                const { latitude, longitude } = event.nativeEvent.coordinate;
+                void selectCoordinates(latitude, longitude, "Marcador");
+              }}
             />
-          </View>
-        )}
+          ) : null}
+        </MapView>
         <Text style={styles.mapHint}>
           Toca el mapa o arrastra el marcador para fijar el punto. Coordenadas:{" "}
-          {selectedPoint.latitude.toFixed(5)}, {selectedPoint.longitude.toFixed(5)}
+          {selectedRegion.latitude.toFixed(5)}, {selectedRegion.longitude.toFixed(5)}
         </Text>
       </View>
 
@@ -374,14 +335,14 @@ export function LocationPicker({
         <View style={styles.warningBox}>
           <Icon name="warning" size={16} color="#B45309" />
           <Text style={styles.warningText}>
-            La dirección seleccionada está a {Math.round(distanceFromCurrent)} m de tu
+            La direccion seleccionada esta a {Math.round(distanceFromCurrent)} m de tu
             ubicacion actual. Puedes continuar si tu consultorio esta en otro punto.
           </Text>
         </View>
       ) : null}
 
       <View style={styles.summary}>
-        <SummaryRow label="Dirección" value={value.address || "Sin dirección"} />
+        <SummaryRow label="Direccion" value={value.address || "Sin direccion"} />
         <SummaryRow label="Ciudad" value={value.city || "Sin ciudad"} />
         <SummaryRow label="Estado" value={value.state || "Sin estado"} />
         <SummaryRow
@@ -408,6 +369,15 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 function formatQuery(value: Pick<LocationDraft, "address" | "city" | "state">) {
   return [value.address, value.city, value.state].filter(Boolean).join(", ");
+}
+
+async function draftFromCoordinates(
+  latitude: number,
+  longitude: number,
+  fallbackLabel?: string,
+) {
+  const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+  return toDraft({ latitude, longitude, reverse, fallbackLabel });
 }
 
 function toDraft({
@@ -443,7 +413,7 @@ function haversineMeters(
   lat2: number,
   lng2: number,
 ) {
-  const toRad = (value: number) => (value * Math.PI) / 180;
+  const toRad = (input: number) => (input * Math.PI) / 180;
   const earthRadius = 6371000;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
@@ -455,84 +425,6 @@ function haversineMeters(
       Math.sin(dLng / 2);
 
   return 2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function mapHtml(latitude: number, longitude: number) {
-  const lat = Number.isFinite(latitude) ? latitude : DEFAULT_REGION.latitude;
-  const lng = Number.isFinite(longitude) ? longitude : DEFAULT_REGION.longitude;
-
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; background: #f8fafc; }
-    .leaflet-control-attribution { font-size: 10px; }
-    .leaflet-marker-icon { filter: hue-rotate(140deg) saturate(1.25); }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    (function () {
-      var start = [${lat}, ${lng}];
-      var map = L.map('map', { zoomControl: true, attributionControl: true }).setView(start, 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
-      }).addTo(map);
-
-      var marker = L.marker(start, { draggable: true }).addTo(map);
-
-      function send(lat, lng) {
-        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'select',
-          lat: lat,
-          lng: lng
-        }));
-      }
-
-      function moveMarker(lat, lng, zoom) {
-        marker.setLatLng([lat, lng]);
-        map.setView([lat, lng], zoom || map.getZoom() || 15);
-      }
-
-      map.on('click', function (event) {
-        moveMarker(event.latlng.lat, event.latlng.lng);
-        send(event.latlng.lat, event.latlng.lng);
-      });
-
-      marker.on('dragend', function () {
-        var pos = marker.getLatLng();
-        map.panTo(pos);
-        send(pos.lat, pos.lng);
-      });
-
-      window.__doctorCloudSelectCenter = function () {
-        var pos = map.getCenter();
-        moveMarker(pos.lat, pos.lng);
-        send(pos.lat, pos.lng);
-      };
-
-      function handleMessage(event) {
-        try {
-          var payload = JSON.parse(event.data || '{}');
-          if (payload.type === 'center' && isFinite(payload.lat) && isFinite(payload.lng)) {
-            moveMarker(Number(payload.lat), Number(payload.lng), 15);
-          }
-        } catch (e) {}
-      }
-
-      document.addEventListener('message', handleMessage);
-      window.addEventListener('message', handleMessage);
-      setTimeout(function () { map.invalidateSize(); }, 250);
-    }());
-  </script>
-</body>
-</html>`;
 }
 
 const styles = StyleSheet.create({
@@ -611,9 +503,9 @@ const styles = StyleSheet.create({
     backgroundColor: MC.white,
     borderBottomWidth: 1,
     borderBottomColor: MC.border,
+    alignItems: "center",
   },
   mapToolButton: {
-    flex: 1,
     borderRadius: 12,
     backgroundColor: MC.primaryLight,
     paddingVertical: 9,
@@ -624,61 +516,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   mapToolText: { fontSize: 12, fontWeight: "800", color: MC.primaryDark },
-  webMapWrap: {
-    height: 260,
-    backgroundColor: "#F8FAFC",
-  },
-  webMap: {
+  mapToolStatus: {
     flex: 1,
-    backgroundColor: "transparent",
-  },
-  mapLoading: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F8FAFC",
-    gap: 8,
-  },
-  mapLoadingText: { fontSize: 12, fontWeight: "700", color: MC.textSecondary },
-  mapFallback: {
-    minHeight: 220,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-    gap: 10,
-  },
-  mapFallbackIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: MC.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mapFallbackTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: MC.textPrimary,
-    textAlign: "center",
-  },
-  mapFallbackText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: MC.textSecondary,
-    textAlign: "center",
-  },
-  openMapsButton: {
-    marginTop: 4,
-    borderRadius: 14,
-    backgroundColor: MC.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-end",
+    gap: 7,
   },
-  openMapsText: { fontSize: 13, fontWeight: "800", color: MC.white },
+  mapToolStatusText: { fontSize: 11, fontWeight: "700", color: MC.textSecondary },
+  map: { width: "100%", height: 260 },
   mapHint: {
     paddingHorizontal: 12,
     paddingVertical: 10,

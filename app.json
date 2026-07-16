@@ -17,6 +17,11 @@
     "android": {
       "package": "com.doctorcloud.app",
       "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyChbsHVh4KcliQm0Wv4qYWwUSmyEYabyt4"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

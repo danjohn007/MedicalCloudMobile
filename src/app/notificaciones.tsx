@@ -297,10 +297,14 @@ export default function NotificacionesScreen() {
       const token = await registerDeviceForPushNotifications();
       const response = await api.testPushNotification();
       const tokenCount = Number(response.token_count ?? 0);
+      const sent = Number(response.sent ?? 0);
+      const serverMessage = response.message || response.errors?.join(" | ") || "";
       if (!token && tokenCount <= 0) {
         setError("No se registro token push para este dispositivo. Revisa permisos, build instalada y credenciales FCM/EAS.");
       } else if (tokenCount <= 0) {
         setError("El servidor no encontro tokens activos aunque la app genero uno. Vuelve a iniciar sesion e intenta de nuevo.");
+      } else if (sent <= 0 && serverMessage) {
+        setError(`Expo no acepto la push: ${serverMessage}`);
       } else {
         await load(true);
       }

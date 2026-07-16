@@ -1383,7 +1383,13 @@ export async function unregisterPushToken(token: string) {
 }
 
 export async function testPushNotification() {
-  return request<{ success: boolean; token_count?: number; message?: string }>("/push/test", {
+  return request<{
+    success: boolean;
+    token_count?: number;
+    sent?: number;
+    errors?: string[];
+    message?: string;
+  }>("/push/test", {
     method: "POST",
   });
 }
