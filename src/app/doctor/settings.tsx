@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +23,8 @@ import { Icon } from "@/components/Icon";
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const DURATION_OPTIONS = [20, 30, 40, 45, 60];
 const money = new Intl.NumberFormat("es-MX", {
@@ -216,7 +219,10 @@ export default function DoctorSettingsScreen() {
       if (!result.url) {
         throw new Error("Stripe no devolvio una liga de conexion.");
       }
-      await WebBrowser.openBrowserAsync(result.url);
+      await WebBrowser.openAuthSessionAsync(
+        result.url,
+        Linking.createURL("stripe-connect"),
+      );
       const synced = await api.syncDoctorStripe();
       setStripeChargesEnabled(Boolean(synced.charges_enabled));
       setStripeStatus(synced.status || result.status || "");

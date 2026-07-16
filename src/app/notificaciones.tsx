@@ -14,7 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
-import { setAppNotificationBadgeCount } from "@/services/push-notifications";
+import {
+  registerDeviceForPushNotifications,
+  setAppNotificationBadgeCount,
+} from "@/services/push-notifications";
 import { useAuthStore } from "@/stores/authStore";
 
 type FilterKey =
@@ -179,6 +182,7 @@ export default function NotificacionesScreen() {
   const [items, setItems] = useState<api.NotificationItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [markingAll, setMarkingAll] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
     try {
@@ -284,6 +288,29 @@ export default function NotificacionesScreen() {
     }
   };
 
+  const testPush = async () => {
+    if (testingPush) return;
+
+    setTestingPush(true);
+    setError("");
+    try {
+      const token = await registerDeviceForPushNotifications();
+      const response = await api.testPushNotification();
+      const tokenCount = Number(response.token_count ?? 0);
+      if (!token && tokenCount <= 0) {
+        setError("No se registro token push para este dispositivo. Revisa permisos, build instalada y credenciales FCM/EAS.");
+      } else if (tokenCount <= 0) {
+        setError("El servidor no encontro tokens activos aunque la app genero uno. Vuelve a iniciar sesion e intenta de nuevo.");
+      } else {
+        await load(true);
+      }
+    } catch (e: any) {
+      setError(e?.message || "No se pudo enviar la prueba push.");
+    } finally {
+      setTestingPush(false);
+    }
+  };
+
   const openNotification = (item: api.NotificationItem) => {
     void markItemRead(item);
     const route = routeForNotification(item, userRole);
@@ -340,6 +367,21 @@ export default function NotificacionesScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      <Pressable
+        style={[styles.testPushButton, testingPush && styles.disabledButton]}
+        onPress={testPush}
+        disabled={testingPush}
+      >
+        {testingPush ? (
+          <ActivityIndicator size="small" color={MC.primaryDark} />
+        ) : (
+          <Icon name="bell-ringing" size={16} color={MC.primaryDark} />
+        )}
+        <Text style={styles.testPushText}>
+          {testingPush ? "Probando push..." : "Probar notificacion push"}
+        </Text>
+      </Pressable>
 
       <View style={styles.filtersWrap}>
         <ScrollView
@@ -556,6 +598,21 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.65 },
   readAllText: { fontSize: 11, fontWeight: "800", color: MC.primaryDark },
+  testPushButton: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#C9ECE8",
+    backgroundColor: MC.white,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  testPushText: { fontSize: 12, fontWeight: "800", color: MC.primaryDark },
   filtersWrap: { paddingBottom: 8 },
   filters: { paddingHorizontal: 16, gap: 8 },
   filterChip: {

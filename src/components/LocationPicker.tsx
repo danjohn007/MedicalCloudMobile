@@ -3,8 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
 import { MC } from "@/constants/theme";
 import { Icon } from "@/components/Icon";
@@ -56,7 +55,10 @@ export function LocationPicker({
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationDraft | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
   const lastSearchRef = useRef(0);
+  const webViewRef = useRef<WebView>(null);
   const selectedAddress = value.address;
   const selectedCity = value.city;
   const selectedState = value.state;
@@ -167,21 +169,74 @@ export function LocationPicker({
     longitude: value.lng ?? currentLocation?.lng ?? DEFAULT_REGION.longitude,
   };
 
-  async function openExternalMap() {
-    const label = encodeURIComponent(formatQuery(value) || "DoctorCloud");
-    const latitude = selectedPoint.latitude;
-    const longitude = selectedPoint.longitude;
-    const url =
-      Platform.OS === "ios"
-        ? `http://maps.apple.com/?ll=${latitude},${longitude}&q=${label}`
-        : Platform.OS === "android"
-          ? `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`
-          : `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+  useEffect(() => {
+    if (!mapReady || mapError) return;
+    webViewRef.current?.postMessage(
+      JSON.stringify({
+        type: "center",
+        lat: selectedPoint.latitude,
+        lng: selectedPoint.longitude,
+      }),
+    );
+  }, [mapReady, mapError, selectedPoint.latitude, selectedPoint.longitude]);
 
+  async function selectCoordinates(latitude: number, longitude: number, fallbackLabel?: string) {
     try {
-      await Linking.openURL(url);
+      const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+      const next = toDraft({ latitude, longitude, reverse, fallbackLabel });
+      onChange(next);
+      setQuery(formatQuery(next));
     } catch {
-      Alert.alert("Mapa no disponible", "No se pudo abrir la aplicacion de mapas.");
+      const next = {
+        ...value,
+        address: fallbackLabel || value.address,
+        lat: latitude,
+        lng: longitude,
+      };
+      onChange(next);
+      setQuery(formatQuery(next));
+    }
+  }
+
+  function handleMapMessage(event: WebViewMessageEvent) {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data) as {
+        type?: string;
+        lat?: number;
+        lng?: number;
+      };
+      if (payload.type !== "select") return;
+      const latitude = Number(payload.lat);
+      const longitude = Number(payload.lng);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+      void selectCoordinates(latitude, longitude, "Punto seleccionado en mapa");
+    } catch {}
+  }
+
+  function centerMapOnCurrentSelection() {
+    if (mapError) return;
+    webViewRef.current?.postMessage(
+      JSON.stringify({
+        type: "center",
+        lat: selectedPoint.latitude,
+        lng: selectedPoint.longitude,
+      }),
+    );
+  }
+
+  function pickMapCenter() {
+    if (mapError) return;
+    webViewRef.current?.injectJavaScript(`
+      if (window.__doctorCloudSelectCenter) {
+        window.__doctorCloudSelectCenter();
+      }
+      true;
+    `);
+  }
+
+  function resetMapError() {
+    if (mapError) {
+      setMapError(false);
     }
   }
 
@@ -262,22 +317,55 @@ export function LocationPicker({
       ) : null}
 
       <View style={styles.mapShell}>
-        <View style={styles.mapFallback}>
-          <View style={styles.mapFallbackIcon}>
-            <Icon name="map-pin" size={24} color={MC.primaryDark} />
-          </View>
-          <Text style={styles.mapFallbackTitle}>Punto de ubicacion</Text>
-          <Text style={styles.mapFallbackText}>
-            Usa la busqueda o tu ubicacion actual para guardar la direccion. Puedes abrir
-            el punto en Maps para verificarlo.
-          </Text>
-          <Pressable style={styles.openMapsButton} onPress={openExternalMap}>
-            <Icon name="map-trifold" size={16} color={MC.white} />
-            <Text style={styles.openMapsText}>Abrir en Maps</Text>
+        <View style={styles.mapToolbar}>
+          <Pressable style={styles.mapToolButton} onPress={centerMapOnCurrentSelection}>
+            <Icon name="map-trifold" size={14} color={MC.primaryDark} />
+            <Text style={styles.mapToolText}>Centrar</Text>
+          </Pressable>
+          <Pressable style={styles.mapToolButton} onPress={pickMapCenter}>
+            <Icon name="map-pin" size={14} color={MC.primaryDark} />
+            <Text style={styles.mapToolText}>Usar centro</Text>
           </Pressable>
         </View>
+        {mapError ? (
+          <View style={styles.mapFallback}>
+            <View style={styles.mapFallbackIcon}>
+              <Icon name="map-pin" size={24} color={MC.primaryDark} />
+            </View>
+            <Text style={styles.mapFallbackTitle}>Mapa no disponible</Text>
+            <Text style={styles.mapFallbackText}>
+              Revisa tu conexion o usa la busqueda/ubicacion actual para guardar el punto.
+            </Text>
+            <Pressable style={styles.openMapsButton} onPress={resetMapError}>
+              <Icon name="arrow-clockwise" size={16} color={MC.white} />
+              <Text style={styles.openMapsText}>Reintentar mapa</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.webMapWrap}>
+            {!mapReady ? (
+              <View style={styles.mapLoading}>
+                <ActivityIndicator size="small" color={MC.primary} />
+                <Text style={styles.mapLoadingText}>Cargando mapa...</Text>
+              </View>
+            ) : null}
+            <WebView
+              ref={webViewRef}
+              originWhitelist={["*"]}
+              source={{ html: mapHtml(selectedPoint.latitude, selectedPoint.longitude) }}
+              style={styles.webMap}
+              javaScriptEnabled
+              domStorageEnabled
+              onLoadEnd={() => setMapReady(true)}
+              onError={() => setMapError(true)}
+              onMessage={handleMapMessage}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
         <Text style={styles.mapHint}>
-          Coordenadas: {selectedPoint.latitude.toFixed(5)}, {selectedPoint.longitude.toFixed(5)}
+          Toca el mapa o arrastra el marcador para fijar el punto. Coordenadas:{" "}
+          {selectedPoint.latitude.toFixed(5)}, {selectedPoint.longitude.toFixed(5)}
         </Text>
       </View>
 
@@ -369,6 +457,84 @@ function haversineMeters(
   return 2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function mapHtml(latitude: number, longitude: number) {
+  const lat = Number.isFinite(latitude) ? latitude : DEFAULT_REGION.latitude;
+  const lng = Number.isFinite(longitude) ? longitude : DEFAULT_REGION.longitude;
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; background: #f8fafc; }
+    .leaflet-control-attribution { font-size: 10px; }
+    .leaflet-marker-icon { filter: hue-rotate(140deg) saturate(1.25); }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      var start = [${lat}, ${lng}];
+      var map = L.map('map', { zoomControl: true, attributionControl: true }).setView(start, 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      var marker = L.marker(start, { draggable: true }).addTo(map);
+
+      function send(lat, lng) {
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'select',
+          lat: lat,
+          lng: lng
+        }));
+      }
+
+      function moveMarker(lat, lng, zoom) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], zoom || map.getZoom() || 15);
+      }
+
+      map.on('click', function (event) {
+        moveMarker(event.latlng.lat, event.latlng.lng);
+        send(event.latlng.lat, event.latlng.lng);
+      });
+
+      marker.on('dragend', function () {
+        var pos = marker.getLatLng();
+        map.panTo(pos);
+        send(pos.lat, pos.lng);
+      });
+
+      window.__doctorCloudSelectCenter = function () {
+        var pos = map.getCenter();
+        moveMarker(pos.lat, pos.lng);
+        send(pos.lat, pos.lng);
+      };
+
+      function handleMessage(event) {
+        try {
+          var payload = JSON.parse(event.data || '{}');
+          if (payload.type === 'center' && isFinite(payload.lat) && isFinite(payload.lng)) {
+            moveMarker(Number(payload.lat), Number(payload.lng), 15);
+          }
+        } catch (e) {}
+      }
+
+      document.addEventListener('message', handleMessage);
+      window.addEventListener('message', handleMessage);
+      setTimeout(function () { map.invalidateSize(); }, 250);
+    }());
+  </script>
+</body>
+</html>`;
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: 22,
@@ -438,6 +604,43 @@ const styles = StyleSheet.create({
     borderColor: MC.border,
     backgroundColor: MC.surface,
   },
+  mapToolbar: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 10,
+    backgroundColor: MC.white,
+    borderBottomWidth: 1,
+    borderBottomColor: MC.border,
+  },
+  mapToolButton: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: MC.primaryLight,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  mapToolText: { fontSize: 12, fontWeight: "800", color: MC.primaryDark },
+  webMapWrap: {
+    height: 260,
+    backgroundColor: "#F8FAFC",
+  },
+  webMap: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  mapLoading: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8FAFC",
+    gap: 8,
+  },
+  mapLoadingText: { fontSize: 12, fontWeight: "700", color: MC.textSecondary },
   mapFallback: {
     minHeight: 220,
     alignItems: "center",

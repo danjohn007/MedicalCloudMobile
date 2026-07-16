@@ -1382,6 +1382,12 @@ export async function unregisterPushToken(token: string) {
   });
 }
 
+export async function testPushNotification() {
+  return request<{ success: boolean; token_count?: number; message?: string }>("/push/test", {
+    method: "POST",
+  });
+}
+
 export interface AiChatResponse {
   success: boolean;
   session_id: string;
