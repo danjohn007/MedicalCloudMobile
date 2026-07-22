@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>1085913898548-83u3eqfup4h0fp6s8vg7g2bb2vd4ma4g.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1085913898548-83u3eqfup4h0fp6s8vg7g2bb2vd4ma4g</string>
+	<key>API_KEY</key>
+	<string>AIzaSyC-WGzSIIWdHGua13bEZzh2Ly3Q6PRDt2M</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1085913898548</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.doctorcloud.app</string>
+	<key>PROJECT_ID</key>
+	<string>doctorcloud-4b105</string>
+	<key>STORAGE_BUCKET</key>
+	<string>doctorcloud-4b105.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1085913898548:ios:7d44cb5d187b4e1e5b7461</string>
+</dict>
+</plist>

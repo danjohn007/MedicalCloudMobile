@@ -49,6 +49,7 @@ export default function RegisterDetailsScreen() {
 
   const { register, completeGoogleSignup, pendingGoogleSignup, clearPendingGoogleSignup } =
     useAuthStore();
+  const socialProviderLabel = pendingGoogleSignup?.provider === "apple" ? "Apple" : "Google";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -210,7 +211,7 @@ export default function RegisterDetailsScreen() {
           </Text>
           <Text style={styles.subtitle}>
             {isGoogle
-              ? "Terminamos de validar Google. Solo confirma tu informacion para cerrar el alta."
+              ? `Terminamos de validar ${socialProviderLabel}. Solo confirma tu informacion para cerrar el alta.`
               : "Completa el formulario para crear tu cuenta con el perfil correcto."}
           </Text>
 
@@ -241,11 +242,11 @@ export default function RegisterDetailsScreen() {
 
                 {isGoogle ? (
                   <>
-                    <ReadonlyField label="Correo de Google" value={email} />
+                    <ReadonlyField label={`Correo de ${socialProviderLabel}`} value={email} />
                     <ReadonlyField
                       label="Contrasena"
-                      value="Protegida por Google"
-                      hint="Este acceso ya queda ligado a tu cuenta de Google."
+                      value={`Protegida por ${socialProviderLabel}`}
+                      hint={`Este acceso ya queda ligado a tu cuenta de ${socialProviderLabel}.`}
                     />
                   </>
                 ) : (

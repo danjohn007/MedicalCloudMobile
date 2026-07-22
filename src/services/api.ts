@@ -45,6 +45,7 @@ export interface PendingGoogleRegistration {
   name: string;
   email: string;
   avatar_url: string | null;
+  provider?: "google" | "apple";
 }
 
 export type GoogleLoginResult =
@@ -950,6 +951,18 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
   };
 }
 
+export async function loginWithNativeSocial(input: {
+  provider: "google" | "apple";
+  id_token: string;
+  name?: string;
+}): Promise<GoogleLoginResult> {
+  return request<GoogleLoginResult>(
+    "/auth/social",
+    { method: "POST", body: JSON.stringify(input) },
+    false,
+  );
+}
+
 export async function completeGoogleRegistration(input: {
   pending_token: string;
   role: "doctor" | "patient";
@@ -1098,7 +1111,12 @@ export async function getMessages() {
 }
 
 export async function getConversation(id: number) {
-  return request<{ data: any[] }>(`/messages/${id}`);
+  return request<{
+    data: any[];
+    meta?: {
+      other_recently_active?: boolean;
+    };
+  }>(`/messages/${id}`);
 }
 
 export async function sendMessage(conversationId: number, message: string) {

@@ -79,6 +79,11 @@ export default function PerfilScreen() {
       action: () => router.push("/notificaciones"),
     },
     {
+      icon: "gear",
+      label: "Apariencia",
+      action: () => router.push("/settings/appearance"),
+    },
+    {
       icon: "info",
       label: "Ayuda y soporte",
       action: () => router.push("/soporte"),

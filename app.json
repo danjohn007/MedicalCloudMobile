@@ -2,7 +2,7 @@
   "expo": {
     "name": "Doctor Cloud",
     "slug": "doctorcloud-app",
-    "version": "1.0.0",
+    "version": "7.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "doctorcloud",
@@ -10,8 +10,16 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.doctorcloud.app",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -68,10 +76,25 @@
         }
       ],
       [
-        "expo-notifications",
+        "./plugins/with-android-google-maps-api-key",
         {
-          "color": "#208AEF",
-          "defaultChannel": "default"
+          "apiKey": "AIzaSyChbsHVh4KcliQm0Wv4qYWwUSmyEYabyt4"
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBMessaging"
+            ]
+          }
         }
       ],
       "@react-native-community/datetimepicker"

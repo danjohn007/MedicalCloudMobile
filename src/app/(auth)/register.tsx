@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState, type ComponentProps } from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,10 +21,10 @@ import { useAuthStore } from "@/stores/authStore";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { loginWithGoogle } = useAuthStore();
+  const { loginWithGoogle, loginWithApple } = useAuthStore();
 
   const [role, setRole] = useState<"doctor" | "patient" | null>(null);
-  const [loadingMode, setLoadingMode] = useState<"email" | "google" | null>(null);
+  const [loadingMode, setLoadingMode] = useState<"email" | "google" | "apple" | null>(null);
   const [error, setError] = useState("");
 
   const handleContinueWithEmail = () => {
@@ -55,6 +56,21 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleAppleRegister = async () => {
+    setLoadingMode("apple");
+    setError("");
+    try {
+      const result = await loginWithApple();
+      if (result === "pending_profile") {
+        router.replace("/(auth)/google-register");
+      }
+    } catch (e: any) {
+      if (e?.code !== "ERR_REQUEST_CANCELED") setError(e.message ?? "Error al registrarte con Apple.");
+    } finally {
+      setLoadingMode(null);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
@@ -65,6 +81,19 @@ export default function RegisterScreen() {
           <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={24} color={MC.textPrimary} />
           </Pressable>
+
+          {Platform.OS === "ios" ? (
+            <View style={[styles.appleWrap, loadingMode !== null && { opacity: 0.6 }]} pointerEvents={loadingMode === null ? "auto" : "none"}>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={14}
+                style={styles.appleButton}
+                onPress={handleAppleRegister}
+              />
+              {loadingMode === "apple" ? <ActivityIndicator color={MC.white} style={styles.appleLoader} /> : null}
+            </View>
+          ) : null}
 
           <View style={styles.brandRow}>
             <Logo variant="icon-color" width={48} />
@@ -261,6 +290,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 15,
   },
+  appleWrap: { height: 56, marginBottom: 20, justifyContent: "center" },
+  appleButton: { width: "100%", height: 56 },
+  appleLoader: { position: "absolute", alignSelf: "center" },
   googleBadge: {
     width: 34,
     height: 34,

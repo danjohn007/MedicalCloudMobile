@@ -219,10 +219,13 @@ export default function DoctorSettingsScreen() {
       if (!result.url) {
         throw new Error("Stripe no devolvio una liga de conexion.");
       }
-      await WebBrowser.openAuthSessionAsync(
+      const browserResult = await WebBrowser.openAuthSessionAsync(
         result.url,
-        Linking.createURL("stripe-connect"),
+        Linking.createURL("stripe-connect/success"),
       );
+      if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
+        return;
+      }
       const synced = await api.syncDoctorStripe();
       setStripeChargesEnabled(Boolean(synced.charges_enabled));
       setStripeStatus(synced.status || result.status || "");
@@ -232,6 +235,14 @@ export default function DoctorSettingsScreen() {
       );
       setSuccess(synced.message || "Stripe Connect sincronizado.");
       setTimeout(() => setSuccess(""), 3600);
+      router.replace({
+        pathname: "/stripe-connect/success",
+        params: {
+          account_id: synced.account_id,
+          status: synced.status,
+          charges_enabled: String(Boolean(synced.charges_enabled)),
+        },
+      } as any);
     } catch (e: any) {
       setError(e?.message || "No se pudo conectar Stripe.");
     } finally {

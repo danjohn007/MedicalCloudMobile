@@ -15,6 +15,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import {
+  getPushRuntimeStatus,
   registerDeviceForPushNotifications,
   setAppNotificationBadgeCount,
 } from "@/services/push-notifications";
@@ -294,17 +295,33 @@ export default function NotificacionesScreen() {
     setTestingPush(true);
     setError("");
     try {
+      const pushStatus = getPushRuntimeStatus();
+      if (!pushStatus.canUseRemotePush) {
+        setError(pushStatus.reason || "Este entorno no puede registrar push remotas.");
+        return;
+      }
+
       const token = await registerDeviceForPushNotifications();
+      if (!token) {
+        setError("No se pudo registrar el token FCM. Revisa permisos, google-services.json/GoogleService-Info.plist y que la app sea un build nativo nuevo.");
+        return;
+      }
+
       const response = await api.testPushNotification();
+      const hasDeliveryReport =
+        typeof response.token_count === "number" || typeof response.sent === "number" || Array.isArray(response.errors);
+      if (!hasDeliveryReport) {
+        setError("El servidor respondio con el endpoint viejo de push. Sube al cPanel la version actualizada de MobileApiController.php y core/PushNotification.php.");
+        return;
+      }
+
       const tokenCount = Number(response.token_count ?? 0);
       const sent = Number(response.sent ?? 0);
       const serverMessage = response.message || response.errors?.join(" | ") || "";
-      if (!token && tokenCount <= 0) {
-        setError("No se registro token push para este dispositivo. Revisa permisos, build instalada y credenciales FCM/EAS.");
-      } else if (tokenCount <= 0) {
+      if (tokenCount <= 0) {
         setError("El servidor no encontro tokens activos aunque la app genero uno. Vuelve a iniciar sesion e intenta de nuevo.");
       } else if (sent <= 0 && serverMessage) {
-        setError(`Expo no acepto la push: ${serverMessage}`);
+        setError(`FCM no acepto la push: ${serverMessage}`);
       } else {
         await load(true);
       }

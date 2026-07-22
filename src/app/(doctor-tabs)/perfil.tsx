@@ -174,6 +174,12 @@ export default function DoctorProfileScreen() {
               onPress={() => router.push("/doctor/settings" as any)}
             />
             <ShortcutCard
+              icon="gear"
+              title="Apariencia"
+              summary="Automatico, claro u oscuro."
+              onPress={() => router.push("/settings/appearance" as any)}
+            />
+            <ShortcutCard
               icon="wallet"
               title="Finanzas"
               summary="Cobros e historial."

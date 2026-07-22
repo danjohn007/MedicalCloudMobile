@@ -48,6 +48,7 @@ export default function GoogleRegisterScreen() {
   };
 
   const avatarLetter = pendingGoogleSignup.name.trim().charAt(0).toUpperCase() || "D";
+  const providerLabel = pendingGoogleSignup.provider === "apple" ? "Apple" : "Google";
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -56,7 +57,7 @@ export default function GoogleRegisterScreen() {
           <Icon name="arrow-left" size={24} color={MC.textPrimary} />
         </Pressable>
 
-        <Text style={styles.title}>Cuenta de Google verificada</Text>
+        <Text style={styles.title}>Cuenta de {providerLabel} verificada</Text>
         <Text style={styles.subtitle}>
           Ahora elige como usaras DoctorCloud y te llevamos al formulario final.
         </Text>

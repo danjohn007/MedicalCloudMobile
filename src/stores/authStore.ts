@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as api from '@/services/api';
 import { registerDeviceForPushNotifications, unregisterDeviceForPushNotifications } from '@/services/push-notifications';
+import { getNativeAppleIdentity, getNativeGoogleIdentity } from '@/services/native-social-auth';
 
 function normalizeAuthErrorMessage(error: unknown): string {
   const message =
@@ -17,6 +18,39 @@ function normalizeAuthErrorMessage(error: unknown): string {
   return message;
 }
 
+async function completeSocialLogin(
+  res: api.GoogleLoginResult,
+  options: { autoCreatePatient?: boolean } | undefined,
+  set: (state: Partial<AuthState>) => void,
+): Promise<'authenticated' | 'pending_profile'> {
+  if (res.status === 'pending_profile') {
+    if (options?.autoCreatePatient) {
+      const completed = await api.completeGoogleRegistration({
+        pending_token: res.pending.pending_token,
+        role: 'patient',
+        name: res.pending.name,
+      });
+      if (completed.status !== 'authenticated') {
+        throw new Error('No se pudo completar el inicio de sesion.');
+      }
+      await api.saveToken(completed.token);
+      await api.saveUser(completed.user);
+      set({ user: completed.user, isAuthenticated: true, pendingGoogleSignup: null });
+      void registerDeviceForPushNotifications().catch(() => {});
+      return 'authenticated';
+    }
+
+    set({ pendingGoogleSignup: res.pending, user: null, isAuthenticated: false });
+    return 'pending_profile';
+  }
+
+  await api.saveToken(res.token);
+  await api.saveUser(res.user);
+  set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
+  void registerDeviceForPushNotifications().catch(() => {});
+  return 'authenticated';
+}
+
 interface AuthState {
   user: api.AuthUser | null;
   pendingGoogleSignup: api.PendingGoogleRegistration | null;
@@ -26,7 +60,8 @@ interface AuthState {
   // Actions
   loadSaved: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<'authenticated' | 'pending_profile'>;
+  loginWithGoogle: (options?: { autoCreatePatient?: boolean }) => Promise<'authenticated' | 'pending_profile'>;
+  loginWithApple: (options?: { autoCreatePatient?: boolean }) => Promise<'authenticated' | 'pending_profile'>;
   completeGoogleSignup: (payload: {
     role: 'doctor' | 'patient';
     name?: string;
@@ -75,19 +110,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  loginWithGoogle: async () => {
+  loginWithGoogle: async (options) => {
     try {
-      const res = await api.loginWithGoogle();
-      if (res.status === 'pending_profile') {
-        set({ pendingGoogleSignup: res.pending, user: null, isAuthenticated: false });
-        return 'pending_profile';
-      }
+      const identity = await getNativeGoogleIdentity();
+      const res = await api.loginWithNativeSocial({ provider: 'google', id_token: identity.idToken, name: identity.name });
+      return completeSocialLogin(res, options, set);
+    } catch (error) {
+      throw new Error(normalizeAuthErrorMessage(error));
+    }
+  },
 
-      await api.saveToken(res.token);
-      await api.saveUser(res.user);
-      set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
-      void registerDeviceForPushNotifications().catch(() => {});
-      return 'authenticated';
+  loginWithApple: async (options) => {
+    try {
+      const identity = await getNativeAppleIdentity();
+      const res = await api.loginWithNativeSocial({ provider: 'apple', id_token: identity.idToken, name: identity.name });
+      return completeSocialLogin(res, options, set);
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
     }

@@ -60,16 +60,16 @@ export default function SplashScreen() {
       <View style={styles.actions}>
         <Pressable
           style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
-          onPress={() => router.push('/(auth)/register')}
+          onPress={() => router.push('/(auth)/login')}
         >
-          <Text style={styles.btnPrimaryText}>Comenzar</Text>
+          <Text style={styles.btnPrimaryText}>Iniciar sesi{"\u00f3"}n</Text>
         </Pressable>
 
         <Pressable
           style={styles.btnLink}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push('/(auth)/register')}
         >
-          <Text style={styles.btnLinkText}>Iniciar sesión</Text>
+          <Text style={styles.btnLinkText}>Registrarse</Text>
         </Pressable>
       </View>
     </SafeAreaView>

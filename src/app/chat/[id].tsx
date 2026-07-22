@@ -88,6 +88,7 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [contactActive, setContactActive] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -103,6 +104,7 @@ export default function ChatScreen() {
         // Orden ascendente para que la conversación conserve su secuencia.
         next.sort((a: ChatMessage, b: ChatMessage) => a.id - b.id);
         setMessages(next);
+        setContactActive(Boolean(res.meta?.other_recently_active));
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: false });
         }, 150);
@@ -160,7 +162,9 @@ export default function ChatScreen() {
             </View>
             <View>
               <Text style={styles.headerTitle}>{contactName}</Text>
-              <Text style={styles.headerStatus}>En línea</Text>
+              <Text style={[styles.headerStatus, !contactActive && styles.headerStatusMuted]}>
+                {contactActive ? "Activo ahora" : "Disponible por chat"}
+              </Text>
             </View>
           </View>
         </View>
@@ -264,6 +268,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 15, fontWeight: "700", color: MC.primary },
   headerTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
   headerStatus: { fontSize: 11, color: MC.primary, fontWeight: "600", marginTop: 1 },
+  headerStatusMuted: { color: MC.textMuted },
 
   errorBar: {
     flexDirection: "row",

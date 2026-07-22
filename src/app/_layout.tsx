@@ -1,6 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef } from "react";
+import { useColorScheme } from "react-native";
 
 import {
   addPushResponseListener,
@@ -9,6 +10,7 @@ import {
   type PushNotificationData,
 } from "@/services/push-notifications";
 import { useAuthStore } from "@/stores/authStore";
+import { useThemeStore } from "@/stores/themeStore";
 
 function textValue(value: unknown): string {
   if (typeof value === "string") return value;
@@ -55,6 +57,14 @@ export default function RootLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userRole = useAuthStore((state) => state.user?.role);
   const handledLastPushRef = useRef(false);
+  const systemScheme = useColorScheme();
+  const themeLoaded = useThemeStore((state) => state.loaded);
+  const resolvedTheme = useThemeStore((state) => state.resolved);
+  const loadTheme = useThemeStore((state) => state.load);
+  const syncSystemTheme = useThemeStore((state) => state.syncSystem);
+
+  useEffect(() => { void loadTheme(systemScheme); }, [loadTheme, systemScheme]);
+  useEffect(() => { syncSystemTheme(systemScheme); }, [syncSystemTheme, systemScheme]);
 
   const openFromPush = useCallback(
     (data: PushNotificationData) => {
@@ -88,9 +98,13 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
+  if (!themeLoaded) {
+    return null;
+  }
+
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={resolvedTheme === "dark" ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
@@ -104,6 +118,9 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
         <Stack.Screen name="patient" />
+        <Stack.Screen name="doctor" />
+        <Stack.Screen name="stripe-connect" />
+        <Stack.Screen name="settings" />
       </Stack>
     </>
   );

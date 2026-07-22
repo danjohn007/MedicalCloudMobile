@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1085913898548-ii5gohk2n30khq71msru2tbdekknlfr0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.doctorcloud.app",
+            "certificate_hash": "a8236d31efea7c19baaf46874669d64f8af74a2a"
+          }
+        },
+        {
           "client_id": "1085913898548-41hl49foqh4q8r1rfroovtqcet78d07n.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "1085913898548-41hl49foqh4q8r1rfroovtqcet78d07n.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1085913898548-83u3eqfup4h0fp6s8vg7g2bb2vd4ma4g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.doctorcloud.app"
+              }
             }
           ]
         }
