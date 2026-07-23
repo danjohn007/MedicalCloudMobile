@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     justifyContent: "center",
     alignItems: "center",
   },

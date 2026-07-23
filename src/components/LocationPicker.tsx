@@ -44,10 +44,11 @@ const DEFAULT_REGION: Region = {
 export function LocationPicker({
   value,
   onChange,
-  title = "Ubicacion",
+  title = "Ubicación",
   subtitle,
   allowCurrentLocation = true,
   distanceWarningThresholdMeters = 50,
+  distanceWarningContinuation = "Puedes continuar si tu consultorio está en otro punto.",
 }: {
   value: LocationDraft;
   onChange: (next: LocationDraft) => void;
@@ -55,12 +56,16 @@ export function LocationPicker({
   subtitle?: string;
   allowCurrentLocation?: boolean;
   distanceWarningThresholdMeters?: number;
+  /** Texto contextual para explicar que la ubicación guardada puede diferir del dispositivo. */
+  distanceWarningContinuation?: string;
 }) {
   const mapRef = useRef<MapView>(null);
   const [query, setQuery] = useState(formatQuery(value));
   const [loadingCurrent, setLoadingCurrent] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [loadingPoint, setLoadingPoint] = useState(false);
+  const [mapReady, setMapReady] = useState(Platform.OS !== "android");
+  const [showMapDiagnostic, setShowMapDiagnostic] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationDraft | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const lastSearchRef = useRef(0);
@@ -110,6 +115,14 @@ export function LocationPicker({
       350,
     );
   }, [value.lat, value.lng]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || mapReady) return;
+
+    const timer = setTimeout(() => setShowMapDiagnostic(true), 7000);
+
+    return () => clearTimeout(timer);
+  }, [mapReady]);
 
   async function loadSuggestions(search: string, searchId: number) {
     try {
@@ -178,7 +191,7 @@ export function LocationPicker({
       if (!permission.granted) {
         Alert.alert(
           "Permiso requerido",
-          "Necesitamos acceso a tu ubicacion para sugerir la direccion mas cercana.",
+          "Necesitamos acceso a tu ubicación para sugerir la dirección más cercana.",
         );
         return;
       }
@@ -190,15 +203,15 @@ export function LocationPicker({
       const next = await draftFromCoordinates(
         position.coords.latitude,
         position.coords.longitude,
-        "Ubicacion actual",
+        "Ubicación actual",
       );
       setCurrentLocation(next);
       onChange(next);
       setQuery(formatQuery(next));
     } catch {
       Alert.alert(
-        "Ubicacion no disponible",
-        "No se pudo obtener tu ubicacion actual. Puedes buscar la direccion manualmente o tocar el mapa.",
+        "Ubicación no disponible",
+        "No se pudo obtener tu ubicación actual. Puedes buscar la dirección manualmente o tocar el mapa.",
       );
     } finally {
       setLoadingCurrent(false);
@@ -244,7 +257,7 @@ export function LocationPicker({
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Busca una direccion o toca el mapa"
+          placeholder="Busca una dirección o toca el mapa"
           placeholderTextColor={MC.textMuted}
           style={styles.searchInput}
         />
@@ -262,7 +275,7 @@ export function LocationPicker({
           ) : (
             <Icon name="map-trifold" size={16} color={MC.primaryDark} />
           )}
-          <Text style={styles.locationButtonText}>Usar ubicacion actual</Text>
+          <Text style={styles.locationButtonText}>Usar ubicación actual</Text>
         </Pressable>
       ) : null}
 
@@ -299,7 +312,7 @@ export function LocationPicker({
           {loadingPoint ? (
             <View style={styles.mapToolStatus}>
               <ActivityIndicator size="small" color={MC.primary} />
-              <Text style={styles.mapToolStatusText}>Leyendo direccion...</Text>
+              <Text style={styles.mapToolStatusText}>Leyendo dirección...</Text>
             </View>
           ) : null}
         </View>
@@ -309,6 +322,19 @@ export function LocationPicker({
           style={styles.map}
           initialRegion={selectedRegion}
           onPress={handleMapPress}
+          loadingEnabled={Platform.OS === "android"}
+          loadingIndicatorColor={MC.primary}
+          loadingBackgroundColor={MC.surface}
+          onMapReady={() => {
+            if (Platform.OS !== "android") {
+              setMapReady(true);
+              setShowMapDiagnostic(false);
+            }
+          }}
+          onMapLoaded={() => {
+            setMapReady(true);
+            setShowMapDiagnostic(false);
+          }}
           showsUserLocation={allowCurrentLocation}
           showsMyLocationButton={false}
           toolbarEnabled={false}
@@ -324,6 +350,13 @@ export function LocationPicker({
             />
           ) : null}
         </MapView>
+        {Platform.OS === "android" && showMapDiagnostic ? (
+          <View pointerEvents="none" style={styles.mapDiagnostic}>
+            <Text style={styles.mapDiagnosticText}>
+              Google Maps no autorizó esta compilación. Revisa la facturación, Maps SDK for Android, el paquete y la huella SHA-1.
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.mapHint}>
           Toca el mapa o arrastra el marcador para fijar el punto. Coordenadas:{" "}
           {selectedRegion.latitude.toFixed(5)}, {selectedRegion.longitude.toFixed(5)}
@@ -333,16 +366,16 @@ export function LocationPicker({
       {distanceFromCurrent != null &&
       distanceFromCurrent > distanceWarningThresholdMeters ? (
         <View style={styles.warningBox}>
-          <Icon name="warning" size={16} color="#B45309" />
+          <Icon name="warning" size={16} color={MC.star} />
           <Text style={styles.warningText}>
-            La direccion seleccionada esta a {Math.round(distanceFromCurrent)} m de tu
-            ubicacion actual. Puedes continuar si tu consultorio esta en otro punto.
+            La dirección seleccionada está a {Math.round(distanceFromCurrent)} m de tu
+            ubicación actual. {distanceWarningContinuation}
           </Text>
         </View>
       ) : null}
 
       <View style={styles.summary}>
-        <SummaryRow label="Direccion" value={value.address || "Sin direccion"} />
+        <SummaryRow label="Dirección" value={value.address || "Sin dirección"} />
         <SummaryRow label="Ciudad" value={value.city || "Sin ciudad"} />
         <SummaryRow label="Estado" value={value.state || "Sin estado"} />
         <SummaryRow
@@ -432,7 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 12,
   },
@@ -451,7 +484,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: "row",
@@ -480,8 +513,8 @@ const styles = StyleSheet.create({
     maxWidth: 220,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#BFE7E4",
-    backgroundColor: "#F0FDFA",
+    borderColor: MC.border,
+    backgroundColor: MC.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -500,7 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     padding: 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderBottomWidth: 1,
     borderBottomColor: MC.border,
     alignItems: "center",
@@ -525,27 +558,41 @@ const styles = StyleSheet.create({
   },
   mapToolStatusText: { fontSize: 11, fontWeight: "700", color: MC.textSecondary },
   map: { width: "100%", height: 260 },
+  mapDiagnostic: {
+    ...StyleSheet.absoluteFillObject,
+    top: 55,
+    bottom: 39,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: MC.surface,
+  },
+  mapDiagnosticText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.textSecondary,
+  },
   mapHint: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 12,
     color: MC.textSecondary,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   warningBox: {
     borderRadius: 16,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: MC.warningSoft,
     borderWidth: 1,
-    borderColor: "#FCD34D",
+    borderColor: MC.warningBorder,
     padding: 12,
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
   },
-  warningText: { flex: 1, fontSize: 12, lineHeight: 18, color: "#92400E" },
+  warningText: { flex: 1, fontSize: 12, lineHeight: 18, color: MC.star },
   summary: {
     borderRadius: 18,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 12,
     gap: 8,
   },

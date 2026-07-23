@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: '#BFE7E4',
+    borderColor: MC.infoBorder,
     paddingHorizontal: 11,
     paddingVertical: 7,
     flexDirection: 'row',

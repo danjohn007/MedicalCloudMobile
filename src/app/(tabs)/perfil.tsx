@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: MC.infoBorder,
     gap: 8,
   },
   linkCodeLabel: {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   linkCodeButtonText: {
     fontSize: 13,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  menuIconDanger: { backgroundColor: "#FEE2E2" },
+  menuIconDanger: { backgroundColor: MC.errorSoft },
   menuLabel: {
     flex: 1,
     fontSize: 15,

@@ -2,11 +2,14 @@ import { Appearance, Platform, type ColorSchemeName } from 'react-native';
 
 // ── Doctor Cloud Brand Colors ─────────────────────────────
 const lightPalette = {
+  scheme:        'light',
   primary:       '#1BA8A0',
   primaryDark:   '#148C85',
   primaryLight:  '#E8F8F7',
   background:    '#FFFFFF',
   surface:       '#F7F9FC',
+  card:          '#FFFFFF',
+  input:         '#F8FAFC',
   border:        '#E5E7EB',
   textPrimary:   '#111827',
   textSecondary: '#6B7280',
@@ -14,15 +17,35 @@ const lightPalette = {
   star:          '#F59E0B',
   success:       '#10B981',
   error:         '#EF4444',
+  errorSoft:     '#FEE2E2',
+  errorBorder:   '#FECACA',
+  warningSoft:   '#FEF3C7',
+  warningBorder: '#FCD34D',
+  infoSoft:      '#E0F2FE',
+  infoBorder:    '#BAE6FD',
+  successSoft:   '#ECFDF5',
+  successBorder: '#A7F3D0',
+  purpleSoft:    '#F5F3FF',
+  purpleBorder:  '#DDD6FE',
+  orangeSoft:    '#FFF7ED',
+  orangeBorder:  '#FED7AA',
   white:         '#FFFFFF',
   overlay:       'rgba(0,0,0,0.45)',
 } as const;
 
 const darkPalette = {
+  scheme: 'dark',
   primary: '#35C4BA', primaryDark: '#1BA8A0', primaryLight: '#143B3A',
-  background: '#101820', surface: '#17222D', border: '#314150',
+  background: '#0B151C', surface: '#12202A', card: '#142331', input: '#101C26', border: '#2D3D4A',
   textPrimary: '#F5F8FA', textSecondary: '#B3C0CB', textMuted: '#8393A1',
-  star: '#FBBF24', success: '#34D399', error: '#FB7185', white: '#FFFFFF', overlay: 'rgba(0,0,0,0.65)',
+  star: '#FBBF24', success: '#34D399', error: '#FB7185',
+  errorSoft: '#3A1820', errorBorder: '#7F1D1D',
+  warningSoft: '#3A2A10', warningBorder: '#92400E',
+  infoSoft: '#0E3042', infoBorder: '#1E4E63',
+  successSoft: '#0F3528', successBorder: '#176246',
+  purpleSoft: '#241B3A', purpleBorder: '#47336F',
+  orangeSoft: '#3A2312', orangeBorder: '#7C3A12',
+  white: '#FFFFFF', overlay: 'rgba(0,0,0,0.65)',
 } as const;
 
 export type AppThemeMode = 'system' | 'light' | 'dark';
@@ -40,6 +63,10 @@ export function applyThemeMode(mode: AppThemeMode, systemScheme?: ColorSchemeNam
   const resolved = resolveThemeMode(mode, systemScheme);
   Object.assign(MC, resolved === 'dark' ? darkPalette : lightPalette);
   return resolved;
+}
+
+export function themed(lightValue: string, darkValue: string): string {
+  return MC.scheme === 'dark' ? darkValue : lightValue;
 }
 
 export const Colors = {

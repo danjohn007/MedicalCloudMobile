@@ -265,8 +265,8 @@ export default function DoctorCreateAppointmentScreen() {
         "Cita creada",
         response.message ||
           (response.payment_status === "pending"
-            ? "La cita quedo pendiente de pago para el paciente."
-            : "La cita quedo confirmada sin cobro."),
+            ? "La cita quedó pendiente de pago para el paciente."
+            : "La cita quedó confirmada sin cobro."),
       );
 
       router.replace(`/doctor/appointments/${response.id}` as any);
@@ -393,7 +393,7 @@ export default function DoctorCreateAppointmentScreen() {
               <Text style={styles.expandButtonText}>
                 {expandedPatients
                   ? "Ver menos pacientes"
-                  : `Mostrar ${sortedPatients.length - 6} pacientes mas`}
+                  : `Mostrar ${sortedPatients.length - 6} pacientes más`}
               </Text>
               <Icon
                 name={expandedPatients ? "caret-left" : "caret-right"}
@@ -408,7 +408,7 @@ export default function DoctorCreateAppointmentScreen() {
         <StepCard
           step="02"
           title="Fecha y horario"
-          subtitle="Usa el calendario mensual y despues selecciona uno de los horarios disponibles."
+          subtitle="Usa el calendario mensual y después selecciona uno de los horarios disponibles."
         >
           <View style={styles.calendarShell}>
             <View style={styles.monthNav}>
@@ -495,7 +495,7 @@ export default function DoctorCreateAppointmentScreen() {
         <StepCard
           step="03"
           title="Modalidad y motivo"
-          subtitle="Define como sera la consulta y agrega el contexto necesario."
+          subtitle="Define cómo será la consulta y agrega el contexto necesario."
         >
           <View style={styles.segmentRow}>
             {TYPE_OPTIONS.map((option) => {
@@ -544,17 +544,17 @@ export default function DoctorCreateAppointmentScreen() {
               <Icon
                 name={waivePayment ? "check-circle" : "wallet"}
                 size={18}
-                color={waivePayment ? "#047857" : MC.primaryDark}
+                color={waivePayment ? MC.success : MC.primaryDark}
               />
             </View>
             <View style={styles.paymentBody}>
               <Text style={styles.paymentTitle}>
-                {waivePayment ? "No cobrar esta consulta" : "Cobrar despues al paciente"}
+                {waivePayment ? "No cobrar esta consulta" : "Cobrar después al paciente"}
               </Text>
               <Text style={styles.paymentText}>
                 {waivePayment
-                  ? "Se confirmara sin pago requerido."
-                  : "Se creara como pendiente para que el paciente la pague despues."}
+                  ? "Se confirmará sin pago requerido."
+                  : "Se creará como pendiente para que el paciente la pague después."}
               </Text>
             </View>
           </Pressable>
@@ -796,9 +796,9 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 24,
     padding: 18,
-    backgroundColor: "#E8F7F5",
+    backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#CBEAE5",
+    borderColor: MC.infoBorder,
     gap: 6,
   },
   heroEyebrow: {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 14,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -894,13 +894,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     gap: 6,
   },
   patientCardActive: {
     borderColor: MC.primary,
-    backgroundColor: "#F0FDFA",
+    backgroundColor: MC.primaryLight,
   },
   patientCardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   patientName: { flex: 1, fontSize: 14, fontWeight: "700", color: MC.textPrimary },
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
   rotateIcon: { transform: [{ rotate: "90deg" }] },
   calendarShell: {
     borderRadius: 20,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 14,
     gap: 12,
   },
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 20,
     alignItems: "center",
   },
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
     alignItems: "center",
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingVertical: 14,
     alignItems: "center",
   },
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 14,
@@ -1026,15 +1026,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
   },
   paymentCardFree: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
+    backgroundColor: MC.successSoft,
+    borderColor: MC.successBorder,
   },
   paymentIcon: {
     width: 42,
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 14,
     gap: 10,
   },
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 18,
     alignItems: "center",
   },

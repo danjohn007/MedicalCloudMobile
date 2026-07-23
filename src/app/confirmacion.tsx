@@ -51,7 +51,7 @@ export default function ConfirmacionScreen() {
         <Text style={styles.subtitle}>
           {isConfirmed
             ? "Hemos enviado los detalles de tu cita a tu correo y a tu teléfono."
-            : "Tu cita esta pendiente de pago. Tienes 2 horas para completar el pago desde la seccion de Citas."}
+            : "Tu cita está pendiente de pago. Tienes 2 horas para completar el pago desde la sección de Citas."}
         </Text>
 
         <View style={styles.summaryCard}>
@@ -117,7 +117,7 @@ export default function ConfirmacionScreen() {
 
         {!isConfirmed ? (
           <Text style={styles.pendingNote}>
-            Puedes pagar desde la seccion de Citas. Selecciona la cita y usa el boton Pagar ahora.
+            Puedes pagar desde la sección de Citas. Selecciona la cita y usa el boton Pagar ahora.
           </Text>
         ) : null}
 

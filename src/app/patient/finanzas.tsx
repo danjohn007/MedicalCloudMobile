@@ -103,7 +103,7 @@ export default function FinanzasScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.doctor}>{p.doctor_name || "Doctor"}</Text>
                   <Text style={s.meta}>
-                    {(p.method || "metodo").toUpperCase()} ·{" "}
+                    {(p.method || "método").toUpperCase()} ·{" "}
                     {String(p.status || "desconocido").toUpperCase()}
                   </Text>
                   {p.created_at ? (

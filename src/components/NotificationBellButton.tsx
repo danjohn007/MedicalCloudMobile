@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components/Icon";
-import { MC } from "@/constants/theme";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 import { setAppNotificationBadgeCount } from "@/services/push-notifications";
 
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#CDEDEA",
+    borderColor: themed("#CDEDEA", "#1F4C4A"),
   },
   buttonLight: {
     backgroundColor: "rgba(255,255,255,0.16)",
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EF4444",
     borderWidth: 2,
-    borderColor: MC.white,
+    borderColor: MC.card,
   },
   badgeText: {
     color: MC.white,

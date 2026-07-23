@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
   },
   errorText: { flex: 1, color: MC.error, fontSize: 13 },
   divider: { height: 1, backgroundColor: MC.border, marginHorizontal: 20 },

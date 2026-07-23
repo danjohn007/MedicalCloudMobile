@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#FCFDFE",
+    backgroundColor: MC.input,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     overflow: "hidden",
   },
   doneButton: {
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   modalCard: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingBottom: 18,
     overflow: "hidden",
   },

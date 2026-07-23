@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
-import { MC } from "@/constants/theme";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
@@ -234,9 +234,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 36, gap: 14 },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: themed("#F5F3FF", "#241B3A"),
     borderWidth: 1,
-    borderColor: "#DDD6FE",
+    borderColor: themed("#DDD6FE", "#47336F"),
     padding: 18,
     gap: 8,
   },
@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  heroEyebrow: { fontSize: 12, fontWeight: "700", color: "#6D28D9" },
+  heroEyebrow: { fontSize: 12, fontWeight: "700", color: themed("#6D28D9", "#C4B5FD") },
   heroTitle: { fontSize: 28, fontWeight: "700", color: MC.textPrimary },
   heroSubtitle: { fontSize: 13, lineHeight: 19, color: MC.textSecondary },
   heroStats: { flexDirection: "row", gap: 10, marginTop: 4 },
   heroStat: {
     flex: 1,
     borderRadius: 16,
-    backgroundColor: "#FFFFFFD9",
+    backgroundColor: themed("#FFFFFFD9", "#0F1C26CC"),
     padding: 12,
   },
   heroStatValue: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   linkButtonText: { fontSize: 14, fontWeight: "800", color: MC.white },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 12,
   },
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   infoChipText: { fontSize: 11, fontWeight: "700", color: MC.textSecondary },
   warningCard: {
     borderRadius: 14,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: MC.errorSoft,
     paddingHorizontal: 10,
     paddingVertical: 9,
     flexDirection: "row",

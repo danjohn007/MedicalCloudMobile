@@ -129,7 +129,7 @@ export default function DoctorConsultationTemplatesScreen() {
     ) {
       Alert.alert(
         "Plantilla incompleta",
-        "Agrega al menos un bloque clinico o un diagnostico base.",
+        "Agrega al menos un bloque clínico o un diagnóstico base.",
       );
       return;
     }
@@ -223,7 +223,7 @@ export default function DoctorConsultationTemplatesScreen() {
           <Text style={styles.heroTitle}>Deja listas tus notas frecuentes</Text>
           <Text style={styles.heroText}>
             Crea bases reutilizables para SOAP, plan terapeutico y receta. Las
-            activas apareceran dentro de la consulta.
+            activas aparecerán dentro de la consulta.
           </Text>
           <View style={styles.heroStats}>
             <StatPill icon="list" label={`${templates.length} propias`} />
@@ -235,7 +235,7 @@ export default function DoctorConsultationTemplatesScreen() {
         {!storageReady ? (
           <Banner
             tone="warning"
-            text="La tabla de plantillas no parece disponible en este entorno. Puedes revisar defaults, pero el guardado requiere la migracion del backend web."
+            text="La tabla de plantillas no está disponible en este entorno. Puedes revisar las plantillas base, pero para guardar hace falta la migración del servidor web."
           />
         ) : null}
 
@@ -299,7 +299,7 @@ export default function DoctorConsultationTemplatesScreen() {
               </View>
             ))
           ) : (
-            <EmptyCard text="Aun no has creado plantillas propias. Puedes empezar desde el editor de abajo." />
+            <EmptyCard text="Aún no has creado plantillas propias. Puedes empezar desde el editor de abajo." />
           )}
         </Section>
 
@@ -350,7 +350,7 @@ export default function DoctorConsultationTemplatesScreen() {
             <Icon
               name={form.is_active ? "check-circle" : "warning"}
               size={16}
-              color={form.is_active ? "#047857" : "#B45309"}
+              color={form.is_active ? MC.success : MC.star}
             />
             <View style={styles.toggleBody}>
               <Text style={styles.toggleTitle}>
@@ -358,8 +358,8 @@ export default function DoctorConsultationTemplatesScreen() {
               </Text>
               <Text style={styles.toggleText}>
                 {form.is_active
-                  ? "Aparecera dentro del SOAP del doctor."
-                  : "Se guardara, pero no saldra como atajo en consulta."}
+                  ? "Aparecerá dentro del SOAP del doctor."
+                  : "Se guardará, pero no saldrá como atajo en consulta."}
               </Text>
             </View>
           </Pressable>
@@ -386,12 +386,12 @@ export default function DoctorConsultationTemplatesScreen() {
             <Input
               value={form.objective}
               onChangeText={(value) => setField("objective", value)}
-              placeholder="Hallazgos o exploracion base."
+              placeholder="Hallazgos o exploración base."
               multiline
             />
           </Field>
 
-          <Field label="Analisis">
+          <Field label="Análisis">
             <Input
               value={form.assessment}
               onChangeText={(value) => setField("assessment", value)}
@@ -438,14 +438,14 @@ export default function DoctorConsultationTemplatesScreen() {
           {editingId ? (
             <Pressable onPress={resetEditor} style={styles.cancelButton}>
               <Icon name="x" size={16} color={MC.textSecondary} />
-              <Text style={styles.cancelButtonText}>Cancelar edicion</Text>
+              <Text style={styles.cancelButtonText}>Cancelar edición</Text>
             </Pressable>
           ) : null}
         </Section>
 
         <Section
-          title="Defaults del sistema web"
-          subtitle="Referencia base que se usa cuando el doctor aun no tiene plantillas activas."
+          title="Plantillas base del sistema web"
+          subtitle="Referencia base que se usa cuando el doctor aún no tiene plantillas activas."
         >
           {defaults.map((template) => (
             <TemplatePreviewCard key={`default-${template.label}`} template={template} />
@@ -512,9 +512,9 @@ function Banner({
   text: string;
 }) {
   const config = {
-    error: { bg: "#FEE2E2", fg: MC.error, icon: "warning" as const },
-    success: { bg: "#DCFCE7", fg: MC.success, icon: "check-circle" as const },
-    warning: { bg: "#FEF3C7", fg: "#B45309", icon: "warning" as const },
+    error: { bg: MC.errorSoft, fg: MC.error, icon: "warning" as const },
+    success: { bg: MC.successSoft, fg: MC.success, icon: "check-circle" as const },
+    warning: { bg: MC.warningSoft, fg: MC.star, icon: "warning" as const },
   }[tone];
 
   return (
@@ -561,7 +561,7 @@ function TemplatePreviewCard({
         <View style={styles.previewBody}>
           <Text style={styles.previewTitle}>{template.label}</Text>
           <Text style={styles.previewMeta}>
-            {template.source === "custom" ? "Personalizada" : "Default"} |{" "}
+            {template.source === "custom" ? "Personalizada" : "Predeterminada"} |{" "}
             {template.is_active === false ? "Inactiva" : "Lista para uso"}
           </Text>
         </View>
@@ -598,9 +598,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#EEF6FF",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#D6E7FF",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 10,
   },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   heroStats: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   statPill: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   },
   dangerAction: {
     borderRadius: 999,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     paddingHorizontal: 12,
     paddingVertical: 9,
     flexDirection: "row",
@@ -711,8 +711,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 10,
   },
-  toggleCardActive: { backgroundColor: "#ECFDF5" },
-  toggleCardInactive: { backgroundColor: "#FEF3C7" },
+  toggleCardActive: { backgroundColor: MC.successSoft },
+  toggleCardInactive: { backgroundColor: MC.warningSoft },
   toggleBody: { flex: 1, gap: 2 },
   toggleTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
   toggleText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 8,
   },

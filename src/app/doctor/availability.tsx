@@ -153,7 +153,7 @@ export default function DoctorAvailabilityScreen() {
       const response = await api.getDoctorAvailabilitySettings(month);
       applyAvailabilitySettings(response);
     } catch (e: any) {
-      setError(e?.message || "No se pudo cargar la configuracion de horarios.");
+      setError(e?.message || "No se pudo cargar la configuración de horarios.");
     }
   }, [applyAvailabilitySettings]);
 
@@ -182,7 +182,7 @@ export default function DoctorAvailabilityScreen() {
       } catch (e: any) {
         if (cancelled) return;
         setSlots([]);
-        setError(e?.message || "No se pudieron cargar los horarios del dia.");
+        setError(e?.message || "No se pudieron cargar los horarios del día.");
       } finally {
         if (!cancelled) setSlotsLoading(false);
       }
@@ -278,7 +278,7 @@ export default function DoctorAvailabilityScreen() {
           const response = await api.getDoctorAvailability(doctorId, selectedDate);
           setSlots(response.slots || []);
         }
-        setSuccess("El dia volvio a quedar disponible.");
+        setSuccess("El día volvió a quedar disponible.");
       } else {
         await api.saveDoctorAvailabilityOverride({
           date: selectedDate,
@@ -297,10 +297,10 @@ export default function DoctorAvailabilityScreen() {
           },
         }));
         setSlots([]);
-        setSuccess("Dia bloqueado correctamente.");
+        setSuccess("Día bloqueado correctamente.");
       }
     } catch (e: any) {
-      setError(e?.message || "No se pudo actualizar el estado del dia.");
+      setError(e?.message || "No se pudo actualizar el estado del día.");
     } finally {
       setSavingOverride(false);
     }
@@ -376,12 +376,12 @@ export default function DoctorAvailabilityScreen() {
           <Text style={styles.heroEyebrow}>Agenda configurable</Text>
           <Text style={styles.heroTitle}>Horarios de {doctorName.split(" ")[0]}</Text>
           <Text style={styles.heroText}>
-            Revisa tu carga real, ajusta la plantilla semanal y bloquea dias
+            Revisa tu carga real, ajusta la plantilla semanal y bloquea días
             especificos desde el calendario.
           </Text>
           <View style={styles.heroPills}>
-            <HeroPill icon="calendar" label={`${calendarCells.filter((cell) => cell.inMonth).length} dias`} />
-            <HeroPill icon="clock" label={`${slots.length} slots visibles`} />
+            <HeroPill icon="calendar" label={`${calendarCells.filter((cell) => cell.inMonth).length} días`} />
+            <HeroPill icon="clock" label={`${slots.length} horarios visibles`} />
             <HeroPill icon="stethoscope" label={`${dayAppointments.length} consultas`} />
           </View>
         </View>
@@ -469,9 +469,9 @@ export default function DoctorAvailabilityScreen() {
         </View>
 
         <View style={styles.metricsRow}>
-          <MetricCard label="Fecha elegida" value={formatLongDate(selectedDayDate)} tone="#EFF6FF" />
-          <MetricCard label="Hora mas cargada" value={busiestHour} tone="#ECFDF5" />
-          <MetricCard label="Estado del dia" value={blocked ? "Bloqueado" : "Activo"} tone="#FFF7ED" />
+          <MetricCard label="Fecha elegida" value={formatLongDate(selectedDayDate)} tone={MC.infoSoft} />
+          <MetricCard label="Hora más cargada" value={busiestHour} tone={MC.successSoft} />
+          <MetricCard label="Estado del día" value={blocked ? "Bloqueado" : "Activo"} tone={MC.orangeSoft} />
         </View>
 
         <View style={styles.toggleRow}>
@@ -482,23 +482,23 @@ export default function DoctorAvailabilityScreen() {
           >
             <View style={styles.toggleIcon}>
               {savingOverride ? (
-                <ActivityIndicator color={blocked ? "#B91C1C" : MC.primaryDark} size="small" />
+                  <ActivityIndicator color={blocked ? MC.error : MC.primaryDark} size="small" />
               ) : (
                 <Icon
                   name={blocked ? "x" : "check-circle"}
                   size={18}
-                  color={blocked ? "#B91C1C" : MC.primaryDark}
+                  color={blocked ? MC.error : MC.primaryDark}
                 />
               )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.toggleTitle}>
-                {blocked ? "Descanso marcado" : "Dia abierto para agenda"}
+                {blocked ? "Descanso marcado" : "Día abierto para agenda"}
               </Text>
               <Text style={styles.toggleText}>
                 {blocked
-                  ? "Este dia ya esta bloqueado y no mostrara horarios disponibles."
-                  : "Marca un descanso puntual para ocultar ese dia de tu agenda."}
+                  ? "Este día ya está bloqueado y no mostrará horarios disponibles."
+                  : "Marca un descanso puntual para ocultar ese día de tu agenda."}
               </Text>
             </View>
           </Pressable>
@@ -506,7 +506,7 @@ export default function DoctorAvailabilityScreen() {
 
         <Section
           title="Plantilla semanal"
-          subtitle="Selecciona un dia base para definir su ventana de consulta y descanso."
+          subtitle="Selecciona un día base para definir su ventana de consulta y descanso."
         >
           <View style={styles.templateGrid}>
             {templates.map((item) => {
@@ -542,7 +542,7 @@ export default function DoctorAvailabilityScreen() {
 
         <Section
           title={`Configurar ${selectedTemplate.label}`}
-          subtitle="Edita la jornada base que se aplicara a ese dia de la semana."
+          subtitle="Edita la jornada base que se aplicará a ese día de la semana."
         >
           <View style={styles.editCard}>
             <Pressable
@@ -562,7 +562,7 @@ export default function DoctorAvailabilityScreen() {
                   selectedTemplate.enabled && styles.statusButtonTextActive,
                 ]}
               >
-                {selectedTemplate.enabled ? "Dia habilitado" : "Dia cerrado"}
+                {selectedTemplate.enabled ? "Día habilitado" : "Día cerrado"}
               </Text>
             </Pressable>
 
@@ -616,8 +616,8 @@ export default function DoctorAvailabilityScreen() {
         </Section>
 
         <Section
-          title="Slots visibles del dia"
-          subtitle="Horarios disponibles despues de aplicar agenda, bloqueos y citas ocupadas."
+          title="Horarios visibles del día"
+          subtitle="Horarios disponibles después de aplicar agenda, bloqueos y citas ocupadas."
         >
           {slotsLoading ? (
             <View style={styles.loadingCard}>
@@ -626,8 +626,8 @@ export default function DoctorAvailabilityScreen() {
           ) : blocked ? (
             <EmptyCard
               icon="warning"
-              title="Dia bloqueado"
-              text="Este dia esta marcado como descanso y no se mostrara como disponible."
+              title="Día bloqueado"
+              text="Este día está marcado como descanso y no se mostrará como disponible."
             />
           ) : slots.length ? (
             <View style={styles.slotGrid}>
@@ -641,15 +641,15 @@ export default function DoctorAvailabilityScreen() {
           ) : (
             <EmptyCard
               icon="calendar"
-              title="Sin slots visibles"
-              text="Para esta fecha no hay horarios abiertos despues de revisar agenda y disponibilidad."
+              title="Sin horarios visibles"
+              text="Para esta fecha no hay horarios abiertos después de revisar agenda y disponibilidad."
             />
           )}
         </Section>
 
         <Section
           title="Consultas ocupadas"
-          subtitle="Vista operativa para revisar que ya tienes tomado ese dia."
+          subtitle="Vista operativa para revisar que ya tienes tomado ese día."
         >
           {dayAppointments.length ? (
             dayAppointments.map((appointment) => (
@@ -674,7 +674,7 @@ export default function DoctorAvailabilityScreen() {
           ) : (
             <EmptyCard
               icon="check-circle"
-              title="Dia limpio"
+              title="Día limpio"
               text="Todavía no hay consultas ocupando esta fecha."
             />
           )}
@@ -741,7 +741,7 @@ function TimelineStrip({ day }: { day: TemplateDay }) {
     return (
       <View style={styles.timelineClosed}>
         <Icon name="x" size={16} color={MC.textMuted} />
-        <Text style={styles.timelineClosedText}>Este dia quedaria cerrado en tu plantilla.</Text>
+        <Text style={styles.timelineClosedText}>Este día quedaría cerrado en tu plantilla.</Text>
       </View>
     );
   }
@@ -1000,7 +1000,7 @@ function normalizeStatus(status?: string | null) {
     in_consultation: "En consulta",
     completed: "Completada",
     cancelled: "Cancelada",
-    no_show: "No asistio",
+    no_show: "No asistió",
   };
   return map[(status || "").toLowerCase()] || (status || "Sin estado");
 }
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
   heroPillText: { fontSize: 12, fontWeight: "700", color: MC.white },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
   errorText: { flex: 1, fontSize: 13, color: MC.error },
   successBox: {
     borderRadius: 14,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: MC.successSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },
@@ -1122,8 +1122,8 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primaryLight,
   },
   calendarCellBlocked: {
-    borderColor: "#FCA5A5",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
   },
   calendarCellText: { fontSize: 13, fontWeight: "700", color: MC.textPrimary },
   calendarCellTextMuted: { color: MC.textMuted },
@@ -1144,11 +1144,11 @@ const styles = StyleSheet.create({
     minWidth: 16,
     paddingHorizontal: 4,
     borderRadius: 999,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  countBadgeText: { fontSize: 9, fontWeight: "800", color: "#075985" },
+  countBadgeText: { fontSize: 9, fontWeight: "800", color: MC.primaryDark },
   metricsRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   metricCard: {
     flex: 1,
@@ -1156,7 +1156,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: MC.border,
+    backgroundColor: MC.card,
   },
   metricValue: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   metricLabel: { fontSize: 12, color: MC.textSecondary, marginTop: 4 },
@@ -1164,7 +1165,7 @@ const styles = StyleSheet.create({
   toggleCard: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#BFE7E4",
+    borderColor: MC.infoBorder,
     backgroundColor: MC.primaryLight,
     padding: 14,
     flexDirection: "row",
@@ -1172,14 +1173,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   toggleCardBlocked: {
-    borderColor: "#FCA5A5",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
   },
   toggleIcon: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1195,7 +1196,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     gap: 4,
   },
@@ -1213,7 +1214,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },
@@ -1259,7 +1260,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     borderRadius: 999,
-    backgroundColor: "#D1D5DB",
+    backgroundColor: MC.border,
   },
   timeSelector: { gap: 8 },
   timeSelectorHeader: {
@@ -1311,7 +1312,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 20,
     alignItems: "center",
   },
@@ -1330,7 +1331,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     flexDirection: "row",
     gap: 12,
@@ -1351,7 +1352,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 22,
     alignItems: "center",
     gap: 8,

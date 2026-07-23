@@ -70,7 +70,7 @@ export default function DoctorAppointmentCompleteScreen() {
         checkout_code: code.trim().toUpperCase(),
         force,
       });
-      Alert.alert("Consulta completada", response.message || "La cita ya quedo cerrada.");
+      Alert.alert("Consulta completada", response.message || "La cita ya quedó cerrada.");
       router.replace(`/doctor/appointments/${appointmentId}` as any);
     } catch (e: any) {
       setError(e?.message || "No se pudo cerrar la consulta.");
@@ -106,7 +106,7 @@ export default function DoctorAppointmentCompleteScreen() {
           <Text style={styles.heroTitle}>{appointment?.patient_name || "Paciente"}</Text>
           <Text style={styles.heroSubtitle}>
             {isPresential
-              ? "Para citas presenciales, valida el código de cierre del paciente antes de marcarla completada."
+              ? "Para citas presenciales, válida el código de cierre del paciente antes de marcarla completada."
               : "En consultas virtuales puedes cerrarla directamente desde la app."}
           </Text>
         </View>
@@ -121,14 +121,14 @@ export default function DoctorAppointmentCompleteScreen() {
         {isPresential ? (
           <>
             <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>Codigo de cierre</Text>
+              <Text style={styles.infoTitle}>Código de cierre</Text>
               <Text style={styles.infoText}>
-                El paciente lo genera desde su app cuando la consulta ya esta en curso.
+                El paciente lo genera desde su app cuando la consulta ya está en curso.
               </Text>
             </View>
 
             <View style={styles.fieldWrap}>
-              <Text style={styles.fieldLabel}>Codigo del paciente</Text>
+              <Text style={styles.fieldLabel}>Código del paciente</Text>
               <TextInput
                 value={code}
                 onChangeText={(value) => setCode(value.toUpperCase())}
@@ -159,7 +159,7 @@ export default function DoctorAppointmentCompleteScreen() {
               disabled={saving}
               style={[styles.secondaryButton, saving && styles.buttonDisabled]}
             >
-              <Icon name="warning" size={18} color="#B45309" />
+              <Icon name="warning" size={18} color={MC.star} />
               <Text style={styles.secondaryButtonText}>Forzar cierre sin código</Text>
             </Pressable>
           </>
@@ -203,15 +203,15 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 24,
     padding: 18,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: MC.orangeSoft,
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: MC.orangeBorder,
     gap: 6,
   },
   heroEyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#B45309",
+    color: MC.star,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 8,
   },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 16,
     fontSize: 22,
@@ -263,15 +263,15 @@ const styles = StyleSheet.create({
   primaryButtonText: { fontSize: 15, fontWeight: "700", color: MC.white },
   secondaryButton: {
     borderRadius: 18,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: MC.orangeSoft,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#FCD34D",
+    borderColor: MC.warningBorder,
   },
-  secondaryButtonText: { fontSize: 15, fontWeight: "700", color: "#B45309" },
+  secondaryButtonText: { fontSize: 15, fontWeight: "700", color: MC.star },
   buttonDisabled: { opacity: 0.6 },
 });

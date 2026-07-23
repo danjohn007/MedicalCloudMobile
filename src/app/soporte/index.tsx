@@ -35,22 +35,22 @@ function formatDate(value?: string | null) {
 function statusMeta(status: api.SupportTicketStatus) {
   switch (status) {
     case "resolved":
-      return { label: "Resuelto", bg: "#ECFDF5", fg: "#047857" };
+      return { label: "Resuelto", bg: MC.successSoft, fg: MC.success };
     case "closed":
-      return { label: "Cerrado", bg: "#F3F4F6", fg: "#4B5563" };
+      return { label: "Cerrado", bg: MC.surface, fg: MC.textSecondary };
     case "in_progress":
-      return { label: "En revision", bg: "#EFF6FF", fg: "#1D4ED8" };
+      return { label: "En revisión", bg: MC.infoSoft, fg: MC.primaryDark };
     default:
-      return { label: "Abierto", bg: "#FFF7ED", fg: "#B45309" };
+      return { label: "Abierto", bg: MC.orangeSoft, fg: MC.star };
   }
 }
 
 function priorityMeta(priority: api.SupportTicketPriority) {
   switch (priority) {
     case "urgent":
-      return { label: "Urgente", fg: "#B91C1C" };
+      return { label: "Urgente", fg: MC.error };
     case "high":
-      return { label: "Alta", fg: "#C2410C" };
+      return { label: "Alta", fg: MC.star };
     case "low":
       return { label: "Baja", fg: MC.textMuted };
     default:
@@ -144,13 +144,13 @@ export default function SupportIndexScreen() {
           <Text style={styles.heroTitle}>Tus tickets en un solo lugar</Text>
           <Text style={styles.heroText}>
             Abre incidencias, sigue respuestas del equipo y cierra tickets cuando
-            ya quedo resuelto desde tu cuenta de {roleLabel}.
+            ya quedó resuelto desde tu cuenta de {roleLabel}.
           </Text>
 
           <View style={styles.heroStats}>
-            <MetricCard label="Activos" value={counts.active} tone="#FFF7ED" />
-            <MetricCard label="Cerrados" value={counts.closed} tone="#EEF2FF" />
-            <MetricCard label="Total" value={counts.total} tone="#ECFDF5" />
+            <MetricCard label="Activos" value={counts.active} tone={MC.orangeSoft} />
+            <MetricCard label="Cerrados" value={counts.closed} tone={MC.purpleSoft} />
+            <MetricCard label="Total" value={counts.total} tone={MC.successSoft} />
           </View>
 
           <Pressable
@@ -236,7 +236,7 @@ export default function SupportIndexScreen() {
             <Text style={styles.emptyTitle}>Todavía no tienes tickets</Text>
             <Text style={styles.emptyText}>
               Si algo falla con una cita, pago, expediente o perfil, abre tu primer
-              ticket y el equipo podra responderte aqui mismo.
+              ticket y el equipo podrá responderte aquí mismo.
             </Text>
             <Pressable
               style={styles.secondaryButton}
@@ -306,16 +306,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 28,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: MC.infoBorder,
     padding: 20,
     gap: 12,
   },
   heroEyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#0369A1",
+    color: MC.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -360,8 +360,8 @@ const styles = StyleSheet.create({
   errorBox: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
     padding: 14,
     flexDirection: "row",
     gap: 10,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 22,
     alignItems: "center",
     gap: 10,

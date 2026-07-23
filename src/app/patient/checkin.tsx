@@ -163,7 +163,7 @@ const s = StyleSheet.create({
   hdr: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MC.border },
   hdrTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   scroll: { flex: 1 }, scrollCt: { padding: 16 },
-  errBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEE2E2", padding: 12, borderRadius: 10, marginBottom: 12 },
+  errBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: MC.errorSoft, padding: 12, borderRadius: 10, marginBottom: 12 },
   errTxt: { color: MC.error, fontSize: 13, flex: 1 },
 
   // QR Card

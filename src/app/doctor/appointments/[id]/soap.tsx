@@ -52,7 +52,7 @@ const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
       "Manejo sintomático, hidratación oral, vigilancia de signos de alarma y reevaluación por evolución.",
     diagnosis: "Infeccion respiratoria alta no complicada",
     usage_notes:
-      "Base breve para cuadros respiratorios no complicados, con ajuste clinico final segun exploracion.",
+      "Base breve para cuadros respiratorios no complicados, con ajuste clínico final según exploración.",
     source: "default",
     is_active: true,
   },
@@ -66,10 +66,10 @@ const FALLBACK_SOAP_TEMPLATES: api.DoctorConsultationTemplate[] = [
       "Exploración clínica registrada sin datos de irritación peritoneal y con estabilidad general.",
     assessment: "Cuadro gastrointestinal no complicado.",
     plan:
-      "Reposicion de liquidos, dieta progresiva, vigilancia de deshidratacion y seguimiento clinico.",
+      "Reposición de líquidos, dieta progresiva, vigilancia de deshidratación y seguimiento clínico.",
     diagnosis: "Cuadro gastrointestinal no complicado",
     usage_notes:
-      "Sirve como borrador rapido para evolucion digestiva sin datos de alarma.",
+      "Sirve como borrador rápido para evolución digestiva sin datos de alarma.",
     source: "default",
     is_active: true,
   },
@@ -351,8 +351,8 @@ export default function DoctorSoapScreen() {
     if (isReadOnly) {
       setError(
         noteSigned
-          ? "La nota ya esta firmada y no admite cambios."
-          : "La consulta ya esta cerrada y la nota es de solo lectura.",
+          ? "La nota ya está firmada y no admite cambios."
+          : "La consulta ya está cerrada y la nota es de solo lectura.",
       );
       return;
     }
@@ -420,7 +420,7 @@ export default function DoctorSoapScreen() {
 
   async function handleCompleteConsultation() {
     if (consultationCompleted) {
-      setError("La consulta ya esta completada.");
+      setError("La consulta ya está completada.");
       return;
     }
 
@@ -579,14 +579,14 @@ export default function DoctorSoapScreen() {
                       ? "Autosave con pendiente"
                       : isDirty
                         ? "Hay cambios sin guardar"
-                        : "Todo lo visible ya esta guardado"}
+                        : "Todo lo visible ya está guardado"}
               </Text>
             </View>
             <Text style={styles.draftHint}>
               {noteSigned
-                ? `Firmada ${formatDateTime(note?.signed_at)}. Solo puedes revisar la informacion desde aqui.`
+                ? `Firmada ${formatDateTime(note?.signed_at)}. Solo puedes revisar la información desde aquí.`
                 : consultationCompleted
-                  ? "La consulta ya esta cerrada; este resumen queda disponible solo para lectura."
+                  ? "La consulta ya está cerrada; este resumen queda disponible solo para lectura."
                   : autosaveMessage ||
                     "Mientras escribes se guarda un borrador local y el SOAP se sincroniza en segundo plano."}
             </Text>
@@ -608,7 +608,7 @@ export default function DoctorSoapScreen() {
 
           <Section
             title="Plantillas de consulta"
-            subtitle="Usa tu biblioteca activa para empezar rapido y luego ajusta los datos clinicos reales."
+            subtitle="Usa tu biblioteca activa para empezar rápido y luego ajusta los datos clínicos reales."
           >
             <View style={styles.inlineActionRow}>
               <InlineAction
@@ -643,13 +643,13 @@ export default function DoctorSoapScreen() {
 
           <Section
             title="SOAP"
-            subtitle="Captura lo que el paciente refiere, lo que observaste y el plan clinico."
+            subtitle="Captura lo que el paciente refiere, lo que observaste y el plan clínico."
           >
             <Field
               label="Subjetivo"
               value={form.subjective}
               onChangeText={(value) => setField("subjective", value)}
-              placeholder="Sintomas, motivo y percepcion del paciente"
+              placeholder="Síntomas, motivo y percepción del paciente"
               multiline
               editable={!isReadOnly}
             />
@@ -657,12 +657,12 @@ export default function DoctorSoapScreen() {
               label="Objetivo"
               value={form.objective}
               onChangeText={(value) => setField("objective", value)}
-              placeholder="Exploracion, signos y datos observables"
+              placeholder="Exploración, signos y datos observables"
               multiline
               editable={!isReadOnly}
             />
             <Field
-              label="Analisis"
+              label="Análisis"
               value={form.assessment}
               onChangeText={(value) => setField("assessment", value)}
               placeholder="Diagnóstico presuntivo o impresión clínica"
@@ -681,7 +681,7 @@ export default function DoctorSoapScreen() {
 
           <Section
             title="Receta"
-            subtitle="Deja clara la indicacion medica para que el paciente la entienda y la pueda seguir."
+            subtitle="Deja clara la indicación médica para que el paciente la entienda y la pueda seguir."
           >
             <Field
               label="Diagnóstico"
@@ -708,7 +708,7 @@ export default function DoctorSoapScreen() {
               editable={!isReadOnly}
             />
             <Field
-              label="Vigencia en dias"
+              label="Vigencia en días"
               value={String(form.rx_valid_days)}
               onChangeText={(value) =>
                 setField(
@@ -724,14 +724,14 @@ export default function DoctorSoapScreen() {
 
           <Section
             title="Contexto del paciente"
-            subtitle="Consulta rapido los datos de seguridad antes de firmar o cerrar la visita."
+            subtitle="Consulta rápido los datos de seguridad antes de firmar o cerrar la visita."
           >
             <ContextCard
-              title="Medicacion actual"
+              title="Medicación actual"
               text={
                 appointment?.patient_current_medications ||
                 data?.medical_record?.current_medications ||
-                "Sin medicacion registrada"
+                "Sin medicación registrada"
               }
             />
             <ContextCard
@@ -789,7 +789,7 @@ export default function DoctorSoapScreen() {
               </Pressable>
               {isDirty ? (
                 <Text style={styles.signHint}>
-                  Guarda los cambios pendientes antes de firmar para bloquear la version final.
+                  Guarda los cambios pendientes antes de firmar para bloquear la versión final.
                 </Text>
               ) : null}
             </>
@@ -933,7 +933,7 @@ function ProgressItem({
           done ? styles.progressItemIconDone : styles.progressItemIconTodo,
         ]}
       >
-        <Icon name={done ? "check-circle" : "warning"} size={14} color={done ? "#047857" : "#B45309"} />
+        <Icon name={done ? "check-circle" : "warning"} size={14} color={done ? MC.success : MC.star} />
       </View>
       <View style={styles.progressItemBody}>
         <Text style={styles.progressItemTitle}>{label}</Text>
@@ -970,18 +970,18 @@ function buildProgress(form: SoapFormState) {
         : "Falta capturar lo que el paciente refiere.",
     },
     {
-      label: "Exploracion y analisis",
+      label: "Exploración y análisis",
       done: Boolean(form.objective.trim() && form.assessment.trim()),
       detail:
         form.objective.trim() && form.assessment.trim()
-          ? "Objetivo y analisis ya estan documentados."
+          ? "Objetivo y análisis ya están documentados."
           : "Completa observaciones y la impresión clínica.",
     },
     {
       label: "Plan de manejo",
       done: Boolean(form.plan_text.trim()),
       detail: form.plan_text.trim()
-        ? "El plan de tratamiento o seguimiento ya esta listo."
+        ? "El plan de tratamiento o seguimiento ya está listo."
         : "Falta dejar claro el plan para el paciente.",
     },
     {
@@ -990,7 +990,7 @@ function buildProgress(form: SoapFormState) {
       detail:
         form.rx_diagnosis.trim() && form.rx_medications.trim()
           ? "La receta ya tiene base suficiente."
-          : "Agrega diagnostico y medicamentos antes del cierre.",
+          : "Agrega diagnóstico y medicamentos antes del cierre.",
     },
   ];
 
@@ -1041,7 +1041,7 @@ const styles = StyleSheet.create({
   inlineActionText: { fontSize: 12, fontWeight: "700", color: MC.primaryDark },
   contextChip: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 10,
     paddingVertical: 6,
     flexDirection: "row",
@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },
@@ -1072,8 +1072,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  progressItemIconDone: { backgroundColor: "#DCFCE7" },
-  progressItemIconTodo: { backgroundColor: "#FFF7ED" },
+  progressItemIconDone: { backgroundColor: MC.successSoft },
+  progressItemIconTodo: { backgroundColor: MC.orangeSoft },
   progressItemBody: { flex: 1, gap: 2 },
   progressItemTitle: { fontSize: 13, fontWeight: "700", color: MC.textPrimary },
   progressItemText: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
   errorText: { flex: 1, color: MC.error, fontSize: 13 },
   successBox: {
     borderRadius: 14,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: MC.successSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -1120,7 +1120,7 @@ const styles = StyleSheet.create({
   templateChip: {
     borderRadius: 18,
     borderWidth: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     paddingHorizontal: 12,
     paddingVertical: 9,
     flexDirection: "row",
@@ -1143,19 +1143,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
     color: MC.textPrimary,
   },
   fieldInputMultiline: { minHeight: 116 },
-  fieldInputDisabled: { backgroundColor: "#F8FAFC", color: MC.textMuted },
+  fieldInputDisabled: { backgroundColor: MC.input, color: MC.textMuted },
   contextCard: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     gap: 6,
   },
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
   saveButtonText: { fontSize: 15, fontWeight: "700", color: MC.white },
   signButton: {
     borderRadius: 16,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: MC.warningSoft,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -1192,14 +1192,14 @@ const styles = StyleSheet.create({
   },
   finishButton: {
     borderRadius: 16,
-    backgroundColor: "#DDF6F4",
+    backgroundColor: MC.primaryLight,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#BDEAE7",
+    borderColor: MC.infoBorder,
   },
   finishButtonText: { fontSize: 15, fontWeight: "700", color: MC.primaryDark },
 });

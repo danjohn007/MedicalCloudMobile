@@ -81,8 +81,8 @@ function getNotificationMeta(item: api.NotificationItem): {
       filter: "message",
       label: "Mensaje",
       icon: "chat-circle-dots",
-      bg: "#EEF2FF",
-      fg: "#4338CA",
+      bg: MC.purpleSoft,
+      fg: MC.primary,
     };
   }
 
@@ -91,8 +91,8 @@ function getNotificationMeta(item: api.NotificationItem): {
       filter: "appointment",
       label: "Cita",
       icon: "calendar",
-      bg: "#ECFDF5",
-      fg: "#047857",
+      bg: MC.successSoft,
+      fg: MC.success,
     };
   }
 
@@ -101,8 +101,8 @@ function getNotificationMeta(item: api.NotificationItem): {
       filter: "doctor",
       label: "Doctor",
       icon: "user-circle",
-      bg: "#E0F2FE",
-      fg: "#0369A1",
+      bg: MC.infoSoft,
+      fg: MC.primaryDark,
     };
   }
 
@@ -111,8 +111,8 @@ function getNotificationMeta(item: api.NotificationItem): {
       filter: "warning",
       label: "Alerta",
       icon: "warning",
-      bg: "#FEF2F2",
-      fg: "#B91C1C",
+      bg: MC.errorSoft,
+      fg: MC.error,
     };
   }
 
@@ -120,8 +120,8 @@ function getNotificationMeta(item: api.NotificationItem): {
     filter: "system",
     label: "Sistema",
     icon: "bell",
-    bg: "#FFF7ED",
-    fg: "#B45309",
+    bg: MC.orangeSoft,
+    fg: MC.star,
   };
 }
 
@@ -303,7 +303,7 @@ export default function NotificacionesScreen() {
 
       const token = await registerDeviceForPushNotifications();
       if (!token) {
-        setError("No se pudo registrar el token FCM. Revisa permisos, google-services.json/GoogleService-Info.plist y que la app sea un build nativo nuevo.");
+        setError("No se pudo registrar el token FCM. Revisa los permisos, google-services.json/GoogleService-Info.plist y que la app tenga una compilación nativa nueva.");
         return;
       }
 
@@ -311,7 +311,7 @@ export default function NotificacionesScreen() {
       const hasDeliveryReport =
         typeof response.token_count === "number" || typeof response.sent === "number" || Array.isArray(response.errors);
       if (!hasDeliveryReport) {
-        setError("El servidor respondio con el endpoint viejo de push. Sube al cPanel la version actualizada de MobileApiController.php y core/PushNotification.php.");
+        setError("El servidor respondió con el endpoint anterior de notificaciones. Sube al cPanel la versión actualizada de MobileApiController.php y core/PushNotification.php.");
         return;
       }
 
@@ -319,7 +319,7 @@ export default function NotificacionesScreen() {
       const sent = Number(response.sent ?? 0);
       const serverMessage = response.message || response.errors?.join(" | ") || "";
       if (tokenCount <= 0) {
-        setError("El servidor no encontro tokens activos aunque la app genero uno. Vuelve a iniciar sesion e intenta de nuevo.");
+        setError("El servidor no encontró tokens activos aunque la app generó uno. Vuelve a iniciar sesión e inténtalo de nuevo.");
       } else if (sent <= 0 && serverMessage) {
         setError(`FCM no acepto la push: ${serverMessage}`);
       } else {
@@ -400,7 +400,7 @@ export default function NotificacionesScreen() {
           <Icon name="bell-ringing" size={16} color={MC.primaryDark} />
         )}
         <Text style={styles.testPushText}>
-          {testingPush ? "Probando push..." : "Probar notificacion push"}
+          {testingPush ? "Probando push..." : "Probar notificación push"}
         </Text>
       </Pressable>
 
@@ -591,13 +591,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: MC.infoBorder,
   },
   summaryIcon: {
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -611,11 +611,11 @@ const styles = StyleSheet.create({
   },
   readAllButton: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: MC.infoBorder,
   },
   disabledButton: { opacity: 0.65 },
   readAllText: { fontSize: 11, fontWeight: "800", color: MC.primaryDark },
@@ -624,8 +624,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
-    backgroundColor: MC.white,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 11,
     flexDirection: "row",
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   filterCountActive: { backgroundColor: "rgba(255,255,255,0.22)" },
   filterCountText: { fontSize: 11, fontWeight: "800", color: MC.primary },
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     borderRadius: 14,
   },
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   notificationHighlighted: {
-    backgroundColor: "#ECFEFF",
+    backgroundColor: MC.primaryLight,
     borderLeftWidth: 3,
     borderLeftColor: MC.primary,
   },

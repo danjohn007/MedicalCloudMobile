@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
-import { MC } from "@/constants/theme";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -120,18 +120,6 @@ export default function DoctorProfileScreen() {
           <Text style={styles.sectionTitle}>Tu espacio de trabajo</Text>
           <View style={styles.shortcutsGrid}>
             <ShortcutCard
-              icon="calendar"
-              title="Agenda"
-              summary="Citas, estados y consulta activa."
-              onPress={() => router.push("/(doctor-tabs)/citas" as any)}
-            />
-            <ShortcutCard
-              icon="user-circle"
-              title="Pacientes"
-              summary="Abrir fichas y expedientes."
-              onPress={() => router.push("/(doctor-tabs)/pacientes" as any)}
-            />
-            <ShortcutCard
               icon="clipboard-text"
               title="Notas"
               summary="Crear y revisar notas clínicas."
@@ -140,7 +128,7 @@ export default function DoctorProfileScreen() {
             <ShortcutCard
               icon="brain"
               title="Asistente IA"
-              summary="Apoyo clinico con contexto de tus consultas."
+              summary="Apoyo clínico con contexto de tus consultas."
               onPress={() => router.push("/ai/chat" as any)}
             />
             <ShortcutCard
@@ -168,22 +156,22 @@ export default function DoctorProfileScreen() {
               onPress={() => router.push("/doctor/availability" as any)}
             />
             <ShortcutCard
-              icon="gear"
-              title="Perfil"
-              summary="Tarifas, dirección y datos base."
-              onPress={() => router.push("/doctor/settings" as any)}
-            />
-            <ShortcutCard
-              icon="gear"
-              title="Apariencia"
-              summary="Automatico, claro u oscuro."
-              onPress={() => router.push("/settings/appearance" as any)}
-            />
-            <ShortcutCard
               icon="wallet"
               title="Finanzas"
               summary="Cobros e historial."
               onPress={() => router.push("/doctor/finanzas" as any)}
+            />
+            <ShortcutCard
+              icon="gear"
+              title="Apariencia"
+              summary="Automático, claro u oscuro."
+              onPress={() => router.push("/settings/appearance" as any)}
+            />
+            <ShortcutCard
+              icon="gear"
+              title="Perfil"
+              summary="Tarifas, dirección y datos base."
+              onPress={() => router.push("/doctor/settings" as any)}
             />
             <ShortcutCard
               icon="chat-circle-dots"
@@ -266,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: themed("#C9ECE8", "#1F4C4A"),
     padding: 20,
     alignItems: "center",
     gap: 6,
@@ -280,7 +268,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 41,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -296,7 +284,7 @@ const styles = StyleSheet.create({
   heroMeta: { fontSize: 13, color: MC.textMuted },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -310,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 6,
   },
@@ -334,7 +322,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -352,8 +340,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

@@ -161,7 +161,7 @@ export default function AiChatScreen() {
         </View>
 
         <View style={styles.disclaimer}>
-          <Icon name="info" size={16} color="#075985" />
+          <Icon name="info" size={16} color={MC.primary} />
           <Text style={styles.disclaimerText}>
             {isDoctor
               ? "La IA puede apoyar tu criterio clínico, pero no reemplaza tu evaluación profesional."
@@ -238,7 +238,7 @@ export default function AiChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#F4FAFA" },
+  safe: { flex: 1, backgroundColor: MC.background },
   container: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -246,9 +246,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderBottomWidth: 1,
-    borderBottomColor: "#DCEEEE",
+    borderBottomColor: MC.infoBorder,
   },
   backButton: {
     width: 36,
@@ -275,11 +275,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 12,
     borderRadius: 18,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: MC.infoBorder,
   },
-  disclaimerText: { flex: 1, fontSize: 12.5, lineHeight: 18, color: "#075985", fontWeight: "600" },
+  disclaimerText: { flex: 1, fontSize: 12.5, lineHeight: 18, color: MC.primaryDark, fontWeight: "600" },
   errorBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -288,9 +288,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: MC.errorSoft,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: MC.errorBorder,
   },
   errorText: { flex: 1, color: MC.error, fontSize: 12.5, fontWeight: "700" },
   listContent: {
@@ -309,11 +309,11 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#CDEDEA",
+    borderColor: MC.infoBorder,
   },
   bubble: {
     maxWidth: "82%",
@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   assistantBubble: {
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderBottomLeftRadius: 6,
     borderWidth: 1,
-    borderColor: "#E0EEEE",
+    borderColor: MC.infoBorder,
   },
   userBubble: {
     backgroundColor: MC.primary,
@@ -354,9 +354,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderWidth: 1,
-    borderColor: "#BFE7E3",
+    borderColor: MC.infoBorder,
   },
   suggestionText: { color: MC.primaryDark, fontSize: 12.5, fontWeight: "800" },
   inputBar: {
@@ -366,9 +366,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: Platform.OS === "ios" ? 12 : 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderTopWidth: 1,
-    borderTopColor: "#DCEEEE",
+    borderTopColor: MC.infoBorder,
   },
   inputWrap: {
     flex: 1,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     borderWidth: 1,
     borderColor: MC.border,
   },

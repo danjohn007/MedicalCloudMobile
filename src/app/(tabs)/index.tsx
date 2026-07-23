@@ -46,60 +46,59 @@ const QUICK_ACTIONS: {
     icon: "user-circle",
     route: "/patient/profile",
     color: "#2563EB",
-    bg: "#EFF6FF",
+    bg: MC.infoSoft,
   },
   {
     label: "Expediente",
     icon: "clipboard-text",
     route: "/patient/expediente",
     color: "#059669",
-    bg: "#ECFDF5",
+    bg: MC.successSoft,
   },
   {
     label: "Citas",
     icon: "calendar",
     route: "/citas",
     color: "#D97706",
-    bg: "#FFFBEB",
+    bg: MC.warningSoft,
   },
   {
     label: "Mensajes",
     icon: "chat-circle-dots",
     route: "/mensajes",
     color: "#7C3AED",
-    bg: "#F5F3FF",
+    bg: MC.purpleSoft,
   },
   {
     label: "Asistente IA",
     icon: "brain",
     route: "/ai/chat",
     color: "#0F766E",
-    bg: "#F0FDFA",
+    bg: MC.primaryLight,
   },
   {
     label: "Recetas",
     icon: "pill",
     route: "/patient/recetas",
     color: "#059669",
-    bg: "#ECFDF5",
+    bg: MC.successSoft,
   },
   {
     label: "Notificaciones",
     icon: "bell",
     route: "/notificaciones",
     color: "#D97706",
-    bg: "#FFFBEB",
+    bg: MC.warningSoft,
   },
   {
     label: "Soporte",
     icon: "info",
     route: "/soporte",
     color: "#0F766E",
-    bg: "#F0FDFA",
+    bg: MC.primaryLight,
   },
 ];
 
-// ── Animated counter hook ──────────────────────────────────
 function useAnimatedCounter(target: number, duration = 600) {
   const animValue = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(0);
@@ -122,7 +121,6 @@ function useAnimatedCounter(target: number, duration = 600) {
   return display;
 }
 
-// ── Fade-in slide-up animation ────────────────────────────
 function FadeSlideIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(24)).current;
@@ -284,7 +282,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.content}
       >
-        {/* ── Hero Section ───────────────────────────────── */}
         <FadeSlideIn delay={0}>
           <View style={s.heroCard}>
             <View style={s.heroGlowOne} />
@@ -317,10 +314,8 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Search & Stats Card ────────────────────────── */}
         <FadeSlideIn delay={100}>
           <View style={s.searchCard}>
-            {/* Sleeker search bar — no longer intrusive */}
             <View style={s.searchRow}>
               <Icon name="magnifying-glass" size={18} color={MC.textMuted} />
               <TextInput
@@ -348,14 +343,14 @@ export default function HomeScreen() {
               <StatPill
                 label="Especialidades"
                 value={specialties.length}
-                color="#7C3AED"
-                bg="#F5F3FF"
+                color={MC.scheme === "dark" ? "#A78BFA" : "#7C3AED"}
+                bg={MC.purpleSoft}
               />
               <StatPill
                 label="Mensajes"
                 value={kpis.unreadMessages}
-                color="#D97706"
-                bg="#FFFBEB"
+                color={MC.star}
+                bg={MC.warningSoft}
               />
             </View>
 
@@ -381,7 +376,6 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── KPI Grid ───────────────────────────────────── */}
         <FadeSlideIn delay={200}>
           <View style={s.sectionBlock}>
             <PatientAccessCodeCard
@@ -430,7 +424,6 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Priority Alerts ────────────────────────────── */}
         {alertCards.length > 0 && (
           <FadeSlideIn delay={300}>
             <View style={s.sectionBlock}>
@@ -451,7 +444,6 @@ export default function HomeScreen() {
           </FadeSlideIn>
         )}
 
-        {/* ── Quick Actions ──────────────────────────────── */}
         <FadeSlideIn delay={400}>
           <View style={s.sectionBlock}>
             <View style={s.sectionHeaderWrap}>
@@ -470,7 +462,6 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Doctor Cards ───────────────────────────────── */}
         <FadeSlideIn delay={500}>
           <View style={s.sectionBlock}>
             <View style={s.sectionTitleRow}>
@@ -521,7 +512,6 @@ export default function HomeScreen() {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────
 
 function StatPill({
   label,
@@ -578,12 +568,12 @@ function KpiCard({
 
   const palette =
     tone === "teal"
-      ? { bg: "#ECFDFB", border: "#C8F1EC", iconBg: "#D8FAF4", icon: MC.primaryDark, shadow: "#1BA8A020" }
+      ? { bg: MC.successSoft, border: MC.infoBorder, iconBg: MC.primaryLight, icon: MC.primaryDark, shadow: "#1BA8A020" }
       : tone === "danger"
-        ? { bg: "#FEF2F2", border: "#FECACA", iconBg: "#FEE2E2", icon: "#B91C1C", shadow: "#EF444420" }
+        ? { bg: MC.errorSoft, border: MC.errorBorder, iconBg: MC.errorSoft, icon: "#B91C1C", shadow: "#EF444420" }
         : tone === "indigo"
-          ? { bg: "#EEF2FF", border: "#C7D2FE", iconBg: "#E0E7FF", icon: "#4338CA", shadow: "#6366F120" }
-          : { bg: "#EFF6FF", border: "#BFDBFE", iconBg: "#DBEAFE", icon: "#0369A1", shadow: "#3B82F620" };
+          ? { bg: MC.purpleSoft, border: MC.purpleBorder, iconBg: MC.purpleSoft, icon: "#4338CA", shadow: "#6366F120" }
+          : { bg: MC.infoSoft, border: MC.infoBorder, iconBg: MC.infoSoft, icon: "#0369A1", shadow: "#3B82F620" };
 
   return (
     <Pressable
@@ -622,10 +612,10 @@ function PriorityCard({
 }) {
   const palette =
     item.tone === "danger"
-      ? { bg: "#FEF2F2", border: "#FECACA", iconBg: "#FEE2E2", icon: "#B91C1C" }
+      ? { bg: MC.errorSoft, border: MC.errorBorder, iconBg: MC.errorSoft, icon: "#B91C1C" }
       : item.tone === "info"
-        ? { bg: "#EFF6FF", border: "#BFDBFE", iconBg: "#DBEAFE", icon: "#0369A1" }
-        : { bg: "#EEF7F6", border: "#C8F1EC", iconBg: MC.primaryLight, icon: MC.primary };
+        ? { bg: MC.infoSoft, border: MC.infoBorder, iconBg: MC.infoSoft, icon: "#0369A1" }
+        : { bg: MC.primaryLight, border: MC.infoBorder, iconBg: MC.primaryLight, icon: MC.primary };
 
   return (
     <Pressable
@@ -774,7 +764,6 @@ const s = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  // ── Hero ───────────────────────────────────────────────
   heroCard: {
     marginTop: 8,
     marginHorizontal: 14,
@@ -854,12 +843,11 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ── Search Card (redesigned — more compact) ────────────
   searchCard: {
     marginTop: -8,
     marginHorizontal: 14,
     borderRadius: 22,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     shadowColor: "#0F172A",
     shadowOpacity: 0.08,
@@ -944,7 +932,7 @@ const s = StyleSheet.create({
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   specialtyChipText: {
     fontSize: 11,
@@ -952,7 +940,6 @@ const s = StyleSheet.create({
     color: MC.primaryDark,
   },
 
-  // ── Sections ───────────────────────────────────────────
   sectionHeaderWrap: {
     marginTop: 22,
     marginHorizontal: 18,
@@ -983,7 +970,6 @@ const s = StyleSheet.create({
     marginHorizontal: 14,
   },
 
-  // ── KPI Grid ───────────────────────────────────────────
   kpiGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1019,7 +1005,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // ── Priority Cards ─────────────────────────────────────
   priorityStack: {
     gap: 10,
     paddingHorizontal: 14,
@@ -1053,7 +1038,6 @@ const s = StyleSheet.create({
     color: MC.textSecondary,
   },
 
-  // ── Quick Actions ──────────────────────────────────────
   quickGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1066,7 +1050,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingVertical: 16,
     shadowColor: "#0F172A",
     shadowOpacity: 0.04,
@@ -1089,7 +1073,6 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ── See All ────────────────────────────────────────────
   seeAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1102,7 +1085,6 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ── Loading & Empty ────────────────────────────────────
   loadingWrap: {
     paddingVertical: 20,
     alignItems: "center",
@@ -1113,7 +1095,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 24,
     alignItems: "center",
     gap: 8,
@@ -1139,14 +1121,13 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // ── Doctor Card ────────────────────────────────────────
   doctorCard: {
     marginHorizontal: 14,
     marginTop: 10,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     shadowColor: "#0F172A",
     shadowOpacity: 0.04,
@@ -1229,7 +1210,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: MC.warningSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

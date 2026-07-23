@@ -910,7 +910,7 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
         : null;
 
     if (!pendingToken || !name || !email) {
-      throw new Error("Google respondio sin los datos necesarios para completar tu registro.");
+      throw new Error("Google respondió sin los datos necesarios para completar tu registro.");
     }
 
     return {
@@ -935,7 +935,7 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
       : null;
 
   if (!token || !idRaw || !name || !email || !role) {
-    throw new Error("Google respondio sin los datos de autenticacion completos.");
+    throw new Error("Google respondió sin los datos de autenticación completos.");
   }
 
   return {

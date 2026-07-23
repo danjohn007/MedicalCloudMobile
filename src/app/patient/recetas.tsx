@@ -162,7 +162,7 @@ const s = StyleSheet.create({
         paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: MC.border,
-        backgroundColor: MC.white,
+        backgroundColor: MC.card,
     },
     backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
     headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "800", color: MC.textPrimary },
@@ -190,7 +190,7 @@ const s = StyleSheet.create({
     retryText: { color: MC.white, fontSize: 14, fontWeight: "700" },
     list: { padding: 14, paddingBottom: 28 },
     card: {
-        backgroundColor: MC.white,
+        backgroundColor: MC.card,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: MC.border,

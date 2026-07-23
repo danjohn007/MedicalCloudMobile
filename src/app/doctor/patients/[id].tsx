@@ -42,7 +42,7 @@ export default function DoctorPatientDetailScreen() {
 
   useEffect(() => {
     if (!Number.isFinite(patientId) || patientId <= 0) {
-      setError("Paciente invalido.");
+      setError("Paciente inválido.");
       setLoading(false);
       return;
     }
@@ -76,7 +76,7 @@ export default function DoctorPatientDetailScreen() {
 
   async function loadData(isRefresh = false) {
     if (!Number.isFinite(patientId) || patientId <= 0) {
-      setError("Paciente invalido.");
+      setError("Paciente inválido.");
       setLoading(false);
       setRefreshing(false);
       return;
@@ -155,7 +155,7 @@ export default function DoctorPatientDetailScreen() {
                 <View style={styles.heroChips}>
                   <MetaChip icon="clock" label={patient.age != null ? `${patient.age} años` : "Edad s/d"} />
                   <MetaChip icon="drop" label={patient.blood_type || "Sangre s/d"} />
-                  <MetaChip icon="user-circle" label={patient.gender || "Genero s/d"} />
+                  <MetaChip icon="user-circle" label={patient.gender || "Género s/d"} />
                 </View>
               </View>
             </View>
@@ -189,7 +189,7 @@ export default function DoctorPatientDetailScreen() {
               />
             </View>
 
-            <Section title="Resumen clinico">
+            <Section title="Resumen clínico">
               <InfoRow label="Teléfono" value={patient.phone || "Sin teléfono"} />
               <InfoRow label="Ciudad" value={patient.city || "Sin ciudad"} />
               <InfoRow label="Ocupacion" value={patient.occupation || "Sin dato"} />
@@ -217,7 +217,7 @@ export default function DoctorPatientDetailScreen() {
                 value={patient.weight_kg ? `${patient.weight_kg} kg` : "Sin dato"}
               />
               <InfoRow
-                label="Direccion"
+                label="Dirección"
                 value={pickFirst(patient.address, patient.state) || "Sin dirección"}
               />
             </Section>
@@ -228,7 +228,7 @@ export default function DoctorPatientDetailScreen() {
                 text={pickFirst(patient.allergies, snapshot?.record?.allergies) || "Sin alergias registradas"}
               />
               <AlertBox
-                title="Medicacion actual"
+                title="Medicación actual"
                 text={
                   pickFirst(patient.current_medications, snapshot?.record?.current_medications) ||
                   "Sin medicamentos registrados"
@@ -246,7 +246,7 @@ export default function DoctorPatientDetailScreen() {
             <Section title="Documentos y carga clínica">
               <AlertBox
                 title="Documentos disponibles"
-                text="Desde esta ficha ya puedes abrir la seccion de documentos del paciente para revisar estudios y archivos ligados a su expediente."
+                text="Desde esta ficha ya puedes abrir la sección de documentos del paciente para revisar estudios y archivos ligados a su expediente."
               />
               <AlertBox
                 title="Siguiente paso sugerido"
@@ -261,7 +261,7 @@ export default function DoctorPatientDetailScreen() {
                     key={`note-${note.id}`}
                     icon="clipboard-text"
                     title={formatDate(note.scheduled_at || note.created_at)}
-                    subtitle={note.assessment || note.appt_reason || "Sin resumen clinico"}
+                    subtitle={note.assessment || note.appt_reason || "Sin resumen clínico"}
                     body={truncate(note.plan_text || note.subjective || "", 140)}
                   />
                 ))
@@ -303,7 +303,7 @@ export default function DoctorPatientDetailScreen() {
             </Section>
           </>
         ) : (
-          <EmptyState text="No se encontro informacion del paciente." />
+          <EmptyState text="No se encontró información del paciente." />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 22 },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   metaChip: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 10,
     paddingVertical: 6,
     flexDirection: "row",
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 4,
   },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     gap: 4,
   },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     flexDirection: "row",
     gap: 10,

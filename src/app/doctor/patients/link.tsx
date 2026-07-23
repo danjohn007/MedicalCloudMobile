@@ -51,7 +51,7 @@ export default function DoctorLinkPatientScreen() {
       setSaving(true);
       setError("");
       const result = await api.linkDoctorPatient(accessCode.trim());
-      Alert.alert("Paciente vinculado", result.message || "El paciente ya quedo disponible.");
+      Alert.alert("Paciente vinculado", result.message || "El paciente ya quedó disponible.");
       if (result.patient?.id) {
         router.replace(`/doctor/patients/${result.patient.id}` as any);
         return;
@@ -118,7 +118,7 @@ export default function DoctorLinkPatientScreen() {
 
           <View style={styles.hero}>
             <Text style={styles.heroEyebrow}>Privacidad primero</Text>
-            <Text style={styles.heroTitle}>Expediente solo con relacion valida</Text>
+            <Text style={styles.heroTitle}>Expediente solo con relación válida</Text>
             <Text style={styles.heroText}>
               Un doctor independiente ya no ve expedientes abiertos por defecto. Puede
               vincular al paciente con su código personal o registrarlo directamente para
@@ -129,7 +129,7 @@ export default function DoctorLinkPatientScreen() {
           <View style={styles.segmentRow}>
             <SegmentButton
               active={mode === "code"}
-              label="Codigo del paciente"
+              label="Código del paciente"
               onPress={() => setMode("code")}
             />
             <SegmentButton
@@ -180,7 +180,7 @@ export default function DoctorLinkPatientScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Alta directa de paciente</Text>
               <Text style={styles.cardSubtitle}>
-                El sistema creara su cuenta, la vinculara contigo y enviara por correo sus
+                El sistema creará su cuenta, la vinculara contigo y enviara por correo sus
                 credenciales de acceso.
               </Text>
 
@@ -197,7 +197,7 @@ export default function DoctorLinkPatientScreen() {
                 <DatePickerField value={birthDate} onChange={setBirthDate} />
               </Field>
 
-              <Text style={styles.fieldLabel}>Genero</Text>
+              <Text style={styles.fieldLabel}>Género</Text>
               <View style={styles.genderRow}>
                 {GENDERS.map((item) => {
                   const active = gender === item;
@@ -216,8 +216,9 @@ export default function DoctorLinkPatientScreen() {
               </View>
 
               <LocationPicker
-                title="Direccion del paciente"
+                title="Dirección del paciente"
                 subtitle="Opcional, pero ayuda a ordenar citas y sugerir doctores cercanos desde su perfil."
+                distanceWarningContinuation="Puedes continuar si esta será la ubicación predeterminada del paciente."
                 value={{ address, city, state: stateProv, lat, lng }}
                 onChange={(next) => {
                   setAddress(next.address);
@@ -317,9 +318,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#93C5FD",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 8,
   },
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
-    color: "#1D4ED8",
+    color: MC.primary,
     letterSpacing: 0.6,
   },
   heroTitle: { fontSize: 24, fontWeight: "800", color: MC.textPrimary },
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingVertical: 14,
     alignItems: "center",
   },
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   segmentButtonTextActive: { color: MC.primaryDark },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 22,
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#FCFDFE",
+    backgroundColor: MC.input,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 14,

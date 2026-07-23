@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
-import { MC } from "@/constants/theme";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 
 const money = new Intl.NumberFormat("es-MX", {
@@ -121,7 +121,7 @@ export default function DoctorHomeScreen() {
             />
             <HeroBadge
               icon="star"
-              label={`${(data?.stats.avg_rating ?? 0).toFixed(1)} rating`}
+              label={`${(data?.stats.avg_rating ?? 0).toFixed(1)} de calificación`}
             />
           </View>
         </View>
@@ -158,71 +158,71 @@ export default function DoctorHomeScreen() {
           <QuickAction
             icon="calendar"
             label="Agenda"
-            toneBg="#EFF6FF"
-            toneFg="#2563EB"
+            toneBg={themed("#EFF6FF", "#122845")}
+            toneFg={themed("#2563EB", "#60A5FA")}
             onPress={() => router.push("/(doctor-tabs)/citas" as any)}
           />
           <QuickAction
             icon="gear"
-            label="Config."
-            toneBg="#F5F3FF"
-            toneFg="#7C3AED"
+            label="Configuración"
+            toneBg={themed("#F5F3FF", "#2A1E46")}
+            toneFg={themed("#7C3AED", "#A78BFA")}
             onPress={() => router.push("/doctor/settings" as any)}
           />
           <QuickAction
             icon="user-circle"
             label="Pacientes"
-            toneBg="#ECFDF5"
-            toneFg="#059669"
+            toneBg={themed("#ECFDF5", "#0F3528")}
+            toneFg={themed("#059669", "#34D399")}
             onPress={() => router.push("/(doctor-tabs)/pacientes" as any)}
           />
           <QuickAction
             icon="clipboard-text"
             label="Notas"
-            toneBg="#E0F2FE"
-            toneFg="#075985"
+            toneBg={themed("#E0F2FE", "#0E3042")}
+            toneFg={themed("#075985", "#38BDF8")}
             onPress={() => router.push("/doctor/notes" as any)}
           />
           <QuickAction
             icon="brain"
             label="IA"
-            toneBg="#F0FDFA"
-            toneFg="#0F766E"
+            toneBg={themed("#F0FDFA", "#103532")}
+            toneFg={themed("#0F766E", "#2DD4BF")}
             onPress={() => router.push("/ai/chat" as any)}
           />
           <QuickAction
             icon="list"
             label="Plantillas"
-            toneBg="#F5F3FF"
-            toneFg="#7C3AED"
+            toneBg={themed("#F5F3FF", "#2A1E46")}
+            toneFg={themed("#7C3AED", "#A78BFA")}
             onPress={() => router.push("/doctor/consultation-templates" as any)}
           />
           <QuickAction
             icon="pill"
             label="Recetas"
-            toneBg="#F5F3FF"
-            toneFg="#7C3AED"
+            toneBg={themed("#F5F3FF", "#2A1E46")}
+            toneFg={themed("#7C3AED", "#A78BFA")}
             onPress={() => router.push("/doctor/prescriptions" as any)}
           />
           <QuickAction
             icon="clock"
             label="Horarios"
-            toneBg="#F0FDFA"
-            toneFg="#0F766E"
+            toneBg={themed("#F0FDFA", "#103532")}
+            toneFg={themed("#0F766E", "#2DD4BF")}
             onPress={() => router.push("/doctor/availability" as any)}
           />
           <QuickAction
             icon="file"
-            label="Docs"
-            toneBg="#FFF7ED"
-            toneFg="#C2410C"
+            label="Documentos"
+            toneBg={themed("#FFF7ED", "#3A2312")}
+            toneFg={themed("#C2410C", "#FB923C")}
             onPress={() => router.push("/doctor/documents" as any)}
           />
           <QuickAction
             icon="wallet"
             label="Finanzas"
-            toneBg="#FFFBEB"
-            toneFg="#D97706"
+            toneBg={themed("#FFFBEB", "#33280F")}
+            toneFg={themed("#D97706", "#FBBF24")}
             onPress={() => router.push("/doctor/finanzas" as any)}
           />
         </View>
@@ -249,7 +249,7 @@ export default function DoctorHomeScreen() {
           <KpiCard
             label="Recetas activas"
             value={String(data?.stats.active_rx ?? 0)}
-            helper="Seguimiento clinico"
+            helper="Seguimiento clínico"
             icon="pill"
           />
         </View>
@@ -314,7 +314,7 @@ export default function DoctorHomeScreen() {
               </Pressable>
             ))
           ) : (
-            <EmptyState text="Aun no hay pacientes recientes para mostrar." />
+            <EmptyState text="Aún no hay pacientes recientes para mostrar." />
           )}
         </Section>
 
@@ -326,22 +326,22 @@ export default function DoctorHomeScreen() {
             <QuickAction
               icon="clock"
               label="Disponibilidad"
-              toneBg="#F0FDFA"
-              toneFg="#0F766E"
+              toneBg={themed("#F0FDFA", "#103532")}
+              toneFg={themed("#0F766E", "#2DD4BF")}
               onPress={() => router.push("/doctor/availability" as any)}
             />
             <QuickAction
               icon="clipboard-text"
               label="Notas"
-              toneBg="#E0F2FE"
-              toneFg="#075985"
+              toneBg={themed("#E0F2FE", "#0E3042")}
+              toneFg={themed("#075985", "#38BDF8")}
               onPress={() => router.push("/doctor/notes" as any)}
             />
             <QuickAction
               icon="chat-circle-dots"
               label="Asistentes"
-              toneBg="#FFF7ED"
-              toneFg="#B45309"
+              toneBg={themed("#FFF7ED", "#3A2312")}
+              toneFg={themed("#B45309", "#FDBA74")}
               onPress={() => router.push("/doctor/assistants" as any)}
             />
           </View>
@@ -406,7 +406,7 @@ function QuickAction({
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.quickAction, { backgroundColor: toneBg }]}>
-      <View style={[styles.quickActionIcon, { backgroundColor: "#FFFFFFAA" }]}>
+      <View style={[styles.quickActionIcon, { backgroundColor: themed("#FFFFFFAA", "#0F1C26CC") }]}>
         <Icon name={icon} size={18} color={toneFg} />
       </View>
       <Text style={[styles.quickActionLabel, { color: toneFg }]}>{label}</Text>
@@ -456,7 +456,7 @@ function AppointmentCard({
             {dateTime.format(new Date(appointment.scheduled_at))} | {normalizeType(appointment.type)}
           </Text>
           <Text style={styles.appointmentMeta}>
-            {appointment.location || "Sin ubicacion"} | {money.format(appointment.fee || 0)}
+            {appointment.location || "Sin ubicación"} | {money.format(appointment.fee || 0)}
           </Text>
           {appointment.reason ? (
             <Text style={styles.appointmentReason}>{appointment.reason}</Text>
@@ -511,7 +511,7 @@ function normalizeStatus(status: string) {
     in_consultation: "En consulta",
     completed: "Completada",
     cancelled: "Cancelada",
-    no_show: "No asistio",
+    no_show: "No asistió",
   };
 
   return map[status] || status;
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: themed("#C9ECE8", "#1F4C4A"),
     padding: 18,
     gap: 10,
   },
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 14,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: themed("#FFFFFFCC", "#0F1C26CC"),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   heroBadgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
   heroBadge: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 10,
     paddingVertical: 7,
     flexDirection: "row",
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   heroBadgeText: { fontSize: 11, fontWeight: "700", color: MC.primaryDark },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -600,9 +600,9 @@ const styles = StyleSheet.create({
   errorText: { flex: 1, color: MC.error, fontSize: 13 },
   liveCard: {
     borderRadius: 20,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: themed("#E0F2FE", "#0E3042"),
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: themed("#BAE6FD", "#1E4E63"),
     padding: 14,
     flexDirection: "row",
     gap: 12,
@@ -612,12 +612,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: themed("#FFFFFFCC", "#0F1C26CC"),
     alignItems: "center",
     justifyContent: "center",
   },
   liveBody: { flex: 1, gap: 2 },
-  liveEyebrow: { fontSize: 12, fontWeight: "700", color: "#075985" },
+  liveEyebrow: { fontSize: 12, fontWeight: "700", color: MC.primary },
   liveTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   liveMeta: { fontSize: 12, color: MC.textSecondary },
   quickActions: {
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 6,
   },
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     flexDirection: "row",
     gap: 12,

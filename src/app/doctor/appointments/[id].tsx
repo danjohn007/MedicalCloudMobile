@@ -155,7 +155,7 @@ export default function DoctorAppointmentDetailScreen() {
       setAiBriefingLoading(true);
       setError("");
       const response = await api.getAiBriefing(appointmentId);
-      setAiBriefing(response.briefing || "La IA no devolvio contenido para esta cita.");
+      setAiBriefing(response.briefing || "La IA no devolvió contenido para esta cita.");
     } catch (e: any) {
       setError(e?.message || "No se pudo generar el briefing con IA.");
     } finally {
@@ -273,7 +273,7 @@ export default function DoctorAppointmentDetailScreen() {
                   </View>
                   <View style={styles.flowHeaderBody}>
                     <Text style={styles.flowTitle}>
-                      {primaryFlow?.title || "Consulta sin accion urgente"}
+                      {primaryFlow?.title || "Consulta sin acción urgente"}
                     </Text>
                     <Text style={styles.flowText}>
                       {primaryFlow?.text ||
@@ -364,7 +364,7 @@ export default function DoctorAppointmentDetailScreen() {
 
             <Section title="Datos de la consulta">
               <InfoRow label="Motivo" value={appointment.reason || "Sin motivo registrado"} />
-              <InfoRow label="Ubicacion" value={appointment.location || "Sin ubicacion"} />
+              <InfoRow label="Ubicación" value={appointment.location || "Sin ubicación"} />
               <InfoRow label="Teléfono paciente" value={appointment.patient_phone || "Sin teléfono"} />
               <InfoRow label="Correo paciente" value={appointment.patient_email || "Sin correo"} />
               <InfoRow
@@ -443,14 +443,14 @@ export default function DoctorAppointmentDetailScreen() {
               </View>
             </Section>
 
-            <Section title="Contexto clinico">
+            <Section title="Contexto clínico">
               <InfoRow
                 label="Alergias"
                 value={appointment.patient_allergies || "Sin alergias registradas"}
               />
               <InfoRow
-                label="Medicacion actual"
-                value={appointment.patient_current_medications || "Sin medicacion registrada"}
+                label="Medicación actual"
+                value={appointment.patient_current_medications || "Sin medicación registrada"}
               />
               <InfoRow label="Perfil" value={buildProfileLine(appointment)} />
               <InfoRow
@@ -459,7 +459,7 @@ export default function DoctorAppointmentDetailScreen() {
               />
             </Section>
 
-            <Section title="Briefing rapido">
+            <Section title="Briefing rápido">
               <Pressable
                 style={[styles.aiBriefingButton, aiBriefingLoading && styles.aiBriefingButtonDisabled]}
                 onPress={handleGenerateAiBriefing}
@@ -503,15 +503,15 @@ export default function DoctorAppointmentDetailScreen() {
               />
               <BriefingCard
                 icon="pill"
-                title="Medicacion actual"
+                title="Medicación actual"
                 text={
                   appointment.patient_current_medications ||
-                  "No hay medicacion activa registrada para este paciente."
+                  "No hay medicación activa registrada para este paciente."
                 }
               />
             </Section>
 
-            <Section title="Estado de trabajo clinico">
+            <Section title="Estado de trabajo clínico">
               <StatusCard
                 icon="clipboard-text"
                 title="Nota clínica"
@@ -563,7 +563,7 @@ export default function DoctorAppointmentDetailScreen() {
             </Pressable>
           </>
         ) : (
-          <EmptyState text="No se encontro informacion de la consulta." />
+          <EmptyState text="No se encontró información de la consulta." />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -664,7 +664,7 @@ function FlowStep({
   tone: "done" | "current" | "upcoming";
 }) {
   const toneStyles = {
-    done: { bg: "#DCFCE7", fg: "#047857" },
+    done: { bg: MC.successSoft, fg: MC.success },
     current: { bg: MC.primaryLight, fg: MC.primaryDark },
     upcoming: { bg: MC.surface, fg: MC.textMuted },
   }[tone];
@@ -700,8 +700,8 @@ function ActionButton({
 }) {
   const toneStyles = {
     primary: { bg: MC.primaryLight, fg: MC.primaryDark },
-    success: { bg: "#ECFDF5", fg: "#047857" },
-    danger: { bg: "#FEF2F2", fg: "#B91C1C" },
+    success: { bg: MC.successSoft, fg: MC.success },
+    danger: { bg: MC.errorSoft, fg: MC.error },
     neutral: { bg: MC.surface, fg: MC.textPrimary },
   }[tone];
 
@@ -753,7 +753,7 @@ function normalizeStatus(status: string) {
     in_consultation: "En consulta",
     completed: "Completada",
     cancelled: "Cancelada",
-    no_show: "No asistio",
+    no_show: "No asistió",
   };
 
   return map[status] || status;
@@ -817,7 +817,7 @@ function getAvailableActions(appointment: api.DoctorAppointmentDetailData["data"
 
   if (!["completed", "cancelled"].includes(status)) {
     actions.push({ action: "cancelled", label: "Cancelar", icon: "x", tone: "danger" });
-    actions.push({ action: "no_show", label: "No asistio", icon: "warning", tone: "neutral" });
+    actions.push({ action: "no_show", label: "No asistió", icon: "warning", tone: "neutral" });
   }
 
   return actions;
@@ -857,8 +857,8 @@ function getPrimaryFlowAction(
       kind: "status",
       action: "confirmed",
       icon: "check-circle",
-      color: "#047857",
-      backgroundColor: "#ECFDF5",
+      color: MC.success,
+      backgroundColor: MC.successSoft,
       title: "Primero confirma la cita",
       text: "Deja resuelta la aprobación antes de pasar a check-in o a la nota clínica.",
       buttonLabel: "Confirmar consulta",
@@ -875,9 +875,9 @@ function getPrimaryFlowAction(
       href: `/doctor/appointments/${appointment.id}/checkin`,
       icon: "shield-check",
       color: "#2563EB",
-      backgroundColor: "#EFF6FF",
+      backgroundColor: MC.infoSoft,
       title: "Pide el check-in del paciente",
-      text: "La cita ya esta confirmada; el siguiente paso es registrar llegada para iniciar consulta.",
+      text: "La cita ya está confirmada; el siguiente paso es registrar llegada para iniciar consulta.",
       buttonLabel: "Abrir check-in",
     };
   }
@@ -890,7 +890,7 @@ function getPrimaryFlowAction(
       color: MC.primaryDark,
       backgroundColor: MC.primaryLight,
       title: "Consulta lista para iniciar",
-      text: "Entra al estado en consulta y abre la nota SOAP cuando ya estes con el paciente.",
+      text: "Entra al estado en consulta y abre la nota SOAP cuando ya estés con el paciente.",
       buttonLabel: "Iniciar consulta",
     };
   }
@@ -900,8 +900,8 @@ function getPrimaryFlowAction(
       kind: "route",
       href: `/doctor/appointments/${appointment.id}/soap`,
       icon: "clipboard-text",
-      color: "#075985",
-      backgroundColor: "#E0F2FE",
+      color: MC.primary,
+      backgroundColor: MC.infoSoft,
       title: "Captura la nota clínica",
       text: "Usa la nota SOAP, la receta y el cierre de consulta desde este mismo flujo.",
       buttonLabel: "Abrir SOAP",
@@ -924,7 +924,7 @@ function buildFlowSteps(appointment: api.DoctorAppointmentDetailData["data"]) {
 
   return [
     {
-      label: "Confirmacion",
+      label: "Confirmación",
       tone: confirmationDone
         ? "done"
         : ["pending", "pending_doctor", "pending_patient", "pending_payment"].includes(
@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 22 },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
   heroChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   heroChip: {
     borderRadius: 999,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 10,
     paddingVertical: 6,
     flexDirection: "row",
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 12,
   },
@@ -1063,7 +1063,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     gap: 4,
   },
@@ -1072,8 +1072,8 @@ const styles = StyleSheet.create({
   paymentSummaryCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#BFE7E3",
-    backgroundColor: "#F0FDFA",
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.primaryLight,
     padding: 10,
     gap: 8,
   },
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },
@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     flexDirection: "row",
     gap: 10,
@@ -1147,8 +1147,8 @@ const styles = StyleSheet.create({
   aiBriefingButton: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#BFE7E3",
-    backgroundColor: "#F0FDFA",
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.primaryLight,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -1159,11 +1159,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#CDEDEA",
+    borderColor: MC.infoBorder,
   },
   aiBriefingButtonBody: { flex: 1, gap: 3 },
   aiBriefingButtonTitle: { fontSize: 14, fontWeight: "800", color: MC.primaryDark },
@@ -1171,8 +1171,8 @@ const styles = StyleSheet.create({
   aiBriefingResult: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#CDEDEA",
-    backgroundColor: MC.white,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },
@@ -1187,7 +1187,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 12,
     flexDirection: "row",
     gap: 10,
@@ -1207,7 +1207,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",

@@ -94,10 +94,10 @@ function pushRegistrationErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
   if (Platform.OS === "android" && (lower.includes("fcm registration failed") || lower.includes("messaging/unknown"))) {
-    return "Android no pudo registrarse en Firebase FCM. Revisa que el google-services.json sea del paquete com.doctorcloud.app y que la API key de Google/Firebase permita esta firma SHA-1/SHA-256 de la build instalada.";
+    return "Android no pudo registrarse en Firebase FCM. Revisa que google-services.json sea del paquete com.doctorcloud.app y que la clave de Google/Firebase permita las huellas SHA-1 y SHA-256 de la compilación instalada.";
   }
   if (Platform.OS === "android" && lower.includes("service_not_available")) {
-    return "Firebase FCM no esta disponible en este dispositivo o Google Play Services no pudo responder. Revisa conexion, Play Services y vuelve a intentar.";
+    return "Firebase FCM no está disponible en este dispositivo o Google Play Services no pudo responder. Revisa conexión, Play Services y vuelve a intentar.";
   }
   if (message.trim() !== "") {
     return message;
@@ -176,7 +176,7 @@ export function getPushRuntimeStatus(): {
       isDevice: Device.isDevice,
       platform: Platform.OS,
       provider: "fcm",
-      reason: "Firebase Messaging requiere un build nativo instalado; no funciona dentro de Expo Go.",
+      reason: "Firebase Messaging requiere una compilación nativa instalada; no funciona dentro de Expo Go.",
     };
   }
 
@@ -187,7 +187,7 @@ export function getPushRuntimeStatus(): {
       isDevice: false,
       platform: Platform.OS,
       provider: "fcm",
-      reason: "Las push remotas requieren un telefono fisico.",
+      reason: "Las push remotas requieren un teléfono físico.",
     };
   }
 
@@ -198,7 +198,7 @@ export function getPushRuntimeStatus(): {
       isDevice: Device.isDevice,
       platform: Platform.OS,
       provider: "fcm",
-      reason: "Firebase Messaging no esta incluido en este build. Reinstala la app con un build nuevo.",
+      reason: "Firebase Messaging no está incluido en este build. Reinstala la app con un build nuevo.",
     };
   }
 

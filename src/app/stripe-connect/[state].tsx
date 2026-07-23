@@ -47,22 +47,22 @@ export default function StripeConnectResultScreen() {
           {ready
             ? "Tu cuenta puede recibir pagos de citas directamente en DoctorCloud."
             : expired
-              ? "Vuelve a configuracion y genera una liga nueva para continuar con la verificacion."
-              : "Stripe recibio tus datos. Algunas verificaciones pueden tardar unos minutos en completarse."}
+              ? "Vuelve a configuración y genera una liga nueva para continuar con la verificación."
+              : "Stripe recibió tus datos. Algunas verificaciones pueden tardar unos minutos en completarse."}
         </Text>
 
         {loading ? <ActivityIndicator size="large" color={MC.primary} style={styles.loader} /> : null}
         {!loading && !expired && !error ? (
           <View style={styles.statusCard}>
             <StatusRow label="Estado" value={status || "Pendiente"} />
-            <StatusRow label="Cobros" value={chargesEnabled ? "Habilitados" : "Pendientes de verificacion"} />
+            <StatusRow label="Cobros" value={chargesEnabled ? "Habilitados" : "Pendientes de verificación"} />
             {accountId ? <StatusRow label="Cuenta" value={`...${accountId.slice(-8)}`} /> : null}
           </View>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable style={styles.primaryButton} onPress={() => router.replace("/doctor/settings" as any)}>
-          <Text style={styles.primaryText}>{expired ? "Volver a configurar" : "Ver configuracion"}</Text>
+          <Text style={styles.primaryText}>{expired ? "Volver a configurar" : "Ver configuración"}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => router.replace("/(doctor-tabs)" as any)}>
           <Text style={styles.secondaryText}>Ir al inicio</Text>
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   statusLabel: { color: MC.textSecondary, fontSize: 14 },
   statusValue: { color: MC.textPrimary, fontSize: 14, fontWeight: "700", flexShrink: 1, textAlign: "right" },
-  error: { color: "#B91C1C", backgroundColor: "#FEE2E2", padding: 14, borderRadius: 10, marginBottom: 24, lineHeight: 20 },
+  error: { color: MC.error, backgroundColor: MC.errorSoft, padding: 14, borderRadius: 10, marginBottom: 24, lineHeight: 20 },
   primaryButton: { backgroundColor: MC.primary, alignItems: "center", justifyContent: "center", minHeight: 52, borderRadius: 12 },
   primaryText: { color: MC.white, fontSize: 16, fontWeight: "800" },
   secondaryButton: { alignItems: "center", justifyContent: "center", minHeight: 48, marginTop: 8 },

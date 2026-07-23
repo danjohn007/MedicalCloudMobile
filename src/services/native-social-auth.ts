@@ -19,18 +19,18 @@ export async function getNativeGoogleIdentity(): Promise<{ idToken: string; name
   }
   const result = await GoogleSignin.signIn();
   if (!isSuccessResponse(result)) {
-    throw new Error("Inicio de sesion con Google cancelado.");
+    throw new Error("Inicio de sesión con Google cancelado.");
   }
   const idToken = result.data.idToken;
   if (!idToken) {
-    throw new Error("Google no devolvio el token de inicio de sesion.");
+    throw new Error("Google no devolvió el token de inicio de sesión.");
   }
   return { idToken, name: result.data.user.name ?? undefined };
 }
 
 export async function getNativeAppleIdentity(): Promise<{ idToken: string; name?: string }> {
   if (Platform.OS !== "ios" || !(await AppleAuthentication.isAvailableAsync())) {
-    throw new Error("Iniciar sesion con Apple solo esta disponible en dispositivos iPhone o iPad compatibles.");
+    throw new Error("Iniciar sesión con Apple solo está disponible en dispositivos iPhone o iPad compatibles.");
   }
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [
@@ -39,7 +39,7 @@ export async function getNativeAppleIdentity(): Promise<{ idToken: string; name?
     ],
   });
   if (!credential.identityToken) {
-    throw new Error("Apple no devolvio el token de inicio de sesion.");
+    throw new Error("Apple no devolvió el token de inicio de sesión.");
   }
   const name = [credential.fullName?.givenName, credential.fullName?.familyName]
     .filter((part): part is string => Boolean(part && part.trim()))

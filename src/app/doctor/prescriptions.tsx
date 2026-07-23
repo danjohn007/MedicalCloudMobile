@@ -179,9 +179,9 @@ export default function DoctorPrescriptionsScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Emite una receta desde aqui</Text>
+          <Text style={styles.heroTitle}>Emite una receta desde aquí</Text>
           <Text style={styles.heroText}>
-            Selecciona al paciente, captura diagnostico e indicaciones, y queda
+            Selecciona al paciente, captura diagnóstico e indicaciones, y queda
             lista en su historial.
           </Text>
         </View>
@@ -226,7 +226,7 @@ export default function DoctorPrescriptionsScreen() {
 
           <Field
             label="Diagnóstico"
-            placeholder="Escribe el diagnostico principal."
+            placeholder="Escribe el diagnóstico principal."
             value={diagnosis}
             onChangeText={setDiagnosis}
           />
@@ -239,13 +239,13 @@ export default function DoctorPrescriptionsScreen() {
           />
           <Field
             label="Indicaciones"
-            placeholder="Duracion, cuidados o recomendaciones."
+            placeholder="Duración, cuidados o recomendaciones."
             value={instructions}
             onChangeText={setInstructions}
             multiline
           />
           <Field
-            label="Vigencia en dias"
+            label="Vigencia en días"
             placeholder="30"
             value={validDays}
             onChangeText={setValidDays}
@@ -289,7 +289,7 @@ export default function DoctorPrescriptionsScreen() {
 
               <Text style={styles.listPatient}>{item.patient_name || "Paciente"}</Text>
               <Text style={styles.listTitle}>
-                {item.diagnosis || "Receta sin diagnostico"}
+                {item.diagnosis || "Receta sin diagnóstico"}
               </Text>
               <Text style={styles.listText}>
                 {truncate(item.medications, 180) || "Sin medicamentos registrados."}
@@ -324,7 +324,7 @@ export default function DoctorPrescriptionsScreen() {
           <EmptyCard
             icon="pill"
             title="Todavía no hay recetas"
-            text="La primera receta que guardes aparecera aqui con acceso rapido al paciente."
+            text="La primera receta que guardes aparecerá aquí con acceso rápido al paciente."
           />
         )}
       </ScrollView>
@@ -403,7 +403,7 @@ function MessageBox({
   tone: "error" | "success";
   text: string;
 }) {
-  const bg = tone === "error" ? "#FEE2E2" : "#ECFDF5";
+  const bg = tone === "error" ? MC.errorSoft : MC.successSoft;
   const color = tone === "error" ? MC.error : MC.success;
   const icon = tone === "error" ? "warning" : "check-circle";
 
@@ -450,9 +450,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#EAF8F5",
+    backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#CBEAE5",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 8,
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 16,
   },
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 20,
     alignItems: "center",
     gap: 10,

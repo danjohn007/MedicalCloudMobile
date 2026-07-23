@@ -122,7 +122,7 @@ export default function DoctorNotesScreen() {
       !assessment.trim() &&
       !planText.trim()
     ) {
-      Alert.alert("Nota vacia", "Escribe al menos un dato clinico.");
+      Alert.alert("Nota vacia", "Escribe al menos un dato clínico.");
       return;
     }
 
@@ -183,10 +183,10 @@ export default function DoctorNotesScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Crea una nota sin salir de aqui</Text>
+          <Text style={styles.heroTitle}>Crea una nota sin salir de aquí</Text>
           <Text style={styles.heroText}>
             Elige al paciente, guarda la nota y abre su ficha solo si necesitas
-            revisar algo mas.
+            revisar algo más.
           </Text>
         </View>
 
@@ -230,14 +230,14 @@ export default function DoctorNotesScreen() {
 
           <Field
             label="Subjetivo"
-            placeholder="Sintomas, motivo y lo que refiere el paciente."
+            placeholder="Síntomas, motivo y lo que refiere el paciente."
             value={subjective}
             onChangeText={setSubjective}
             multiline
           />
           <Field
             label="Objetivo"
-            placeholder="Signos, exploracion o hallazgos importantes."
+            placeholder="Signos, exploración o hallazgos importantes."
             value={objective}
             onChangeText={setObjective}
             multiline
@@ -350,7 +350,7 @@ export default function DoctorNotesScreen() {
           <EmptyCard
             icon="clipboard-text"
             title="Todavía no hay notas"
-            text="La primera nota que guardes aparecera aqui con acceso rapido al paciente."
+            text="La primera nota que guardes aparecerá aquí con acceso rápido al paciente."
           />
         )}
       </ScrollView>
@@ -426,7 +426,7 @@ function MessageBox({
   tone: "error" | "success";
   text: string;
 }) {
-  const bg = tone === "error" ? "#FEE2E2" : "#ECFDF5";
+  const bg = tone === "error" ? MC.errorSoft : MC.successSoft;
   const color = tone === "error" ? MC.error : MC.success;
   const icon = tone === "error" ? "warning" : "check-circle";
 
@@ -473,9 +473,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#EEF8F6",
+    backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#CBEAE5",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 8,
   },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 16,
   },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -575,11 +575,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  listStateBadgeSigned: { backgroundColor: "#DCFCE7" },
-  listStateBadgeDraft: { backgroundColor: "#FEF3C7" },
+  listStateBadgeSigned: { backgroundColor: MC.successSoft },
+  listStateBadgeDraft: { backgroundColor: MC.warningSoft },
   listStateBadgeText: { fontSize: 12, fontWeight: "700" },
-  listStateBadgeTextSigned: { color: "#047857" },
-  listStateBadgeTextDraft: { color: "#B45309" },
+  listStateBadgeTextSigned: { color: MC.success },
+  listStateBadgeTextDraft: { color: MC.star },
   listDate: { fontSize: 12, color: MC.textMuted },
   listPatient: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   listTitle: { fontSize: 14, fontWeight: "600", color: MC.textPrimary },
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 20,
     alignItems: "center",
     gap: 10,

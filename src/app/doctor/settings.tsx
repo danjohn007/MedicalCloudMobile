@@ -217,7 +217,7 @@ export default function DoctorSettingsScreen() {
       setSuccess("");
       const result = await api.connectDoctorStripe();
       if (!result.url) {
-        throw new Error("Stripe no devolvio una liga de conexion.");
+        throw new Error("Stripe no devolvió una liga de conexión.");
       }
       const browserResult = await WebBrowser.openAuthSessionAsync(
         result.url,
@@ -287,7 +287,7 @@ export default function DoctorSettingsScreen() {
                 )}
               </Pressable>
               <View style={styles.heroBody}>
-                <Text style={styles.heroEyebrow}>Workspace doctor</Text>
+                <Text style={styles.heroEyebrow}>Espacio del doctor</Text>
                 <Text style={styles.heroTitle}>{name || "Doctor"}</Text>
                 <Text style={styles.heroSubtitle}>
                   {specialty || "Especialidad pendiente"}
@@ -329,7 +329,7 @@ export default function DoctorSettingsScreen() {
                   <Input
                     value={specialty}
                     onChangeText={setSpecialty}
-                    placeholder="Cardiologia"
+                    placeholder="Cardiología"
                   />
                 </Field>
               </Col>
@@ -355,7 +355,7 @@ export default function DoctorSettingsScreen() {
           <SectionCard
             icon="first-aid"
             title="Enfermedades y tratamientos"
-            subtitle="Escribe terminos separados por coma. Los publicos se muestran al paciente; los privados solo ayudan al buscador."
+            subtitle="Escribe términos separados por coma. Los públicos se muestran al paciente; los privados solo ayudan al buscador."
           >
             <Field label="Experto en">
               <MultilineInput
@@ -376,7 +376,7 @@ export default function DoctorSettingsScreen() {
 
           <SectionCard
             icon="wallet"
-            title="Tarifas y duracion"
+            title="Tarifas y duración"
             subtitle="Precios base del consultorio para cada modalidad de cita."
           >
             <Row>
@@ -410,7 +410,7 @@ export default function DoctorSettingsScreen() {
               />
             </Field>
 
-            <Text style={styles.subLabel}>Duracion por consulta</Text>
+            <Text style={styles.subLabel}>Duración por consulta</Text>
             <View style={styles.chipRow}>
               {DURATION_OPTIONS.map((minutes) => {
                 const active = durationMinutes === String(minutes);
@@ -441,7 +441,7 @@ export default function DoctorSettingsScreen() {
           <SectionCard
             icon="credit-card"
             title="Cobro de consultas"
-            subtitle="Pagos en linea que llegan directo a tu cuenta de PayPal o Stripe."
+            subtitle="Pagos en línea que llegan directo a tu cuenta de PayPal o Stripe."
           >
             <Pressable
               style={[styles.toggleRow, consultationPaymentsEnabled && styles.toggleRowActive]}
@@ -462,7 +462,7 @@ export default function DoctorSettingsScreen() {
               </View>
             </Pressable>
 
-            <Text style={styles.subLabel}>Metodo de cobro</Text>
+            <Text style={styles.subLabel}>Método de cobro</Text>
             <View style={styles.chipRow}>
               {[
                 { value: "manual_only", label: "Manual" },
@@ -564,7 +564,7 @@ export default function DoctorSettingsScreen() {
           <SectionCard
             icon="file"
             title="Documentos y expediente"
-            subtitle="Atajo rapido al bloque pendiente de documentos desde la app."
+            subtitle="Atajo rápido al bloque pendiente de documentos desde la app."
           >
             <Text style={styles.cardText}>
               La ficha del doctor ya tiene acceso a pacientes, historial y recetas.
@@ -645,9 +645,9 @@ function Banner({
   text: string;
 }) {
   const palette = {
-    info: { bg: "#E0F2FE", fg: "#075985", border: "#7DD3FC" },
-    success: { bg: "#ECFDF5", fg: "#047857", border: "#6EE7B7" },
-    error: { bg: "#FEE2E2", fg: "#B91C1C", border: "#FCA5A5" },
+    info: { bg: MC.infoSoft, fg: MC.primaryDark, border: MC.infoBorder },
+    success: { bg: MC.successSoft, fg: MC.success, border: MC.successBorder },
+    error: { bg: MC.errorSoft, fg: MC.error, border: MC.errorBorder },
   }[tone];
 
   return (
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },
@@ -867,7 +867,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 14,
-    backgroundColor: "#FCFDFE",
+    backgroundColor: MC.input,
     paddingHorizontal: 14,
     paddingVertical: 13,
     color: MC.textPrimary,
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   toggleRowActive: {
-    borderColor: "#BFE7E4",
+    borderColor: MC.infoBorder,
     backgroundColor: MC.primaryLight,
   },
   toggleTitle: {
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E2E8F0",
+    backgroundColor: MC.surface,
   },
   toggleKnobActive: {
     backgroundColor: MC.primary,
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 16,
-    backgroundColor: "#FCFDFE",
+    backgroundColor: MC.input,
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#BFE7E4",
+    borderColor: MC.infoBorder,
     backgroundColor: MC.primaryLight,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -986,12 +986,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionStatusOk: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#6EE7B7",
+    backgroundColor: MC.successSoft,
+    borderColor: MC.successBorder,
   },
   actionStatusError: {
-    backgroundColor: "#FEE2E2",
-    borderColor: "#FCA5A5",
+    backgroundColor: MC.errorSoft,
+    borderColor: MC.errorBorder,
   },
   actionStatusText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 12 },

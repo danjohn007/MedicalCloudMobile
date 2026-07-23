@@ -21,7 +21,7 @@ export async function resolvePatientSearchLocation(): Promise<PatientSearchLocat
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         source: "device",
-        label: "Ubicacion actual",
+        label: "Ubicación actual",
       };
     }
   } catch {
@@ -34,7 +34,7 @@ export async function resolvePatientSearchLocation(): Promise<PatientSearchLocat
         lat: profile.lat,
         lng: profile.lng,
         source: "profile",
-        label: [profile.city, profile.state].filter(Boolean).join(", ") || "Ubicacion guardada",
+        label: [profile.city, profile.state].filter(Boolean).join(", ") || "Ubicación guardada",
       };
     }
 

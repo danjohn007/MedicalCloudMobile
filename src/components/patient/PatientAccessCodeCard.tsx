@@ -25,7 +25,7 @@ export function PatientAccessCodeCard({
   hint,
   onOpenProfile,
   style,
-  title = "Codigo personal",
+  title = "Código personal",
 }: PatientAccessCodeCardProps) {
   const [visible, setVisible] = useState(false);
   const safeCode = (code || "").trim();
@@ -60,13 +60,13 @@ export function PatientAccessCodeCard({
         <View style={styles.headerBody}>
           <Text style={styles.eyebrow}>{title}</Text>
           <Text style={styles.subtitle}>
-            Compartelo solo con doctores que deban enlazarte o revisar tu expediente.
+            Compártelo solo con doctores que deban enlazarte o revisar tu expediente.
           </Text>
         </View>
       </View>
 
       <View style={styles.codeBox}>
-        <Text style={styles.codeLabel}>CODIGO DE ACCESO</Text>
+        <Text style={styles.codeLabel}>CÓDIGO DE ACCESO</Text>
         <Text style={styles.codeValue}>{displayCode}</Text>
         <Text style={styles.hint}>
           {hint ||
@@ -114,9 +114,9 @@ export function PatientAccessCodeCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: MC.infoBorder,
     padding: 16,
     gap: 14,
   },
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 14,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: MC.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -151,9 +151,9 @@ const styles = StyleSheet.create({
   },
   codeBox: {
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: MC.card,
     borderWidth: 1,
-    borderColor: "#DBEAFE",
+    borderColor: MC.infoBorder,
     padding: 14,
     gap: 8,
   },
@@ -183,8 +183,8 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: MC.white,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.card,
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -209,8 +209,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   disabledButton: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#E2E8F0",
+    backgroundColor: MC.input,
+    borderColor: MC.border,
   },
   disabledText: {
     color: MC.textMuted,

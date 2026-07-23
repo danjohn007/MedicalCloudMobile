@@ -371,6 +371,7 @@ export default function PatientProfileScreen() {
             <LocationPicker
               title="Ubicación guardada"
               subtitle="Busca tu dirección, usa tu ubicación actual o toca el mapa para guardarla."
+              distanceWarningContinuation="Puedes continuar si esta será tu ubicación predeterminada."
               value={{ address, city, state: stateProv, lat, lng }}
               onChange={(next) => {
                 setAddress(next.address);
@@ -501,16 +502,16 @@ function Banner({
   text: string;
   type?: "info" | "warning";
 }) {
-  const bg = type === "warning" ? "#FEF3C7" : MC.primaryLight;
+  const bg = type === "warning" ? MC.warningSoft : MC.primaryLight;
   const ic: "warning" | "info" = type === "warning" ? "warning" : "info";
-  const icc = type === "warning" ? "#D97706" : MC.primary;
+  const icc = type === "warning" ? MC.star : MC.primary;
   return (
     <View
       style={[
         s.banner,
         {
           backgroundColor: bg,
-          borderLeftColor: type === "warning" ? "#F59E0B" : MC.primary,
+          borderLeftColor: type === "warning" ? MC.warningBorder : MC.primary,
         },
       ]}
     >
@@ -585,19 +586,19 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: MC.errorBorder,
   },
   avatarDelTxt: { color: MC.error, fontSize: 12, fontWeight: "700" },
   errBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -607,7 +608,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#D1FAE5",
+    backgroundColor: MC.successSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -623,12 +624,12 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   actionStatusOk: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#6EE7B7",
+    backgroundColor: MC.successSoft,
+    borderColor: MC.successBorder,
   },
   actionStatusError: {
-    backgroundColor: "#FEE2E2",
-    borderColor: "#FCA5A5",
+    backgroundColor: MC.errorSoft,
+    borderColor: MC.errorBorder,
   },
   actionStatusTxt: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   sec: {
@@ -657,23 +658,25 @@ const s = StyleSheet.create({
   secSub: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
   codeCard: {
     borderRadius: 16,
-    backgroundColor: "#0F172A",
+    backgroundColor: MC.surface,
+    borderWidth: 1,
+    borderColor: MC.border,
     padding: 16,
     gap: 8,
   },
   codeLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: MC.textMuted,
     letterSpacing: 0.8,
   },
   codeValue: {
     fontSize: 26,
     fontWeight: "800",
-    color: "#F8FAFC",
+    color: MC.textPrimary,
     letterSpacing: 2,
   },
-  codeHint: { fontSize: 12, lineHeight: 18, color: "#CBD5E1" },
+  codeHint: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
   lbl: {
     fontSize: 11,
     fontWeight: "700",

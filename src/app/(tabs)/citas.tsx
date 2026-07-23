@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
-import { MC } from "@/constants/theme";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 
 type StatusKey =
@@ -34,51 +34,51 @@ const STATUS_META: Record<
 > = {
   pending: {
     label: "Pendiente",
-    bg: "rgba(245,158,11,0.10)",
-    fg: "#92400E",
-    dot: "#F59E0B",
+    bg: MC.warningSoft,
+    fg: MC.star,
+    dot: MC.star,
   },
   pending_payment: {
     label: "Pago pendiente",
-    bg: "rgba(245,158,11,0.12)",
-    fg: "#92400E",
-    dot: "#F59E0B",
+    bg: MC.warningSoft,
+    fg: MC.star,
+    dot: MC.star,
   },
   confirmed: {
     label: "Confirmada",
-    bg: "rgba(16,185,129,0.10)",
-    fg: "#065F46",
-    dot: "#10B981",
+    bg: MC.successSoft,
+    fg: MC.success,
+    dot: MC.success,
   },
   in_consultation: {
     label: "En consulta",
-    bg: "rgba(14,165,233,0.10)",
-    fg: "#075985",
-    dot: "#0EA5E9",
+    bg: MC.infoSoft,
+    fg: themed("#075985", "#38BDF8"),
+    dot: themed("#0EA5E9", "#38BDF8"),
   },
   completed: {
     label: "Completada",
-    bg: "rgba(99,102,241,0.10)",
-    fg: "#3730A3",
-    dot: "#6366F1",
+    bg: MC.purpleSoft,
+    fg: themed("#4338CA", "#A78BFA"),
+    dot: themed("#6366F1", "#A78BFA"),
   },
   cancelled: {
     label: "Cancelada",
-    bg: "rgba(239,68,68,0.10)",
-    fg: "#991B1B",
-    dot: "#EF4444",
+    bg: MC.errorSoft,
+    fg: MC.error,
+    dot: MC.error,
   },
   no_show: {
-    label: "No asistio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
-    dot: "#F97316",
+    label: "No asistió",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
+    dot: themed("#F97316", "#FB923C"),
   },
   missed: {
     label: "No atendida",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
-    dot: "#F97316",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
+    dot: themed("#F97316", "#FB923C"),
   },
 };
 const TYPE_META: Record<
@@ -87,38 +87,38 @@ const TYPE_META: Record<
 > = {
   presencial: {
     label: "Presencial",
-    bg: "rgba(27,168,160,0.10)",
-    fg: "#0E7C75",
+    bg: MC.primaryLight,
+    fg: MC.primary,
     icon: "buildings",
   },
   videoconsulta: {
     label: "Videoconsulta",
-    bg: "rgba(139,92,246,0.10)",
-    fg: "#5B21B6",
+    bg: MC.purpleSoft,
+    fg: themed("#6D28D9", "#A78BFA"),
     icon: "video-camera",
   },
   domicilio: {
     label: "A domicilio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
     icon: "house",
   },
   presential: {
     label: "Presencial",
-    bg: "rgba(27,168,160,0.10)",
-    fg: "#0E7C75",
+    bg: MC.primaryLight,
+    fg: MC.primary,
     icon: "buildings",
   },
   virtual: {
     label: "Videoconsulta",
-    bg: "rgba(139,92,246,0.10)",
-    fg: "#5B21B6",
+    bg: MC.purpleSoft,
+    fg: themed("#6D28D9", "#A78BFA"),
     icon: "video-camera",
   },
   home_visit: {
     label: "A domicilio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
     icon: "house",
   },
 };
@@ -154,7 +154,7 @@ const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: "in_consultation", label: "En consulta", color: "#0EA5E9" },
   { key: "completed", label: "Completada", color: "#6366F1" },
   { key: "cancelled", label: "Cancelada", color: "#EF4444" },
-  { key: "no_show", label: "No asistio", color: "#F97316" },
+  { key: "no_show", label: "No asistió", color: "#F97316" },
   { key: "missed", label: "No atendida", color: "#F97316" },
 ];
 
@@ -258,14 +258,14 @@ export default function CitasScreen() {
     if (within24h && !isUnpaid) {
       Alert.alert(
         "No se puede cancelar",
-        "Solo puedes cancelar con menos de 24 h de anticipacion si aun no has pagado.",
+        "Solo puedes cancelar con menos de 24 h de anticipación si aún no has pagado.",
       );
       return;
     }
     Alert.alert("Cancelar cita", `Cancelar cita con ${a.doctor_name}?`, [
       { text: "No", style: "cancel" },
       {
-        text: "Si, cancelar",
+        text: "Sí, cancelar",
         style: "destructive",
         onPress: async () => {
           try {
@@ -405,7 +405,7 @@ export default function CitasScreen() {
           )}
           {tab === "past" && counts.no_show > 0 && (
             <StatChip
-              label="No asistio"
+              label="No asistió"
               value={counts.no_show}
               color="#F97316"
               icon="warning"
@@ -592,8 +592,8 @@ function AppointmentCard({
           </View>
           {isUnpaid && (
             <View style={[s.badge, s.badgePay]}>
-              <Icon name="warning" size={10} color="#92400E" />
-              <Text style={[s.badgeText, { color: "#92400E" }]}>Por pagar</Text>
+              <Icon name="warning" size={10} color={MC.star} />
+              <Text style={[s.badgeText, { color: MC.star }]}>Por pagar</Text>
             </View>
           )}
         </View>
@@ -721,7 +721,7 @@ function AppointmentDetail(props: {
           <InfoRow
             icon="user"
             iconColor="#8B5CF6"
-            iconBg="rgba(139,92,246,0.10)"
+            iconBg={MC.purpleSoft}
             label="Doctor"
             value={`Dr. ${appt.doctor_name}`}
             subtitle={appt.specialty}
@@ -729,7 +729,7 @@ function AppointmentDetail(props: {
           <InfoRow
             icon="clipboard-text"
             iconColor="#10B981"
-            iconBg="rgba(16,185,129,0.10)"
+            iconBg={MC.successSoft}
             label="Motivo"
             value={reason}
           />
@@ -738,8 +738,8 @@ function AppointmentDetail(props: {
               <InfoRow
                 icon="map-pin"
                 iconColor="#F97316"
-                iconBg="rgba(249,115,22,0.10)"
-                label="Ubicacion"
+                iconBg={MC.orangeSoft}
+                label="Ubicación"
                 value={appt.location}
                 actionLabel="Ver en Google Maps"
               />
@@ -749,7 +749,7 @@ function AppointmentDetail(props: {
             <InfoRow
               icon="currency-dollar"
               iconColor="#059669"
-              iconBg="rgba(16,185,129,0.10)"
+              iconBg={MC.successSoft}
               label="Costo de consulta"
               value={`$${appt.fee.toFixed(2)} MXN`}
               valueColor={isUnpaid ? "#F59E0B" : MC.textPrimary}
@@ -760,7 +760,7 @@ function AppointmentDetail(props: {
             <InfoRow
               icon="check-circle"
               iconColor={MC.success}
-              iconBg="rgba(16,185,129,0.10)"
+              iconBg={MC.successSoft}
               label="Costo de consulta"
               value="Sin costo"
             />
@@ -775,7 +775,7 @@ function AppointmentDetail(props: {
               disabled={busy}
             >
               <Icon name="credit-card" size={18} color={MC.white} />
-              <Text style={s.payBtnText}>Elegir metodo de pago</Text>
+              <Text style={s.payBtnText}>Elegir método de pago</Text>
             </Pressable>
           )}
           <View style={s.modalActionRow}>
@@ -1040,7 +1040,7 @@ const s = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
-  badgePay: { backgroundColor: "#FEF3C7" },
+  badgePay: { backgroundColor: MC.warningSoft },
   badgeDot: { width: 6, height: 6, borderRadius: 3 },
   badgeText: { fontSize: 10, fontWeight: "700" },
   cardDoctor: {
@@ -1184,7 +1184,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "rgba(239,68,68,0.10)",
+    backgroundColor: MC.errorSoft,
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: 12,

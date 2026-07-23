@@ -1,4 +1,3 @@
-import { CardField, StripeProvider, useConfirmPayment } from "@stripe/stripe-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -12,6 +11,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { CardField, StripeProvider, useConfirmPayment } from "@/components/payments/StripeClient";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import PayPalIcon from "../../../../assets/images/PayPal_Icon.svg";
@@ -84,7 +85,11 @@ export default function PagoScreen() {
   const [step, setStep] = useState<ScreenStep>("booting");
   const [countdown, setCountdown] = useState<string | null>(null);
 
-  const effectiveMethods = paymentInfo?.methods ?? FALLBACK_METHODS;
+  const configuredMethods = paymentInfo?.methods ?? FALLBACK_METHODS;
+  const effectiveMethods = {
+    ...configuredMethods,
+    stripe_card: Platform.OS !== "web" && configuredMethods.stripe_card,
+  };
   const stripePublishableKey = paymentInfo?.stripe_publishable_key?.trim() ?? "";
   const stripeAccountId =
     paymentInfo?.doctor_payment_destination?.stripe_account_id?.trim() ?? "";
@@ -152,7 +157,11 @@ export default function PagoScreen() {
       try {
         const info = await api.getAppointmentPaymentInfo(idToLoad);
         setPaymentInfo(info);
-        if (info.methods.stripe_card && info.stripe_publishable_key?.trim()) {
+        if (
+          Platform.OS !== "web" &&
+          info.methods.stripe_card &&
+          info.stripe_publishable_key?.trim()
+        ) {
           setSelectedMethod("stripe_card");
         } else if (info.methods.paypal) {
           setSelectedMethod("paypal");
@@ -161,7 +170,7 @@ export default function PagoScreen() {
         setPaymentInfo(null);
         if (isMissingMobilePaymentInfo(err)) {
           setError(
-            "No se pudo cargar la configuracion de pago de esta cita. Intenta de nuevo en unos segundos.",
+            "No se pudo cargar la configuración de pago de esta cita. Intenta de nuevo en unos segundos.",
           );
           return;
         }
@@ -259,7 +268,7 @@ export default function PagoScreen() {
 
   async function handlePayLater() {
     if (!appointmentId) {
-      setError("Aun estamos preparando tu cita. Intenta de nuevo en unos segundos.");
+      setError("Aún estamos preparando tu cita. Intenta de nuevo en unos segundos.");
       return;
     }
 
@@ -274,7 +283,7 @@ export default function PagoScreen() {
 
   async function handlePaypalPay() {
     if (!appointmentId) {
-      setError("Aun no se ha creado la cita para iniciar el pago.");
+      setError("Aún no se ha creado la cita para iniciar el pago.");
       return;
     }
 
@@ -316,8 +325,8 @@ export default function PagoScreen() {
 
     setStep("idle");
     Alert.alert(
-      "Pago en revision",
-      "Si ya completaste el pago, tu cita se confirmara en cuanto el backend termine de validarlo.",
+      "Pago en revisión",
+      "Si ya completaste el pago, tu cita se confirmará en cuanto el servidor termine de validarlo.",
     );
   }
 
@@ -338,7 +347,7 @@ export default function PagoScreen() {
             {createdFromDraft ? "Creando tu cita..." : "Cargando opciones de pago..."}
           </Text>
           <Text style={styles.loadingCaption}>
-            Estamos preparando el checkout con los mismos datos de la version web.
+            Estamos preparando el pago con los mismos datos de la versión web.
           </Text>
         </View>
       ) : (
@@ -375,13 +384,13 @@ export default function PagoScreen() {
               </View>
             </View>
 
-            <Text style={styles.sectionEyebrow}>Selecciona metodo de pago</Text>
+            <Text style={styles.sectionEyebrow}>Selecciona método de pago</Text>
 
             <PaymentMethodCard
               active={selectedMethod === "stripe_card"}
               disabled={!effectiveMethods.stripe_card}
               icon={<StripeIcon width={28} height={28} />}
-              title="Tarjeta de credito / debito"
+              title="Tarjeta de crédito / débito"
               subtitle="Formulario embebido dentro de la app con Stripe."
               onPress={() => setSelectedMethod("stripe_card")}
             >
@@ -410,13 +419,13 @@ export default function PagoScreen() {
                     </StripeProvider>
                   ) : (
                     <InfoNotice kind="warning">
-                      Stripe no esta disponible para esta cita porque faltan datos de configuracion de pago.
+                      Stripe no está disponible para esta cita porque faltan datos de configuración de pago.
                     </InfoNotice>
                   )
                 ) : (
                   <InfoNotice kind="muted">
                     {paymentInfo?.unavailable_reasons?.stripe_card ||
-                      "Stripe no esta habilitado para este contexto segun la configuracion actual."}
+                      "Stripe no está habilitado para este contexto según la configuración actual."}
                   </InfoNotice>
                 )
               ) : null}
@@ -427,15 +436,15 @@ export default function PagoScreen() {
               disabled={!effectiveMethods.paypal}
               icon={<PayPalIcon width={28} height={28} />}
               title="PayPal"
-              subtitle="Checkout seguro en navegador, igual al flujo actual de la app."
+              subtitle="Pago seguro en el navegador, igual al flujo actual de la app."
               onPress={() => setSelectedMethod("paypal")}
             >
               {selectedMethod === "paypal" ? (
                 effectiveMethods.paypal ? (
                   <View style={styles.paypalPanel}>
                     <Text style={styles.paypalBody}>
-                      Abriremos PayPal en un navegador seguro para completar la autorizacion.
-                      Cuando el pago se apruebe volveras a la app para validar la cita.
+                      Abriremos PayPal en un navegador seguro para completar la autorización.
+                      Cuando el pago se apruebe volverás a la app para validar la cita.
                     </Text>
                     <Pressable
                       style={[styles.primaryPayButton, step !== "idle" && styles.buttonDisabled]}
@@ -455,7 +464,7 @@ export default function PagoScreen() {
                 ) : (
                   <InfoNotice kind="muted">
                     {paymentInfo?.unavailable_reasons?.paypal ||
-                      "PayPal no esta habilitado para esta cita segun la configuracion actual."}
+                      "PayPal no está habilitado para esta cita según la configuración actual."}
                   </InfoNotice>
                 )
               ) : null}
@@ -472,7 +481,7 @@ export default function PagoScreen() {
               <View style={styles.statusBox}>
                 <ActivityIndicator size="small" color={MC.primary} />
                 <Text style={styles.statusText}>
-                  Verificando el resultado del pago con el backend...
+                  Verificando el resultado del pago con el servidor...
                 </Text>
               </View>
             ) : null}
@@ -484,7 +493,7 @@ export default function PagoScreen() {
               onPress={() => void handlePayLater()}
             >
               <Text style={styles.secondaryFooterButtonText}>
-                {createdFromDraft ? "Pagar despues" : "Volver"}
+                {createdFromDraft ? "Pagar después" : "Volver"}
               </Text>
             </Pressable>
 
@@ -524,7 +533,7 @@ function StripeCardSection(props: {
 
   const handleStripeSubmit = async () => {
     if (!appointmentId) {
-      onPaymentError("La cita aun no esta lista para cobrarse con Stripe.");
+      onPaymentError("La cita aún no está lista para cobrarse con Stripe.");
       return;
     }
 
@@ -570,7 +579,7 @@ function StripeCardSection(props: {
         autoCapitalize="words"
         autoCorrect={false}
         onChangeText={onChangeValue}
-        placeholder="Como aparece en la tarjeta"
+        placeholder="Cómo aparece en la tarjeta"
         placeholderTextColor={MC.textMuted}
         style={styles.textField}
         value={value}
@@ -682,7 +691,7 @@ function InfoNotice(props: { kind: "warning" | "muted"; children: ReactNode }) {
       <Icon
         name={isWarning ? "warning" : "info"}
         size={16}
-        color={isWarning ? "#92400E" : MC.textSecondary}
+        color={isWarning ? MC.star : MC.textSecondary}
       />
       <Text style={[styles.infoNoticeText, isWarning && styles.infoNoticeTextWarning]}>
         {props.children}
@@ -734,7 +743,7 @@ function buildSummary(input: {
 
   const normalized = normalizeSummaryDateTime(input.date, input.time, input.scheduledAt);
   return {
-    doctorName: input.doctorName ? `Dr. ${input.doctorName}` : "Consulta medica",
+    doctorName: input.doctorName ? `Dr. ${input.doctorName}` : "Consulta médica",
     specialty: input.specialty,
     date: normalized.date,
     time: normalized.time,
@@ -960,8 +969,8 @@ const styles = StyleSheet.create({
   },
   deadlineCard: {
     alignItems: "center",
-    backgroundColor: "#FFF7E8",
-    borderColor: "#F59E0B",
+    backgroundColor: MC.warningSoft,
+    borderColor: MC.warningBorder,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: "row",
@@ -971,7 +980,7 @@ const styles = StyleSheet.create({
   },
   deadlineIcon: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: MC.card,
     borderRadius: 12,
     height: 40,
     justifyContent: "center",
@@ -981,12 +990,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deadlineLabel: {
-    color: "#92400E",
+    color: MC.star,
     fontSize: 13,
     fontWeight: "600",
   },
   deadlineValue: {
-    color: "#B45309",
+    color: MC.star,
     fontSize: 20,
     fontWeight: "800",
     marginTop: 4,
@@ -1133,7 +1142,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   infoNoticeWarning: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: MC.warningSoft,
   },
   infoNoticeMuted: {
     backgroundColor: MC.surface,
@@ -1145,11 +1154,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   infoNoticeTextWarning: {
-    color: "#92400E",
+    color: MC.star,
   },
   errorBox: {
     alignItems: "flex-start",
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     borderRadius: 14,
     flexDirection: "row",
     gap: 10,
@@ -1157,7 +1166,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   errorText: {
-    color: "#991B1B",
+    color: MC.error,
     flex: 1,
     fontSize: 13,
     lineHeight: 20,

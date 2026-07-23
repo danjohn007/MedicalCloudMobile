@@ -72,13 +72,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicacion para encontrar doctores cercanos, completar direcciones y validar consultorios."
-        }
-      ],
-      [
-        "./plugins/with-android-google-maps-api-key",
-        {
-          "apiKey": "AIzaSyChbsHVh4KcliQm0Wv4qYWwUSmyEYabyt4"
+          "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicación para encontrar doctores cercanos, completar direcciones y validar consultorios."
         }
       ],
       "@react-native-firebase/app",

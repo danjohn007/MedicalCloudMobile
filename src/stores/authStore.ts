@@ -31,7 +31,7 @@ async function completeSocialLogin(
         name: res.pending.name,
       });
       if (completed.status !== 'authenticated') {
-        throw new Error('No se pudo completar el inicio de sesion.');
+        throw new Error('No se pudo completar el inicio de sesión.');
       }
       await api.saveToken(completed.token);
       await api.saveUser(completed.user);

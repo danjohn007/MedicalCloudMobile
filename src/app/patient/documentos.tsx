@@ -176,7 +176,7 @@ export default function DocumentosScreen() {
               <Icon name="file" size={34} color={MC.textMuted} />
               <Text style={styles.emptyTitle}>Sin documentos por ahora</Text>
               <Text style={styles.emptyText}>
-                Puedes subir estudios, recetas y archivos clinicos desde esta
+                Puedes subir estudios, recetas y archivos clínicos desde esta
                 misma pantalla.
               </Text>
             </View>
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingBottom: 36, gap: 14 },
   errorBox: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     borderRadius: 12,
     padding: 12,
     flexDirection: "row",
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   emptyTitle: {
     fontSize: 16,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
   },
   cardBody: { flex: 1, gap: 4 },
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     alignItems: "center",
     justifyContent: "center",
   },

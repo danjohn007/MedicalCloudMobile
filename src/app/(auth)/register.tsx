@@ -101,18 +101,18 @@ export default function RegisterScreen() {
               <Text style={styles.appName}>
                 <Text style={styles.appNameBold}>Doctor</Text> Cloud
               </Text>
-              <Text style={styles.brandSub}>Elige como quieres usar tu cuenta</Text>
+              <Text style={styles.brandSub}>Elige cómo quieres usar tu cuenta</Text>
             </View>
           </View>
 
           <Text style={styles.title}>Crear cuenta</Text>
           <Text style={styles.subtitle}>
-            Primero elige tu perfil y despues te llevamos al formulario correcto.
+            Primero elige tu perfil y después te llevamos al formulario correcto.
           </Text>
 
           {!!error ? (
             <View style={styles.errorBox}>
-              <Icon name="warning" size={18} color="#B91C1C" />
+              <Icon name="warning" size={18} color={MC.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -171,7 +171,7 @@ export default function RegisterScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.btnGoogleText}>Continuar con Google</Text>
                   <Text style={styles.btnGoogleHint}>
-                    Primero verificamos tu cuenta y despues eliges el perfil final.
+                    Primero verificamos tu cuenta y después eliges el perfil final.
                   </Text>
                 </View>
               </>
@@ -231,15 +231,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     borderRadius: 12,
     padding: 12,
     marginBottom: 18,
   },
-  errorText: { color: "#B91C1C", fontSize: 14, flex: 1 },
+  errorText: { color: MC.error, fontSize: 14, flex: 1 },
   roleGrid: { gap: 14, marginBottom: 22 },
   roleCard: {
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
@@ -248,17 +248,17 @@ const styles = StyleSheet.create({
   },
   roleCardActive: {
     borderColor: MC.primary,
-    backgroundColor: "#EAF8FB",
+    backgroundColor: MC.infoSoft,
   },
   roleIcon: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: MC.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  roleIconActive: { backgroundColor: "#DDF6F4" },
+  roleIconActive: { backgroundColor: MC.primaryLight },
   roleTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   roleTitleActive: { color: MC.primaryDark },
   roleDescription: { fontSize: 14, color: MC.textSecondary, lineHeight: 21 },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: MC.surface,
     alignItems: "center",
     justifyContent: "center",
   },

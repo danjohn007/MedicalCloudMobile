@@ -95,7 +95,7 @@ export default function DoctorFinancesScreen() {
 
         <View style={styles.hero}>
           <View style={styles.heroGlow} />
-          <Text style={styles.heroEyebrow}>Operacion del consultorio</Text>
+          <Text style={styles.heroEyebrow}>Operación del consultorio</Text>
           <Text style={styles.heroTitle}>{money.format(collected)}</Text>
           <Text style={styles.heroSubtitle}>Cobrado en consultas completadas</Text>
           <View style={styles.heroPills}>
@@ -122,14 +122,14 @@ export default function DoctorFinancesScreen() {
 
         <Section
           title="Cobros por consulta"
-          subtitle="Cada pago queda ligado a la cita y al paciente cuando existe esa relacion."
+          subtitle="Cada pago queda ligado a la cita y al paciente cuando existe esa relación."
         >
           {data?.consultations.length ? (
             data.consultations.map((item) => (
               <View key={item.id} style={styles.card}>
                 <View style={styles.cardTop}>
                   <View>
-                    <Text style={styles.cardTitle}>{item.patient_name || "Consulta medica"}</Text>
+                    <Text style={styles.cardTitle}>{item.patient_name || "Consulta médica"}</Text>
                     <Text style={styles.cardSubtitle}>
                       {item.appointment_type ? normalizeType(item.appointment_type) : "Consulta"}
                       {item.scheduled_at ? ` | ${formatDate(item.scheduled_at)}` : ""}
@@ -140,7 +140,7 @@ export default function DoctorFinancesScreen() {
 
                 <View style={styles.metaRow}>
                   <MetaBadge text={normalizeStatus(item.status)} />
-                  <MetaBadge text={(item.method || "metodo").toUpperCase()} />
+                  <MetaBadge text={(item.method || "método").toUpperCase()} />
                   <MetaBadge text={(item.currency || "MXN").toUpperCase()} />
                 </View>
 
@@ -166,14 +166,14 @@ export default function DoctorFinancesScreen() {
             <EmptyCard
               icon="wallet"
               title="Todavía no hay cobros"
-              text="Los pagos de consultas aparecerán aquí cuando el backend móvil sincronice esos movimientos."
+              text="Los pagos de consultas aparecerán aquí cuando el servidor sincronice esos movimientos."
             />
           )}
         </Section>
 
         <Section
           title="Suscripciones"
-          subtitle="Vista rapida de renovaciones y cargos administrativos del doctor."
+          subtitle="Vista rápida de renovaciones y cargos administrativos del doctor."
         >
           {data?.subscriptions.length ? (
             data.subscriptions.map((item) => (
@@ -185,7 +185,7 @@ export default function DoctorFinancesScreen() {
                 <View style={styles.subscriptionRight}>
                   <Text style={styles.amountText}>{money.format(item.amount)}</Text>
                   <Text style={styles.subscriptionMeta}>
-                    {(item.method || "metodo").toUpperCase()} | {normalizeStatus(item.status)}
+                    {(item.method || "método").toUpperCase()} | {normalizeStatus(item.status)}
                   </Text>
                 </View>
               </View>
@@ -194,7 +194,7 @@ export default function DoctorFinancesScreen() {
             <EmptyCard
               icon="calendar"
               title="Sin cargos de suscripcion"
-              text="Aqui se mostraran los movimientos del plan del consultorio cuando existan."
+              text="Aquí se mostrarán los movimientos del plan del consultorio cuando existan."
             />
           )}
         </Section>
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   heroPillText: { fontSize: 12, fontWeight: "700", color: MC.white },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 6,
   },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 12,
   },
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
   },
   metaBadgeText: { fontSize: 11, fontWeight: "700", color: MC.textMuted },
   cardFooter: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 24,
     alignItems: "center",
     gap: 8,

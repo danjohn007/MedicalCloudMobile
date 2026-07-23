@@ -199,7 +199,7 @@ export default function ExpedienteScreen() {
                     label={l}
                     active={record[keys[i]]}
                     onPress={() => toggle(keys[i])}
-                    color="#F59E0B"
+                    color={MC.star}
                   />
                 );
               })}
@@ -397,7 +397,7 @@ export default function ExpedienteScreen() {
                     label={o}
                     active={record.alcohol === vals[i]}
                     onPress={() => set("alcohol", vals[i])}
-                    color="#F59E0B"
+                    color={MC.star}
                   />
                 );
               })}
@@ -636,7 +636,7 @@ export default function ExpedienteScreen() {
             )}
           </Card>
 
-          {/* Entradas de historial clinico */}
+          {/* Entradas del historial clínico */}
           <Card
             icon="list"
             title="Historial Clínico"
@@ -840,7 +840,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -850,7 +850,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#D1FAE5",
+    backgroundColor: MC.successSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,

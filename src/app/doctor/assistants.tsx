@@ -6,29 +6,29 @@ import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 
 const WEB_CAPABILITIES = [
-  "Panel assistant con cambio de doctor activo.",
+  "Panel asistente con cambio de doctor activo.",
   "Pacientes y expediente dentro del contexto del doctor.",
   "Notas, recetas y apoyo operativo del consultorio.",
-  "Busqueda de doctores, solicitudes y aceptacion de relaciones.",
-  "Creacion de citas desde el lado assistant.",
+  "Búsqueda de doctores, solicitudes y aceptación de relaciones.",
+  "Creación de citas desde el panel del asistente.",
 ];
 
 const MOBILE_BLOCKERS = [
-  "El login movil hoy solo contempla patient y doctor.",
+  "El inicio de sesión móvil hoy solo contempla paciente y doctor.",
   "No existe un namespace `/api/mobile/assistant/*` equivalente al panel web.",
-  "La app no tiene selector de doctor activo ni matriz de permisos por accion.",
+  "La app no tiene selector de doctor activo ni matriz de permisos por acción.",
 ];
 
 const RECOMMENDED_SCOPE = [
   "Agenda, pacientes y expediente en lectura o captura operativa.",
-  "Creacion de citas y apoyo al check-in del paciente.",
+  "Creación de citas y apoyo en el registro de llegada del paciente.",
   "Borradores de notas o recetas siempre bajo contexto del doctor activo.",
 ];
 
 const WEB_ONLY_SCOPE = [
-  "Firma final de nota clinica y decisiones medicas definitivas.",
-  "Cobros, suscripciones, payout del consultorio y configuracion de pagos al assistant.",
-  "Acciones sensibles sin trazabilidad o sin validacion del doctor responsable.",
+  "Firma final de nota clínica y decisiones médicas definitivas.",
+  "Cobros, suscripciones, payout del consultorio y configuración de pagos al assistant.",
+  "Acciones sensibles sin trazabilidad o sin validación del doctor responsable.",
 ];
 
 export default function DoctorAssistantsScreen() {
@@ -46,11 +46,11 @@ export default function DoctorAssistantsScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Mi recomendacion</Text>
-          <Text style={styles.heroTitle}>Si, pero con permisos limitados</Text>
+          <Text style={styles.heroEyebrow}>Mi recomendación</Text>
+          <Text style={styles.heroTitle}>Sí, pero con permisos limitados</Text>
           <Text style={styles.heroText}>
-            Viendo todo lo que ya existe en la web, mi opinion es que los asistentes
-            si deberian poder trabajar en la app. No al mismo nivel que el doctor,
+            Viendo todo lo que ya existe en la web, mi opinión es que los asistentes
+            sí deberían poder trabajar en la app. No al mismo nivel que el doctor,
             sino como un rol operativo controlado.
           </Text>
         </View>
@@ -61,11 +61,11 @@ export default function DoctorAssistantsScreen() {
               <Icon name="user-circle" size={20} color={MC.primaryDark} />
             </View>
             <View style={styles.recommendationBody}>
-              <Text style={styles.recommendationTitle}>Porque si vale la pena en movil</Text>
+              <Text style={styles.recommendationTitle}>Por qué sí vale la pena en móvil</Text>
               <Text style={styles.recommendationText}>
                 El assistant web ya hace trabajo real de agenda, pacientes,
-                expediente y apoyo clinico. Ese tipo de operacion gana mucho en
-                telefono o tablet, sobre todo dentro del consultorio.
+                expediente y apoyo clínico. Ese tipo de operación gana mucho en
+                teléfono o tablet, sobre todo dentro del consultorio.
               </Text>
             </View>
           </View>
@@ -73,7 +73,7 @@ export default function DoctorAssistantsScreen() {
 
         <Section
           title="Lo que ya opera en la web"
-          subtitle="Estas son las piezas que hoy hacen que el assistant no sea solo un rol decorativo."
+          subtitle="Estas son las piezas que hoy hacen que el asistente no sea solo un rol decorativo."
         >
           {WEB_CAPABILITIES.map((item) => (
             <BulletCard key={item} icon="check-circle" tone="success" text={item} />
@@ -81,8 +81,8 @@ export default function DoctorAssistantsScreen() {
         </Section>
 
         <Section
-          title="Lo que si deberia entrar primero a la app"
-          subtitle="Este seria mi alcance recomendado para un assistant movil util y seguro."
+          title="Lo que sí debería entrar primero a la app"
+          subtitle="Este sería mi alcance recomendado para un asistente móvil útil y seguro."
         >
           {RECOMMENDED_SCOPE.map((item) => (
             <BulletCard key={item} icon="clipboard-text" tone="brand" text={item} />
@@ -90,8 +90,8 @@ export default function DoctorAssistantsScreen() {
         </Section>
 
         <Section
-          title="Lo que yo dejaria fuera o mas restringido"
-          subtitle="Aqui es donde conviene mantener el control medico o administrativo del doctor."
+          title="Lo que yo dejaría fuera o más restringido"
+          subtitle="Aquí es donde conviene mantener el control médico o administrativo del doctor."
         >
           {WEB_ONLY_SCOPE.map((item) => (
             <BulletCard key={item} icon="warning" tone="warning" text={item} />
@@ -100,7 +100,7 @@ export default function DoctorAssistantsScreen() {
 
         <Section
           title="Bloqueos reales hoy"
-          subtitle="Estas son las razones por las que no conviene prometer assistant movil completo todavia."
+          subtitle="Estas son las razones por las que no conviene prometer asistente móvil completo todavía."
         >
           {MOBILE_BLOCKERS.map((item) => (
             <BulletCard key={item} icon="x" tone="danger" text={item} />
@@ -116,13 +116,13 @@ export default function DoctorAssistantsScreen() {
           />
           <StepRow
             step="2"
-            title="Abrir assistant movil fase operativa"
-            text="Agenda, pacientes, expediente y citas. Nada de pagos o firma clinica final en esta fase."
+            title="Abrir asistente móvil fase operativa"
+            text="Agenda, pacientes, expediente y citas. Nada de pagos o firma clínica final en esta fase."
           />
           <StepRow
             step="3"
             title="Agregar permisos granulares"
-            text="Cada accion sensible debe depender del doctor activo y quedar trazada."
+            text="Cada acción sensible debe depender del doctor activo y quedar trazada."
           />
         </View>
       </ScrollView>
@@ -161,9 +161,9 @@ function BulletCard({
 }) {
   const colors = {
     brand: { bg: MC.primaryLight, fg: MC.primaryDark },
-    success: { bg: "#ECFDF5", fg: "#047857" },
-    warning: { bg: "#FFF7ED", fg: "#B45309" },
-    danger: { bg: "#FEF2F2", fg: "#B91C1C" },
+    success: { bg: MC.successSoft, fg: MC.success },
+    warning: { bg: MC.orangeSoft, fg: MC.star },
+    danger: { bg: MC.errorSoft, fg: MC.error },
   }[tone];
 
   return (
@@ -210,16 +210,16 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 22 },
   hero: {
     borderRadius: 28,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: MC.infoBorder,
     padding: 20,
     gap: 8,
   },
   heroEyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#075985",
+    color: MC.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
   },
   recommendationTop: { flexDirection: "row", gap: 12, alignItems: "center" },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 14,
   },

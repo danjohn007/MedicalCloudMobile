@@ -20,21 +20,21 @@ import { useAuthStore } from "@/stores/authStore";
 import { resolveAppHome } from "@/utils/role-routing";
 
 const FALLBACK_SPECIALTIES = [
-  "Cardiologia",
-  "Dermatologia",
+  "Cardiología",
+  "Dermatología",
   "Endocrinologia",
   "Gastroenterologia",
-  "Ginecologia",
+  "Ginecología",
   "Medicina General",
   "Medicina Interna",
-  "Neurologia",
+  "Neurología",
   "Nutriologia",
-  "Oftalmologia",
+  "Oftalmología",
   "Oncologia",
   "Ortopedia",
   "Otorrinolaringologia",
-  "Pediatria",
-  "Psiquiatria",
+  "Pediatría",
+  "Psiquiatría",
   "Traumatologia",
   "Urologia",
 ];
@@ -133,7 +133,7 @@ export default function RegisterDetailsScreen() {
     }
 
     if (role === "doctor" && (!cedula.trim() || !specialty.trim() || !city.trim())) {
-      setError("Cedula, especialidad y ciudad son obligatorios para doctores.");
+      setError("Cédula, especialidad y ciudad son obligatorios para doctores.");
       return;
     }
 
@@ -211,7 +211,7 @@ export default function RegisterDetailsScreen() {
           </Text>
           <Text style={styles.subtitle}>
             {isGoogle
-              ? `Terminamos de validar ${socialProviderLabel}. Solo confirma tu informacion para cerrar el alta.`
+              ? `Terminamos de validar ${socialProviderLabel}. Solo confirma tu información para cerrar el alta.`
               : "Completa el formulario para crear tu cuenta con el perfil correcto."}
           </Text>
 
@@ -227,7 +227,7 @@ export default function RegisterDetailsScreen() {
             <>
               {!!error ? (
                 <View style={styles.errorBox}>
-                  <Icon name="warning" size={18} color="#B91C1C" />
+                  <Icon name="warning" size={18} color={MC.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
@@ -244,7 +244,7 @@ export default function RegisterDetailsScreen() {
                   <>
                     <ReadonlyField label={`Correo de ${socialProviderLabel}`} value={email} />
                     <ReadonlyField
-                      label="Contrasena"
+                      label="Contraseña"
                       value={`Protegida por ${socialProviderLabel}`}
                       hint={`Este acceso ya queda ligado a tu cuenta de ${socialProviderLabel}.`}
                     />
@@ -252,7 +252,7 @@ export default function RegisterDetailsScreen() {
                 ) : (
                   <>
                     <Field
-                      label="Correo electronico"
+                      label="Correo electrónico"
                       value={email}
                       onChangeText={setEmail}
                       placeholder="correo@ejemplo.com"
@@ -260,10 +260,10 @@ export default function RegisterDetailsScreen() {
                       autoCapitalize="none"
                     />
                     <Field
-                      label="Contrasena"
+                      label="Contraseña"
                       value={password}
                       onChangeText={setPassword}
-                      placeholder="Minimo 8 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       secureTextEntry={!showPwd}
                       trailing={
                         <Pressable onPress={() => setShowPwd((value) => !value)} hitSlop={8}>
@@ -275,7 +275,7 @@ export default function RegisterDetailsScreen() {
                 )}
 
                 <Field
-                  label="Telefono"
+                  label="Teléfono"
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="10 digitos"
@@ -285,10 +285,10 @@ export default function RegisterDetailsScreen() {
                 {role === "doctor" ? (
                   <>
                     <Field
-                      label="Cedula profesional"
+                      label="Cédula profesional"
                       value={cedula}
                       onChangeText={setCedula}
-                      placeholder="Tu cedula"
+                      placeholder="Tu cédula"
                     />
                     <Field
                       label="Especialidad"
@@ -327,10 +327,10 @@ export default function RegisterDetailsScreen() {
                   </>
                 ) : (
                   <View style={styles.patientHintCard}>
-                    <Text style={styles.patientHintTitle}>Codigo personal del paciente</Text>
+                    <Text style={styles.patientHintTitle}>Código personal del paciente</Text>
                     <Text style={styles.patientHintText}>
                       Tu código de 8 caracteres se genera automáticamente al terminar el alta y
-                      luego lo veras en tu perfil y dashboard.
+                      luego lo verás en tu perfil y panel principal.
                     </Text>
                   </View>
                 )}
@@ -430,28 +430,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     borderRadius: 12,
     padding: 12,
   },
-  errorText: { color: "#B91C1C", fontSize: 14, flex: 1 },
+  errorText: { color: MC.error, fontSize: 14, flex: 1 },
   successCard: {
     borderRadius: 18,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: MC.successSoft,
     borderWidth: 1,
-    borderColor: "#A7F3D0",
+    borderColor: MC.successBorder,
     padding: 18,
     gap: 10,
   },
-  successTitle: { fontSize: 18, fontWeight: "700", color: "#047857" },
-  successText: { fontSize: 14, lineHeight: 21, color: "#047857" },
+  successTitle: { fontSize: 18, fontWeight: "700", color: MC.success },
+  successText: { fontSize: 14, lineHeight: 21, color: MC.success },
   form: { gap: 14 },
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 14, fontWeight: "600", color: MC.textPrimary },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderWidth: 1,
     borderColor: MC.border,
     borderRadius: 14,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#EEF2F7",
+    backgroundColor: MC.surface,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -479,12 +479,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderWidth: 1,
     borderColor: MC.border,
   },
   chipActive: {
-    backgroundColor: "#DDF7F7",
+    backgroundColor: MC.primaryLight,
     borderColor: MC.primary,
   },
   chipText: { color: MC.textSecondary, fontSize: 13, fontWeight: "600" },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: MC.input,
     padding: 14,
     gap: 6,
   },

@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoogleLogo } from '@/components/GoogleLogo';
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
-import { MC } from '@/constants/theme';
+import { MC, themed } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 import { resolveAppHome } from '@/utils/role-routing';
 
@@ -89,7 +89,7 @@ export default function LoginScreen() {
       }
       router.replace(resolveAppHome(useAuthStore.getState().user?.role));
     } catch (e: any) {
-      if (e?.code !== 'ERR_REQUEST_CANCELED') setError(e.message ?? 'Error al iniciar sesion con Apple.');
+      if (e?.code !== 'ERR_REQUEST_CANCELED') setError(e.message ?? 'Error al iniciar sesión con Apple.');
     } finally {
       setLoadingMode(null);
     }
@@ -127,7 +127,7 @@ export default function LoginScreen() {
           {/* Error */}
           {!!error && (
             <View style={styles.errorBox}>
-              <Icon name="warning" size={18} color="#B91C1C" />
+              <Icon name="warning" size={18} color={MC.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
@@ -245,10 +245,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: MC.textSecondary, marginBottom: 28 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEE2E2', borderRadius: 10,
+    backgroundColor: MC.errorSoft, borderRadius: 10,
     padding: 12, marginBottom: 20,
   },
-  errorText: { color: '#B91C1C', fontSize: 14, flex: 1 },
+  errorText: { color: MC.error, fontSize: 14, flex: 1 },
   form: { gap: 16, marginBottom: 28 },
   inputGroup: { gap: 6 },
   label: { fontSize: 14, fontWeight: '500', color: MC.textPrimary },
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: MC.border,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: themed('#F3F4F6', '#0F1C26'),
     alignItems: 'center',
     justifyContent: 'center',
   },

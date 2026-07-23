@@ -119,20 +119,20 @@ export default function DoctorAppointmentCheckinScreen() {
         ) : null}
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Como funciona</Text>
+          <Text style={styles.infoTitle}>Cómo funciona</Text>
           <Text style={styles.infoText}>
-            1. El paciente abre su modulo de check-in.
+            1. El paciente abre su módulo de check-in.
           </Text>
           <Text style={styles.infoText}>
             2. Te comparte el código de 6 caracteres.
           </Text>
           <Text style={styles.infoText}>
-            3. Tu lo capturas aqui y la cita pasa a en consulta.
+            3. Tú lo capturas aquí y la cita pasa a en consulta.
           </Text>
         </View>
 
         <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Codigo de check-in</Text>
+          <Text style={styles.fieldLabel}>Código de check-in</Text>
           <TextInput
             value={code}
             onChangeText={(value) => setCode(value.toUpperCase())}
@@ -181,15 +181,15 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 24,
     padding: 18,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: MC.infoBorder,
     gap: 6,
   },
   heroEyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#1D4ED8",
+    color: MC.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 8,
   },
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 16,
     fontSize: 22,

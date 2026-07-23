@@ -18,7 +18,7 @@ import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
 const PRIORITIES: { value: api.SupportTicketPriority; label: string; hint: string }[] = [
-  { value: "normal", label: "Normal", hint: "Consulta o incidencia comun." },
+  { value: "normal", label: "Normal", hint: "Consulta o incidencia común." },
   { value: "high", label: "Alta", hint: "Bloquea una tarea importante." },
   { value: "urgent", label: "Urgente", hint: "Impide operar correctamente hoy." },
   { value: "low", label: "Baja", hint: "Seguimiento o duda menor." },
@@ -150,7 +150,7 @@ export default function SupportCreateScreen() {
           <TextInput
             value={body}
             onChangeText={setBody}
-            placeholder="Explica lo que ves, a quien le pasa y desde cuando ocurre."
+            placeholder="Explica lo que ves, a quién le pasa y desde cuándo ocurre."
             placeholderTextColor={MC.textMuted}
             multiline
             textAlignVertical="top"
@@ -215,16 +215,16 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 22 },
   hero: {
     borderRadius: 26,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: MC.successSoft,
     borderWidth: 1,
-    borderColor: "#A7F3D0",
+    borderColor: MC.successBorder,
     padding: 20,
     gap: 8,
   },
   heroEyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#047857",
+    color: MC.success,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 14,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 4,
   },
@@ -268,8 +268,8 @@ const styles = StyleSheet.create({
   attachmentButton: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.infoSoft,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 4,
   },
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
   },
   submitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: MC.textMuted,
   },
   submitButtonText: { color: MC.white, fontSize: 15, fontWeight: "800" },
 });

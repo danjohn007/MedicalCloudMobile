@@ -36,13 +36,13 @@ function formatDate(value?: string | null) {
 function statusMeta(status: api.SupportTicketStatus) {
   switch (status) {
     case "resolved":
-      return { label: "Resuelto", bg: "#ECFDF5", fg: "#047857" };
+      return { label: "Resuelto", bg: MC.successSoft, fg: MC.success };
     case "closed":
-      return { label: "Cerrado", bg: "#F3F4F6", fg: "#4B5563" };
+      return { label: "Cerrado", bg: MC.surface, fg: MC.textSecondary };
     case "in_progress":
-      return { label: "En revision", bg: "#EFF6FF", fg: "#1D4ED8" };
+      return { label: "En revisión", bg: MC.infoSoft, fg: MC.primary };
     default:
-      return { label: "Abierto", bg: "#FFF7ED", fg: "#B45309" };
+      return { label: "Abierto", bg: MC.orangeSoft, fg: MC.star };
   }
 }
 
@@ -77,7 +77,7 @@ export default function SupportDetailScreen() {
 
   const load = useCallback(async (isRefresh = false) => {
     if (!Number.isFinite(ticketId) || ticketId < 1) {
-      setError("Ticket invalido.");
+      setError("Ticket inválido.");
       setLoading(false);
       setRefreshing(false);
       return;
@@ -173,7 +173,7 @@ export default function SupportDetailScreen() {
 
     Alert.alert(
       "Cerrar ticket",
-      "Podras seguir leyendo el historial, pero ya no responder desde la app.",
+      "Podrás seguir leyendo el historial, pero ya no responder desde la app.",
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -326,7 +326,7 @@ export default function SupportDetailScreen() {
             <TextInput
               value={replyBody}
               onChangeText={setReplyBody}
-              placeholder="Escribe aqui la actualizacion o respuesta."
+              placeholder="Escribe aquí la actualización o respuesta."
               placeholderTextColor={MC.textMuted}
               multiline
               textAlignVertical="top"
@@ -371,10 +371,10 @@ export default function SupportDetailScreen() {
           </View>
         ) : (
           <View style={styles.closedCard}>
-            <Icon name="check-circle" size={18} color="#4B5563" />
+            <Icon name="check-circle" size={18} color={MC.textSecondary} />
             <Text style={styles.closedText}>
-              Este ticket ya esta cerrado. Puedes consultar el historial, pero no
-              enviar mas respuestas desde aqui.
+              Este ticket ya está cerrado. Puedes consultar el historial, pero no
+              enviar más respuestas desde aquí.
             </Text>
           </View>
         )}
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 18,
     gap: 10,
   },
@@ -429,8 +429,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -438,8 +438,8 @@ const styles = StyleSheet.create({
   errorBox: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
     padding: 14,
     flexDirection: "row",
     gap: 10,
@@ -449,8 +449,8 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
     padding: 18,
     flexDirection: "row",
     gap: 10,
@@ -470,10 +470,10 @@ const styles = StyleSheet.create({
   messageBubbleMine: {
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#BFE7E2",
+    borderColor: MC.infoBorder,
   },
   messageBubbleTheirs: {
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderWidth: 1,
     borderColor: MC.border,
   },
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: MC.infoSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 18,
     gap: 12,
   },
@@ -534,8 +534,8 @@ const styles = StyleSheet.create({
   attachButton: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.infoSoft,
     paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: "row",
@@ -554,14 +554,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: MC.textMuted,
   },
   sendButtonText: { color: MC.white, fontSize: 14, fontWeight: "800" },
   closedCard: {
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: MC.input,
     padding: 16,
     flexDirection: "row",
     gap: 10,

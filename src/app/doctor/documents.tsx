@@ -227,7 +227,7 @@ export default function DoctorDocumentsScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>Expediente por paciente</Text>
           <Text style={styles.heroText}>
-            Selecciona a quien quieres revisar y abre sus archivos sin dar vueltas
+            Selecciona a quién quieres revisar y abre sus archivos sin dar vueltas
             por otras pantallas.
           </Text>
         </View>
@@ -311,8 +311,8 @@ export default function DoctorDocumentsScreen() {
 
               <Text style={styles.docTitle}>{doc.title || "Documento"}</Text>
               <Text style={styles.docMeta}>
-                {doc.file_size_kb ? `${doc.file_size_kb} KB` : "Tamano no disponible"}
-                {doc.uploader_name ? ` | Subio: ${doc.uploader_name}` : ""}
+                {doc.file_size_kb ? `${doc.file_size_kb} KB` : "Tamaño no disponible"}
+                {doc.uploader_name ? ` | Subió: ${doc.uploader_name}` : ""}
               </Text>
               {doc.notes ? <Text style={styles.docNotes}>{doc.notes}</Text> : null}
 
@@ -340,7 +340,7 @@ export default function DoctorDocumentsScreen() {
           <EmptyCard
             icon="file"
             title="Todavía no hay documentos"
-            text="Cuando este paciente tenga archivos en su expediente apareceran aqui."
+            text="Cuando este paciente tenga archivos en su expediente aparecerán aquí."
           />
         )}
       </ScrollView>
@@ -400,9 +400,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   hero: {
     borderRadius: 24,
-    backgroundColor: "#EEF7FF",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#D6E7FF",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 8,
   },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   heroText: { fontSize: 14, lineHeight: 21, color: MC.textSecondary },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 16,
   },
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 16,
     gap: 10,
   },
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 20,
     alignItems: "center",
     gap: 10,

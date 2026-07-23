@@ -203,7 +203,7 @@ export default function DoctorAppointmentsScreen() {
                       {normalizeType(appointment.type)}
                     </Text>
                     <Text style={styles.meta}>
-                      {appointment.location || "Sin ubicacion"} |{" "}
+                      {appointment.location || "Sin ubicación"} |{" "}
                       {money.format(appointment.fee || 0)}
                     </Text>
                     {appointment.reason ? (
@@ -297,7 +297,7 @@ function normalizeStatus(status: string) {
     in_consultation: "En consulta",
     completed: "Completada",
     cancelled: "Cancelada",
-    no_show: "No asistio",
+    no_show: "No asistió",
   };
 
   return map[status] || status;
@@ -346,7 +346,7 @@ function getScopeSummary(
       icon: "clock" as const,
       color: "#7C3AED",
       title: "Próximas por preparar",
-      text: "Deja listas las consultas futuras: confirma, valida pago y revisa motivo antes del día de atención.",
+      text: "Deja listas las consultas futuras: confirma, valida el pago y revisa el motivo antes del día de atención.",
       priorityCount,
     };
   }
@@ -354,7 +354,7 @@ function getScopeSummary(
   if (scope === "in_consultation") {
     return {
       icon: "pulse" as const,
-      color: "#075985",
+      color: MC.primary,
       title: "Consultas en curso",
       text: "Desde aquí lo importante es abrir la nota clínica, revisar alertas del paciente y cerrar bien la consulta.",
       priorityCount: appointments.length,
@@ -363,7 +363,7 @@ function getScopeSummary(
 
   return {
     icon: "check-circle" as const,
-    color: "#047857",
+    color: MC.success,
     title: "Consultas cerradas",
     text: "Usa esta vista para seguimiento clínico, repasar notas emitidas y abrir rápido la ficha del paciente.",
     priorityCount: appointments.length,
@@ -376,7 +376,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
   ) {
     return {
       icon: "check-circle" as const,
-      color: "#047857",
+      color: MC.success,
       title: "Siguiente paso: confirmar cita",
       text: "Confirma la consulta para dejarla lista en la agenda operativa del doctor.",
       tone: "success" as const,
@@ -386,9 +386,9 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
   if (appointment.status === "pending_payment") {
     return {
       icon: "credit-card" as const,
-      color: "#B45309",
+      color: MC.star,
       title: "Siguiente paso: revisar cobro",
-      text: "Espera pago, condona si aplica o confirma cuando el backend la deje lista para atención.",
+      text: "Espera el pago, condona si aplica o confirma cuando el servidor la deje lista para atención.",
       tone: "warning" as const,
     };
   }
@@ -401,7 +401,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
     return {
       icon: "shield-check" as const,
       color: "#2563EB",
-      title: "Siguiente paso: check-in del paciente",
+      title: "Siguiente paso: registrar la llegada del paciente",
       text: "Pide el código de llegada y cambia la cita a en consulta desde tablet o teléfono.",
       tone: "info" as const,
     };
@@ -412,7 +412,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
       icon: "pulse" as const,
       color: MC.primaryDark,
       title: "Siguiente paso: iniciar consulta",
-      text: "Abre el detalle y entra al flujo clinico cuando toque atender al paciente.",
+      text: "Abre el detalle y entra al flujo clínico cuando toque atender al paciente.",
       tone: "brand" as const,
     };
   }
@@ -420,7 +420,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
   if (appointment.status === "in_consultation") {
     return {
       icon: "clipboard-text" as const,
-      color: "#075985",
+      color: MC.primary,
       title: "Siguiente paso: capturar SOAP",
       text: "La consulta ya está activa. Abre la nota clínica, receta y cierre de visita.",
       tone: "info" as const,
@@ -430,7 +430,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
   if (appointment.status === "completed") {
     return {
       icon: "check" as const,
-      color: "#047857",
+      color: MC.success,
       title: "Consulta finalizada",
       text: "Puedes revisar la nota, la receta y volver a la ficha del paciente para seguimiento.",
       tone: "success" as const,
@@ -447,10 +447,10 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
 }
 
 const appointmentHintToneStyles = {
-  brand: { backgroundColor: "#ECFEFF", borderColor: "#A5F3FC" },
-  success: { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" },
-  warning: { backgroundColor: "#FFF7ED", borderColor: "#FED7AA" },
-  info: { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" },
+  brand: { backgroundColor: MC.primaryLight, borderColor: MC.infoBorder },
+  success: { backgroundColor: MC.successSoft, borderColor: MC.successBorder },
+  warning: { backgroundColor: MC.orangeSoft, borderColor: MC.orangeBorder },
+  info: { backgroundColor: MC.infoSoft, borderColor: MC.infoBorder },
   neutral: { backgroundColor: MC.surface, borderColor: MC.border },
 } as const;
 
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: "#C9ECE8",
+    borderColor: MC.infoBorder,
     padding: 18,
     gap: 8,
   },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   heroStat: {
     flex: 1,
     borderRadius: 16,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: MC.card,
     padding: 12,
     gap: 2,
   },
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 12,
   },
@@ -539,9 +539,9 @@ const styles = StyleSheet.create({
   scopeStats: { flexDirection: "row", gap: 10 },
   liveCard: {
     borderRadius: 20,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: MC.infoSoft,
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: MC.infoBorder,
     padding: 14,
     flexDirection: "row",
     gap: 12,
@@ -551,17 +551,17 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
   liveBody: { flex: 1, gap: 2 },
-  liveEyebrow: { fontSize: 12, fontWeight: "700", color: "#075985" },
+  liveEyebrow: { fontSize: 12, fontWeight: "700", color: MC.primary },
   liveTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
   liveText: { fontSize: 12, color: MC.textSecondary },
   errorBox: {
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     flexDirection: "row",
     gap: 8,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 10,
   },

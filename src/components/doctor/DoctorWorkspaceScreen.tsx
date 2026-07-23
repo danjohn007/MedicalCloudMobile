@@ -63,8 +63,8 @@ export function DoctorWorkspaceScreen({
                 <View style={styles.statusPill}>
                   <Text style={styles.statusText}>
                     {module.status === "mobile-shell"
-                      ? "base movil"
-                      : "requiere backend"}
+                      ? "base para móvil"
+                      : "requiere servidor"}
                   </Text>
                 </View>
               </View>
@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#BDEAE7",
+    borderColor: MC.infoBorder,
     gap: 10,
   },
   heroIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     gap: 8,
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   statusPill: {
     borderRadius: 999,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: MC.surface,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
