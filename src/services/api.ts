@@ -1178,6 +1178,29 @@ export async function removeAvatar() {
   return request<{ success: boolean }>("/avatar/remove", { method: "POST" });
 }
 
+export interface AccountDeletionStatus {
+  status: "requested" | "cancelled" | "completed";
+  requested_at: string;
+  cancelled_at: string | null;
+}
+
+export async function getAccountDeletionStatus() {
+  return request<{ data: AccountDeletionStatus | null }>("/account/deletion");
+}
+
+export async function requestAccountDeletion(reason?: string) {
+  return request<{ success: boolean; message: string }>("/account/deletion", {
+    method: "POST",
+    body: JSON.stringify({ confirmation: "ELIMINAR", reason: reason?.trim() || undefined }),
+  });
+}
+
+export async function cancelAccountDeletion() {
+  return request<{ success: boolean; message: string }>("/account/deletion/cancel", {
+    method: "POST",
+  });
+}
+
 // ── QR / Check-in / Checkout ────────────────────────────
 export async function getAppointmentQr(id: number) {
   return request<{

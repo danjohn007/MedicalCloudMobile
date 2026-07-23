@@ -88,6 +88,11 @@ export default function PerfilScreen() {
       label: "Ayuda y soporte",
       action: () => router.push("/soporte"),
     },
+    {
+      icon: "trash",
+      label: "Eliminar mi cuenta",
+      action: () => router.push("/account/delete"),
+    },
   ];
 
   const handleLogout = async () => {
@@ -188,7 +193,7 @@ export default function PerfilScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version}>Doctor Cloud v1.0.0</Text>
+          <Text style={styles.version}>Doctor Cloud v7.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

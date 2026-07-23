@@ -39,7 +39,7 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Mapa Android | Sigue sin cargar correctamente | `[ ] BLOQUEADOR` |
 | Login social | Google nativo y Sign in with Apple implementados | `[~]` |
 | Web publica | HTTPS y landing activa | `[x]` |
-| Privacidad/terminos/eliminacion | Las URLs publicas probadas responden 404 | `[ ] BLOQUEADOR` |
+| Privacidad/terminos/eliminacion | Las URLs publicas siguen sin estar disponibles | `[ ] BLOQUEADOR` |
 | Eliminacion de cuenta en app | No existe flujo visible ni endpoint movil | `[ ] BLOQUEADOR` |
 | Build contra cambios actuales | Hay cambios locales posteriores a las builds de EAS | `[ ] BLOQUEADOR` |
 
@@ -63,26 +63,26 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 ### Seguridad inmediata del servidor
 
-- [ ] `BLOQUEADOR` Rotar el secreto de los cron jobs. Actualmente existe un secreto real escrito en `CronController.php` y en comentarios versionados.
-- [ ] Mover el secreto de cron a `Config.php` o variable de entorno y retirarlo por completo del repositorio.
+- [ ] `BLOQUEADOR` Rotar el secreto de los cron jobs en produccion. El valor anterior debe asumirse comprometido por su historial versionado.
+- [~] El código ya lee `CRON_SECRET` desde `Config.php` o entorno y se retiró el valor actual del repositorio; falta configurar y desplegar el secreto nuevo.
 - [ ] Actualizar las tareas de cPanel con el secreto nuevo y comprobar que un valor incorrecto responde 403.
 - [ ] Revisar historial Git y cualquier copia desplegada para asumir que el secreto anterior ya esta comprometido.
 - [x] `core/Config.php` y cuentas de servicio estan ignorados por Git.
 - [~] La cuenta de servicio FCM existe fuera de Git en `storage/firebase/`; confirmar el mismo archivo y permisos restrictivos en produccion.
-- [x] `test_connection.php` devuelve 404 en produccion.
-- [ ] Evitar que `test_connection.php` pueda desplegarse por accidente o protegerlo solo para administracion.
+- [ ] `BLOQUEADOR` `test_connection.php` responde 200 actualmente en produccion; debe devolver 404 al desplegar la regla preparada.
+- [~] El repositorio ya tiene una regla para bloquearlo con 404; falta desplegarla y comprobarla en produccion.
 
 ### Privacidad, terminos y eliminacion de cuenta
 
 - [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/privacidad` con aviso integral y datos de contacto reales.
 - [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/terminos` con condiciones para pacientes, doctores y clinicas.
 - [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/eliminar-cuenta` con solicitud autenticada o verificacion de identidad.
-- [ ] `BLOQUEADOR` Agregar en la app una opcion facil de encontrar para iniciar la eliminacion de la cuenta.
-- [ ] Crear endpoint autenticado en la API movil para solicitar/cancelar eliminacion.
-- [ ] Revocar sesiones, JWT, tokens FCM y acceso social al iniciar o completar la eliminacion.
+- [~] La app ya incluye una opcion visible para solicitar la eliminacion de cuenta en ambos perfiles; falta desplegarla y probarla desde builds de tienda.
+- [~] API y migracion `v70` preparadas para solicitar/cancelar eliminacion; falta ejecutar la migracion y desplegar el backend.
+- [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar en produccion y completar la revocacion de Apple.
 - [ ] Para cuentas Apple, implementar revocacion del token de Sign in with Apple.
 - [ ] Eliminar o anonimizar datos que no deban conservarse y documentar claramente las excepciones clinicas/legales.
-- [ ] Enviar confirmacion y plazo estimado al usuario cuando la eliminacion no pueda ser inmediata.
+- [~] La app confirma la solicitud y cierra sesion; falta definir el plazo legal y enviar la confirmacion por correo.
 - [ ] Enlazar privacidad, terminos y eliminacion desde login/registro, perfil y pie de pagina web.
 - [ ] Obtener revision legal del texto aplicable a datos personales sensibles y expedientes clinicos en Mexico. Este checklist no sustituye asesoria legal.
 
@@ -109,7 +109,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 - [x] `app.json` declara version `7.0.0`.
 - [x] EAS usa versionado remoto y `autoIncrement` en produccion.
-- [ ] Alinear `package.json` (`1.0.0`) con la version publica o documentar que no gobierna las tiendas.
+- [x] `package.json` y el texto visible de perfil están alineados con la versión pública `7.0.0`.
 - [ ] Definir una politica simple: version publica `major.minor.patch`; build number/versionCode siempre incremental.
 - [ ] Agregar identificadores de envio a `eas.json` cuando ya existan las apps en ambas consolas, sin guardar secretos en Git.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.

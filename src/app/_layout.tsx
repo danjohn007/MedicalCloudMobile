@@ -121,6 +121,7 @@ export default function RootLayout() {
         <Stack.Screen name="doctor" />
         <Stack.Screen name="stripe-connect" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="account" />
       </Stack>
     </>
   );

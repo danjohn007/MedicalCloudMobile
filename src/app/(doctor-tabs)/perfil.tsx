@@ -179,6 +179,12 @@ export default function DoctorProfileScreen() {
               summary="Tickets y seguimiento con el equipo."
               onPress={() => router.push("/soporte" as any)}
             />
+            <ShortcutCard
+              icon="trash"
+              title="Eliminar cuenta"
+              summary="Solicitar la eliminación de tu cuenta."
+              onPress={() => router.push("/account/delete" as any)}
+            />
           </View>
         </View>
 

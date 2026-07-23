@@ -1,7 +1,7 @@
 {
   "name": "doctor-cloud",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "7.0.0",
   "dependencies": {
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-firebase/app": "^25.1.0",
