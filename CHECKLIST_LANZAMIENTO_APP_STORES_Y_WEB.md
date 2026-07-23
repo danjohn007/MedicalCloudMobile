@@ -74,16 +74,16 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 ### Privacidad, terminos y eliminacion de cuenta
 
-- [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/privacidad` con aviso integral y datos de contacto reales.
-- [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/terminos` con condiciones para pacientes, doctores y clinicas.
-- [ ] `BLOQUEADOR` Crear `https://doctorcloud.digital/eliminar-cuenta` con solicitud autenticada o verificacion de identidad.
+- [~] Aviso integral preparado en `https://doctorcloud.digital/app/privacidad` con responsable, contacto, datos clínicos, proveedores, derechos ARCO y retención; falta desplegarlo y obtener revisión legal.
+- [~] Términos preparados en `https://doctorcloud.digital/app/terminos` para pacientes, doctores, menores, IA, pagos y proveedores; falta desplegarlos y obtener revisión legal.
+- [~] Recurso web preparado en `https://doctorcloud.digital/app/eliminar-cuenta` con canal de solicitud y aviso de verificación de identidad; falta desplegarlo y confirmar que el correo de soporte está atendido.
 - [~] La app ya incluye una opcion visible para solicitar la eliminacion de cuenta en ambos perfiles; falta desplegarla y probarla desde builds de tienda.
 - [~] API y migracion `v70` preparadas para solicitar/cancelar eliminacion; falta ejecutar la migracion y desplegar el backend.
 - [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar en produccion y completar la revocacion de Apple.
 - [ ] Para cuentas Apple, implementar revocacion del token de Sign in with Apple.
 - [ ] Eliminar o anonimizar datos que no deban conservarse y documentar claramente las excepciones clinicas/legales.
 - [~] La app confirma la solicitud y cierra sesion; falta definir el plazo legal y enviar la confirmacion por correo.
-- [ ] Enlazar privacidad, terminos y eliminacion desde login/registro, perfil y pie de pagina web.
+- [~] Privacidad y términos están enlazados desde login/registro y las páginas legales se enlazan entre sí; falta agregarlos al perfil y al pie de la landing al desplegar el sitio.
 - [ ] Obtener revision legal del texto aplicable a datos personales sensibles y expedientes clinicos en Mexico. Este checklist no sustituye asesoria legal.
 
 ### Coherencia publica de DoctorCloud

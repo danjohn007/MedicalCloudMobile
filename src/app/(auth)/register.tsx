@@ -4,6 +4,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -184,6 +185,13 @@ export default function RegisterScreen() {
               <Text style={styles.footerLink}>Inicia sesión</Text>
             </Pressable>
           </View>
+          <View style={styles.legalRow}>
+            <Text style={styles.legalText}>Al continuar aceptas el </Text>
+            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/terminos")}><Text style={styles.legalLink}>uso de la plataforma</Text></Pressable>
+            <Text style={styles.legalText}> y el </Text>
+            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/privacidad")}><Text style={styles.legalLink}>aviso de privacidad</Text></Pressable>
+            <Text style={styles.legalText}>.</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -306,4 +314,7 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 22 },
   footerText: { color: MC.textSecondary, fontSize: 15 },
   footerLink: { color: MC.primary, fontSize: 15, fontWeight: "700" },
+  legalRow: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap", marginTop: 18, paddingHorizontal: 8 },
+  legalText: { color: MC.textMuted, fontSize: 12, lineHeight: 18 },
+  legalLink: { color: MC.primary, fontSize: 12, fontWeight: "700", lineHeight: 18 },
 });

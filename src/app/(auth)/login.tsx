@@ -4,6 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -227,6 +228,11 @@ export default function LoginScreen() {
               <Text style={styles.footerLink}>Regístrate</Text>
             </Pressable>
           </View>
+          <View style={styles.legalRow}>
+            <Pressable onPress={() => void Linking.openURL('https://doctorcloud.digital/app/privacidad')}><Text style={styles.legalLink}>Privacidad</Text></Pressable>
+            <Text style={styles.legalText}> · </Text>
+            <Pressable onPress={() => void Linking.openURL('https://doctorcloud.digital/app/terminos')}><Text style={styles.legalLink}>Términos</Text></Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -314,4 +320,7 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { color: MC.textSecondary, fontSize: 15 },
   footerLink: { color: MC.primary, fontSize: 15, fontWeight: '600' },
+  legalRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
+  legalText: { color: MC.textMuted, fontSize: 13 },
+  legalLink: { color: MC.primary, fontSize: 13, fontWeight: '600' },
 });
