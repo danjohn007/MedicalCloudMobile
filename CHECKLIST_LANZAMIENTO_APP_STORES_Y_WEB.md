@@ -114,16 +114,16 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] Definir una politica simple: version publica `major.minor.patch`; build number/versionCode siempre incremental.
 - [ ] Agregar identificadores de envio a `eas.json` cuando ya existan las apps en ambas consolas, sin guardar secretos en Git.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
-- [ ] Confirmar que produccion siempre usa `https://doctorcloud.digital/app/api/mobile` y nunca localhost/sandbox.
+- [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
 - [ ] Decidir si `expo-updates` se configurara realmente con `runtimeVersion` y canales o si se retirara. Hoy esta instalado principalmente para recargar apariencia.
 - [ ] Revisar advertencias de privacidad de SDKs iOS y manifiestos de razones aprobadas antes del binario final.
 
 ### Permisos
 
 - [x] Ubicacion tiene texto de uso en iOS/Android mediante `expo-location`.
-- [~] Fotos/documentos se solicitan solo al iniciar una accion; validar textos de permiso generados en iOS.
+- [~] Fotos/documentos se solicitan solo al iniciar una accion; el texto de Fotos ya es especifico de Doctor Cloud. Falta validarlo en iOS fisico.
 - [~] Notificaciones se solicitan mediante Firebase; validar el momento y explicacion al usuario.
-- [ ] Revisar el manifiesto final y retirar cualquier permiso no usado.
+- [~] El manifiesto generado ya omite Camara y Microfono, se elimino `expo-camera`, Android no permite backups automaticos e iOS rechaza cargas no seguras. Falta comprobar el AAB/IPA final.
 - [ ] Probar cada flujo con permiso aceptado, denegado y denegado permanentemente.
 
 ### Autenticacion y sesion

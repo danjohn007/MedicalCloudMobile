@@ -17,6 +17,9 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        },
         "UIBackgroundModes": [
           "remote-notification"
         ]
@@ -36,6 +39,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -73,6 +81,14 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicación para encontrar doctores cercanos, completar direcciones y validar consultorios."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Doctor Cloud necesita acceso a tus fotos para que puedas elegir una imagen de perfil.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "@react-native-firebase/app",
