@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -206,7 +207,8 @@ export default function DoctorConsultationTemplatesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <DoctorFeatureAccessGate feature="soap_notes">
+      <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -452,7 +454,8 @@ export default function DoctorConsultationTemplatesScreen() {
           ))}
         </Section>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

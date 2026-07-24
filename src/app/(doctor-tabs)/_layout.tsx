@@ -1,8 +1,12 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import { useRootBackExit } from "@/hooks/useRootBackExit";
+import * as api from "@/services/api";
+import { useAuthStore } from "@/stores/authStore";
 
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
@@ -18,7 +22,44 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
 const DOCTOR_ROOT_SCREENS = ["index", "pacientes", "citas", "mensajes", "perfil"];
 
 export default function DoctorTabsLayout() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const [checkingAccess, setCheckingAccess] = useState(true);
   useRootBackExit("(doctor-tabs)", DOCTOR_ROOT_SCREENS);
+
+  useEffect(() => {
+    if (user?.role !== "doctor") {
+      setCheckingAccess(false);
+      return;
+    }
+
+    let active = true;
+    void api
+      .getDoctorMobileAccess()
+      .then(({ data }) => {
+        if (!active) return;
+        if (!data.can_access_mobile) {
+          router.replace("/subscription-required" as any);
+          return;
+        }
+        setCheckingAccess(false);
+      })
+      .catch(() => {
+        if (active) router.replace("/subscription-required" as any);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router, user?.role]);
+
+  if (checkingAccess) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
+        <ActivityIndicator size="large" color={MC.primary} />
+      </View>
+    );
+  }
 
   return (
     <Tabs

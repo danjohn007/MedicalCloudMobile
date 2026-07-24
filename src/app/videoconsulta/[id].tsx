@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -159,7 +160,8 @@ export default function VideoconsultaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <DoctorFeatureAccessGate feature="video_consult">
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
@@ -240,7 +242,8 @@ export default function VideoconsultaScreen() {
           incluso antes de la ventana normal.
         </Text>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

@@ -1,4 +1,5 @@
 import { Icon } from "@/components/Icon";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -136,7 +137,8 @@ export default function AiChatScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <DoctorFeatureAccessGate feature="ai_assistant">
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -233,7 +235,8 @@ export default function AiChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

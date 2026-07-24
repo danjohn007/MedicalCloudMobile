@@ -1545,6 +1545,19 @@ export async function getDoctorDashboard() {
   return request<DoctorDashboardData>("/doctor/dashboard");
 }
 
+export interface DoctorMobileAccess {
+  can_access_mobile: boolean;
+  reason: "subscription_required" | "mobile_app_required" | "subscription_unavailable" | null;
+  message: string | null;
+  plan_name: string | null;
+  features: Record<"soap_notes" | "prescriptions" | "ai_assistant" | "video_consult" | "analytics" | "mobile_app", boolean>;
+  upgrade_url: string;
+}
+
+export async function getDoctorMobileAccess() {
+  return request<{ data: DoctorMobileAccess }>("/doctor/access");
+}
+
 export async function getDoctorAppointments(
   scope: DoctorAppointmentScope = "upcoming",
 ) {

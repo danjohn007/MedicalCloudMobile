@@ -17,6 +17,7 @@ import {
   DoctorPatientPicker,
   filterDoctorPatients,
 } from "@/components/DoctorPatientPicker";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
@@ -157,7 +158,8 @@ export default function DoctorPrescriptionsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <DoctorFeatureAccessGate feature="prescriptions">
+      <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -328,7 +330,8 @@ export default function DoctorPrescriptionsScreen() {
           />
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { getSecure, removeSecure, setSecure } from "@/services/storage";
@@ -472,7 +473,8 @@ export default function DoctorSoapScreen() {
   const progress = buildProgress(form);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <DoctorFeatureAccessGate feature="soap_notes">
+      <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -814,7 +816,8 @@ export default function DoctorSoapScreen() {
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

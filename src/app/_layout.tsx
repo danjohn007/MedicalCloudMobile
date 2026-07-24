@@ -1,6 +1,6 @@
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useColorScheme } from "react-native";
 
 import {
@@ -9,6 +9,7 @@ import {
   registerDeviceForPushNotifications,
   type PushNotificationData,
 } from "@/services/push-notifications";
+import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userRole = useAuthStore((state) => state.user?.role);
+  const [doctorAccessChecked, setDoctorAccessChecked] = useState(true);
   const handledLastPushRef = useRef(false);
   const systemScheme = useColorScheme();
   const themeLoaded = useThemeStore((state) => state.loaded);
@@ -98,7 +100,35 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
-  if (!themeLoaded) {
+  useEffect(() => {
+    if (!isAuthenticated || userRole !== "doctor") {
+      setDoctorAccessChecked(true);
+      return;
+    }
+
+    let active = true;
+    setDoctorAccessChecked(false);
+    void api
+      .getDoctorMobileAccess()
+      .then(({ data }) => {
+        if (!active) return;
+        setDoctorAccessChecked(true);
+        if (!data.can_access_mobile) {
+          router.replace("/subscription-required" as any);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setDoctorAccessChecked(true);
+        router.replace("/subscription-required" as any);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, router, userRole]);
+
+  if (!themeLoaded || !doctorAccessChecked) {
     return null;
   }
 
@@ -122,6 +152,7 @@ export default function RootLayout() {
         <Stack.Screen name="stripe-connect" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="subscription-required" options={{ gestureEnabled: false }} />
       </Stack>
     </>
   );
