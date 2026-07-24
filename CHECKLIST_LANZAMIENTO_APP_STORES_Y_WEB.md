@@ -50,7 +50,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 - [x] Responsable legal definido: Dan Jonathan Raso Rios. Falta verificar que el nombre publico de cada cuenta de tienda coincida.
 - [x] Lanzamiento inicial definido: Mexico.
-- [~] Se admitiran menores; falta implementar consentimiento verificable de madre, padre o tutor antes de publicar para ese publico.
+- [~] Se admitiran menores; el diseno tecnico esta en `DISENO_CONSENTIMIENTO_MENORES.md` y falta implementar consentimiento verificable de madre, padre o tutor antes de publicar para ese publico.
 - [ ] Confirmar que la app se presentara como plataforma de gestion y servicios medicos, no como dispositivo medico ni sustituto de un profesional.
 - [x] Correo oficial definido: `soporte@doctorcloud.digital`.
 - [x] Responsable de privacidad y domicilio definidos; falta revision legal del texto final.
