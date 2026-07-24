@@ -36,24 +36,25 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Push Android | Implementacion FCM nativa presente; falta prueba de la build final | `[~]` |
 | Mapa iOS | Funciona con Apple Maps | `[x]` |
 | Mapa web | Reportado funcionando | `[~]` |
-| Mapa Android | Sigue sin cargar correctamente | `[ ] BLOQUEADOR` |
+| Mapa Android | Reportado funcional tras ajustar Google Cloud; falta validarlo en AAB firmado/Play Internal Testing | `[~]` |
 | Login social | Google nativo y Sign in with Apple implementados | `[~]` |
 | Web publica | HTTPS y landing activa | `[x]` |
-| Privacidad/terminos/eliminacion | Las URLs publicas siguen sin estar disponibles | `[ ] BLOQUEADOR` |
-| Eliminacion de cuenta en app | No existe flujo visible ni endpoint movil | `[ ] BLOQUEADOR` |
+| Privacidad/terminos/eliminacion | Paginas y enlaces preparados en codigo; falta desplegarlos y probar URLs publicas | `[~] BLOQUEADOR hasta desplegar` |
+| Eliminacion de cuenta en app | Flujo, endpoint y migracion v70 preparados; la migracion ya fue aplicada y falta prueba de produccion/build final | `[~]` |
+| Acceso doctor por suscripcion | Backend y app exigen suscripcion activa con `has_app=1` y bloquean modulos por plan; falta desplegar y probar con cuentas de cada plan | `[~]` |
 | Build contra cambios actuales | Hay cambios locales posteriores a las builds de EAS | `[ ] BLOQUEADOR` |
 
 ## Decisiones que deben definirse primero
 
 Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
-- [ ] Confirmar titular legal y nombre publico del desarrollador en Apple y Google.
-- [ ] Definir lanzamiento inicial: solo Mexico o tambien otros paises.
-- [ ] Definir publico objetivo. Recomendacion inicial: mayores de 18 anos; si se admitiran menores, disenar consentimiento y cuenta de tutor antes de publicar.
+- [x] Responsable legal definido: Dan Jonathan Raso Rios. Falta verificar que el nombre publico de cada cuenta de tienda coincida.
+- [x] Lanzamiento inicial definido: Mexico.
+- [~] Se admitiran menores; falta implementar consentimiento verificable de madre, padre o tutor antes de publicar para ese publico.
 - [ ] Confirmar que la app se presentara como plataforma de gestion y servicios medicos, no como dispositivo medico ni sustituto de un profesional.
-- [ ] Definir correo oficial unico. Recomendacion: `soporte@doctorcloud.digital`.
-- [ ] Definir razon social, domicilio, responsable de privacidad y medio para ejercer derechos sobre datos.
-- [ ] Definir politica de retencion: que datos clinicos/contables deben conservarse legalmente, por cuanto tiempo y cuales se eliminan al cerrar cuenta.
+- [x] Correo oficial definido: `soporte@doctorcloud.digital`.
+- [x] Responsable de privacidad y domicilio definidos; falta revision legal del texto final.
+- [~] Solicitud de eliminacion con plazo operativo de 30 dias definida; falta documentar la retencion clinica, contable y las excepciones legales con revision profesional.
 - [ ] Decidir si pagos estaran visibles en la primera version. Si no estan en modo real y totalmente probados, ocultar sus acciones en produccion.
 - [ ] Decidir si se migra Expo SDK 54 a SDK 56 antes del primer lanzamiento o en la primera actualizacion. SDK 54 pasa `expo-doctor` y apunta a Android API 36; la migracion no debe mezclarse sin una regresion completa.
 - [ ] Confirmar si se distribuira en la Union Europea. En ese caso completar estado de comerciante DSA en App Store Connect.
@@ -97,7 +98,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 ### Calidad funcional minima
 
-- [ ] `BLOQUEADOR` Resolver Google Maps en Android y validarlo desde una build firmada de tienda.
+- [~] Google Maps ya fue reportado funcional en Android; falta validarlo desde una build firmada de tienda y Play Internal Testing.
 - [ ] `BLOQUEADOR` Generar las builds finales desde un commit limpio que contenga todos los cambios aprobados.
 - [ ] Probar los dos roles principales con cuentas de revision sin datos reales: paciente y doctor.
 - [ ] Corregir contrastes, textos invisibles, fondos pastel y cambios de tema pendientes en claro/oscuro.
@@ -175,6 +176,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 ### IA y contenido medico
 
 - [~] La app ya muestra avisos de que la IA no reemplaza el criterio profesional en algunas vistas.
+- [ ] `BLOQUEADOR` Actualizar en Superadmin la configuracion global de IA a `gemini-2.5-flash`: el export actual aun contiene `gemini-2.0-flash`, que invalida el cambio hecho en el archivo de configuracion.
 - [ ] Revisar todos los accesos de IA para que no afirmen diagnosticar ni sustituir atencion medica.
 - [ ] Mostrar aviso de consultar a un profesional antes de decisiones medicas, especialmente al paciente.
 - [ ] Documentar proveedor, datos enviados, retencion y controles de privacidad en el aviso de privacidad.
