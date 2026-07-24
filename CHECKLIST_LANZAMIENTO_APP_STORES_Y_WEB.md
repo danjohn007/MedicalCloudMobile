@@ -205,16 +205,16 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 
 ### Ficha y declaraciones
 
-- [ ] Nombre, descripcion corta, descripcion completa y categoria Medica.
-- [ ] Icono 512 x 512 para Play, feature graphic 1024 x 500 y capturas reales sin datos personales.
+- [~] Borrador de nombre, descripciones y categoria Medica preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion del propietario de la ficha.
+- [~] Icono maestro 1024 x 1024 disponible; faltan exportacion Play 512 x 512, feature graphic 1024 x 500 y capturas reales sin datos personales.
 - [ ] Correo, web y URL de privacidad.
 - [ ] URL publica de eliminacion de cuenta.
 - [ ] Declaracion de anuncios: actualmente deberia ser “no contiene anuncios”, si se confirma.
 - [ ] Acceso a la app: entregar cuentas e instrucciones para paciente y doctor.
 - [ ] Publico objetivo y contenido; evitar seleccionar menores si el producto no esta preparado para ellos.
 - [ ] Cuestionario de clasificacion de contenido.
-- [ ] Declaracion de seguridad de datos basada en el inventario de este documento.
-- [ ] Declaracion de apps de salud. Como minimo evaluar “Healthcare Services and Management”, recetas/tratamientos y soporte a decisiones clinicas.
+- [~] Borrador de Data safety preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validarlo contra produccion, SDKs y revision legal.
+- [~] Borrador de declaracion de salud preparado; falta completarlo con los nombres exactos que muestre Play Console.
 - [ ] Declaracion de funciones financieras; declarar con precision el procesamiento de pagos si queda visible.
 - [ ] Verificar politicas de permisos sensibles despues de subir el AAB.
 - [ ] Notas de version en espanol.
@@ -235,14 +235,14 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 
 ### Ficha y revision
 
-- [ ] Nombre, subtitulo, descripcion, palabras clave, categoria Medica y copyright.
+- [~] Borrador de nombre, subtitulo, descripcion, palabras clave, categoria Medica y copyright preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`.
 - [ ] URL de soporte publica con contacto real.
 - [ ] URL de politica de privacidad.
-- [ ] Respuestas de App Privacy para la app y todos los SDK de terceros.
-- [ ] Capturas reales para los tamanos de iPhone solicitados; no incluir datos clinicos reales.
+- [~] Borrador de App Privacy y proveedores preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion legal y de produccion.
+- [~] Guion de capturas preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; faltan capturas reales para los tamanos de iPhone solicitados.
 - [ ] Decidir si la app sera solo iPhone. No activar iPad sin revisar toda la interfaz y preparar capturas.
-- [ ] Incluir notas de revision explicando roles, pagos por servicios reales, ubicacion, notificaciones e IA.
-- [ ] Entregar una cuenta paciente y una cuenta doctor con datos ficticios pero flujos utilizables.
+- [~] Borrador de notas de revision preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; completar flujo de pagos visible en la build candidata.
+- [~] Plantilla de cuentas de revision preparada; faltan dos cuentas funcionales con datos ficticios.
 - [ ] Mantener backend, correos y cuentas de revision activos durante todo el proceso.
 - [ ] Probar restauracion de acceso con Apple y eliminacion/revocacion de cuenta.
 - [ ] Enviar primero a TestFlight interno/externo y despues a App Review.
