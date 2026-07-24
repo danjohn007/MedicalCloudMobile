@@ -68,10 +68,11 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [~] El código ya lee `CRON_SECRET` desde `Config.php` o entorno y se retiró el valor actual del repositorio; falta configurar y desplegar el secreto nuevo.
 - [ ] Actualizar las tareas de cPanel con el secreto nuevo y comprobar que un valor incorrecto responde 403.
 - [ ] Revisar historial Git y cualquier copia desplegada para asumir que el secreto anterior ya esta comprometido.
+- [~] El JWT movil ya falla cerrado si `MOBILE_JWT_SECRET` falta o conserva un marcador de ejemplo; falta desplegarlo y confirmar que la configuracion privada contiene un secreto aleatorio real.
 - [x] `core/Config.php` y cuentas de servicio estan ignorados por Git.
 - [~] La cuenta de servicio FCM existe fuera de Git en `storage/firebase/`; confirmar el mismo archivo y permisos restrictivos en produccion.
-- [ ] `BLOQUEADOR` `test_connection.php` responde 200 actualmente en produccion; debe devolver 404 al desplegar la regla preparada.
-- [~] El repositorio ya tiene una regla para bloquearlo con 404; falta desplegarla y comprobarla en produccion.
+- [ ] `BLOQUEADOR` `test_connection.php` responde 200 actualmente en produccion; debe devolver 404 al desplegar el cambio.
+- [~] El archivo de diagnostico fue eliminado del repositorio y la regla defensiva 404 se mantiene; falta desplegar y comprobar produccion.
 
 ### Privacidad, terminos y eliminacion de cuenta
 
