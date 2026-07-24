@@ -45,7 +45,9 @@ export default function DoctorTabsLayout() {
         setCheckingAccess(false);
       })
       .catch(() => {
-        if (active) router.replace("/subscription-required" as any);
+        if (!active) return;
+        setCheckingAccess(false);
+        router.replace("/subscription-required" as any);
       });
 
     return () => {

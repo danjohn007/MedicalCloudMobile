@@ -1,7 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useColorScheme } from "react-native";
+import { ActivityIndicator, View, useColorScheme } from "react-native";
 
 import {
   addPushResponseListener,
@@ -9,6 +9,7 @@ import {
   registerDeviceForPushNotifications,
   type PushNotificationData,
 } from "@/services/push-notifications";
+import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
@@ -129,7 +130,11 @@ export default function RootLayout() {
   }, [isAuthenticated, router, userRole]);
 
   if (!themeLoaded || !doctorAccessChecked) {
-    return null;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
+        <ActivityIndicator size="large" color={MC.primary} />
+      </View>
+    );
   }
 
   return (

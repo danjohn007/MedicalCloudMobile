@@ -12,6 +12,7 @@ import {
   Dimensions,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -156,13 +157,16 @@ export default function HomeScreen() {
     unreadMessages: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const firstName = user?.name?.split(" ")[0] ?? "Paciente";
 
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
+        if (reloadNonce > 0) setRefreshing(true);
+        else setLoading(true);
         const location = await resolvePatientSearchLocation();
 
         // Use dedicated dashboard stats endpoint + specialties + doctors
@@ -232,9 +236,10 @@ export default function HomeScreen() {
         }
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     })();
-  }, []);
+  }, [reloadNonce]);
 
   const handleSearch = () => {
     const query = search.trim();
@@ -281,6 +286,14 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => setReloadNonce((current) => current + 1)}
+            tintColor={MC.primary}
+            colors={[MC.primary]}
+          />
+        }
       >
         <FadeSlideIn delay={0}>
           <View style={s.heroCard}>
