@@ -9,22 +9,81 @@ export interface PatientSearchLocation {
   label?: string;
 }
 
-export async function resolvePatientSearchLocation(): Promise<PatientSearchLocation> {
-  try {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (permission.granted) {
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+export interface ResolvePatientSearchLocationOptions {
+  /** Ask for permission only from a deliberate location-related action. */
+  requestPermission?: boolean;
+  /** Use the saved profile as a fallback when a location is needed for a search. */
+  includeProfileFallback?: boolean;
+}
 
-      return {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        source: "device",
-        label: "Ubicación actual",
-      };
+const LOCATION_TIMEOUT_MS = 6_000;
+
+function withinLocationTimeout<T>(operation: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error("No se pudo obtener la ubicación a tiempo."));
+    }, LOCATION_TIMEOUT_MS);
+
+    operation.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
+export async function resolvePatientSearchLocation(
+  options: ResolvePatientSearchLocationOptions = {},
+): Promise<PatientSearchLocation> {
+  const { requestPermission = false, includeProfileFallback = false } = options;
+
+  try {
+    const permission = await (requestPermission
+      ? Location.requestForegroundPermissionsAsync()
+      : Location.getForegroundPermissionsAsync());
+
+    if (permission.granted) {
+      const lastKnown = await withinLocationTimeout(
+        Location.getLastKnownPositionAsync({
+          maxAge: 15 * 60 * 1000,
+          requiredAccuracy: 5_000,
+        }),
+      );
+
+      if (lastKnown) {
+        return {
+          lat: lastKnown.coords.latitude,
+          lng: lastKnown.coords.longitude,
+          source: "device",
+          label: "Ubicación actual",
+        };
+      }
+
+      // A fresh GPS fix is appropriate only after the person explicitly chose
+      // a location-based action. The dashboard must never wait for the GPS.
+      if (requestPermission) {
+        const position = await withinLocationTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        );
+
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          source: "device",
+          label: "Ubicación actual",
+        };
+      }
     }
   } catch {
+  }
+
+  if (!includeProfileFallback) {
+    return { source: "none" };
   }
 
   try {

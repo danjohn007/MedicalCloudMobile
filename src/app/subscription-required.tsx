@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,28 +10,49 @@ import { useAuthStore } from "@/stores/authStore";
 
 export default function SubscriptionRequiredScreen() {
   const router = useRouter();
-  const { feature } = useLocalSearchParams<{ feature?: string }>();
+  const routerRef = useRef(router);
+  const requestRef = useRef(0);
+  const { feature, validation } = useLocalSearchParams<{ feature?: string; validation?: string }>();
   const logout = useAuthStore((state) => state.logout);
   const [access, setAccess] = useState<api.DoctorMobileAccess | null>(null);
-  const [validationError, setValidationError] = useState("");
-  const [checking, setChecking] = useState(true);
+  const [validationError, setValidationError] = useState(
+    validation === "1" ? "No pudimos validar tu suscripción ahora. Revisa tu conexión e inténtalo de nuevo." : "",
+  );
+  const [checking, setChecking] = useState(validation !== "1");
+
+  routerRef.current = router;
 
   const loadAccess = useCallback(() => {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
     setChecking(true);
     setValidationError("");
     void api
       .getDoctorMobileAccess()
-      .then(({ data }) => setAccess(data))
+      .then(({ data }) => {
+        if (requestRef.current !== requestId) return;
+        setAccess(data);
+
+        const requestedFeature = feature as keyof api.DoctorMobileAccess["features"] | undefined;
+        const canResume = data.can_access_mobile && (!requestedFeature || Boolean(data.features[requestedFeature]));
+        if (canResume) {
+          routerRef.current.replace("/(doctor-tabs)" as any);
+        }
+      })
       .catch(() => {
+        if (requestRef.current !== requestId) return;
         setAccess(null);
         setValidationError("No pudimos validar tu suscripción ahora. Revisa tu conexión e inténtalo de nuevo.");
       })
-      .finally(() => setChecking(false));
-  }, []);
+      .finally(() => {
+        if (requestRef.current === requestId) setChecking(false);
+      });
+  }, [feature]);
 
   useEffect(() => {
+    if (validation === "1") return;
     loadAccess();
-  }, [loadAccess]);
+  }, [loadAccess, validation]);
 
   const featureLabel: Record<string, string> = {
     ai_assistant: "el asistente IA",

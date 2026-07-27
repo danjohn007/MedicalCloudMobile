@@ -1,7 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View, useColorScheme } from "react-native";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Text, View, useColorScheme } from "react-native";
 
 import {
   addPushResponseListener,
@@ -56,15 +56,23 @@ function routeFromPushData(data: PushNotificationData, role?: string | null): st
 
 export default function RootLayout() {
   const router = useRouter();
+  const routerRef = useRef(router);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id);
   const userRole = useAuthStore((state) => state.user?.role);
   const [doctorAccessChecked, setDoctorAccessChecked] = useState(true);
   const handledLastPushRef = useRef(false);
+  const doctorAccessCheckRef = useRef(0);
+  const redirectedDoctorAccessRef = useRef<string | null>(null);
   const systemScheme = useColorScheme();
   const themeLoaded = useThemeStore((state) => state.loaded);
   const resolvedTheme = useThemeStore((state) => state.resolved);
   const loadTheme = useThemeStore((state) => state.load);
   const syncSystemTheme = useThemeStore((state) => state.syncSystem);
+
+  // Keep navigation available to background validation without making its effect
+  // depend on a router object that may be recreated after a navigation event.
+  routerRef.current = router;
 
   useEffect(() => { void loadTheme(systemScheme); }, [loadTheme, systemScheme]);
   useEffect(() => { syncSystemTheme(systemScheme); }, [syncSystemTheme, systemScheme]);
@@ -102,37 +110,74 @@ export default function RootLayout() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || userRole !== "doctor") {
+    const accessKey = isAuthenticated && userRole === "doctor" && userId
+      ? String(userId)
+      : null;
+
+    if (!accessKey) {
+      doctorAccessCheckRef.current += 1;
+      redirectedDoctorAccessRef.current = null;
       setDoctorAccessChecked(true);
       return;
     }
 
     let active = true;
+    const requestId = doctorAccessCheckRef.current + 1;
+    doctorAccessCheckRef.current = requestId;
     setDoctorAccessChecked(false);
+
+    const denyAccess = (query = "") => {
+      if (redirectedDoctorAccessRef.current === accessKey) return;
+      redirectedDoctorAccessRef.current = accessKey;
+      routerRef.current.replace(`/subscription-required${query}` as any);
+    };
+
+    const accessTimeoutId = setTimeout(() => {
+      if (!active || doctorAccessCheckRef.current !== requestId) return;
+      active = false;
+      setDoctorAccessChecked(true);
+      denyAccess("?validation=1");
+    }, 10_000);
+
     void api
       .getDoctorMobileAccess()
       .then(({ data }) => {
-        if (!active) return;
+        if (!active || doctorAccessCheckRef.current !== requestId) return;
         setDoctorAccessChecked(true);
         if (!data.can_access_mobile) {
-          router.replace("/subscription-required" as any);
+          denyAccess();
         }
       })
       .catch(() => {
-        if (!active) return;
+        if (!active || doctorAccessCheckRef.current !== requestId) return;
         setDoctorAccessChecked(true);
-        router.replace("/subscription-required" as any);
+        denyAccess("?validation=1");
+      })
+      .finally(() => {
+        clearTimeout(accessTimeoutId);
       });
 
     return () => {
       active = false;
+      clearTimeout(accessTimeoutId);
     };
-  }, [isAuthenticated, router, userRole]);
+  }, [isAuthenticated, userId, userRole]);
 
+  let validationOverlay: ReactNode = null;
   if (!themeLoaded || !doctorAccessChecked) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
+    validationOverlay = (
+      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
         <ActivityIndicator size="large" color={MC.primary} />
+        {isAuthenticated && userRole === "doctor" ? (
+          <>
+            <Text style={{ color: MC.textPrimary, fontSize: 16, fontWeight: "700", marginTop: 16 }}>
+              Validando acceso a la app
+            </Text>
+            <Text style={{ color: MC.textSecondary, fontSize: 13, marginTop: 6 }}>
+              Esto tomará solo unos segundos.
+            </Text>
+          </>
+        ) : null}
       </View>
     );
   }
@@ -159,6 +204,7 @@ export default function RootLayout() {
         <Stack.Screen name="account" />
         <Stack.Screen name="subscription-required" options={{ gestureEnabled: false }} />
       </Stack>
+      {validationOverlay}
     </>
   );
 }

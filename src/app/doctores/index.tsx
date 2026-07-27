@@ -242,7 +242,10 @@ export default function DoctoresScreen() {
   useEffect(() => {
     let mounted = true;
 
-    void resolvePatientSearchLocation().then((location) => {
+    void resolvePatientSearchLocation({
+      requestPermission: true,
+      includeProfileFallback: true,
+    }).then((location) => {
       if (!mounted) return;
       setSearchLocation(location);
       if (initialLoaded.current) {

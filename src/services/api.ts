@@ -849,8 +849,26 @@ async function request<T>(
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const text = await res.text();
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 15_000);
+
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal ?? abortController.signal,
+    });
+    text = await res.text();
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      throw new Error("El servidor tardó demasiado en responder. Intenta de nuevo.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   let json: any;
   try {

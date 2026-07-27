@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as api from '@/services/api';
-import { registerDeviceForPushNotifications, unregisterDeviceForPushNotifications } from '@/services/push-notifications';
+import { unregisterDeviceForPushNotifications } from '@/services/push-notifications';
 import { getNativeAppleIdentity, getNativeGoogleIdentity } from '@/services/native-social-auth';
 
 function normalizeAuthErrorMessage(error: unknown): string {
@@ -36,7 +36,6 @@ async function completeSocialLogin(
       await api.saveToken(completed.token);
       await api.saveUser(completed.user);
       set({ user: completed.user, isAuthenticated: true, pendingGoogleSignup: null });
-      void registerDeviceForPushNotifications().catch(() => {});
       return 'authenticated';
     }
 
@@ -47,7 +46,6 @@ async function completeSocialLogin(
   await api.saveToken(res.token);
   await api.saveUser(res.user);
   set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
-  void registerDeviceForPushNotifications().catch(() => {});
   return 'authenticated';
 }
 
@@ -89,7 +87,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       const [token, user] = await Promise.all([api.getToken(), api.getSavedUser()]);
       if (token && user) {
         set({ user, isAuthenticated: true, isLoading: false });
-        void registerDeviceForPushNotifications().catch(() => {});
       } else {
         set({ isLoading: false });
       }
@@ -104,7 +101,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.saveToken(res.token);
       await api.saveUser(res.user);
       set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
-      void registerDeviceForPushNotifications().catch(() => {});
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
     }
@@ -150,7 +146,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       await api.saveToken(res.token);
       await api.saveUser(res.user);
       set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
-      void registerDeviceForPushNotifications().catch(() => {});
       return 'authenticated';
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
@@ -171,7 +166,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     await api.saveToken(res.token);
     await api.saveUser(res.user);
     set({ user: res.user, isAuthenticated: true, pendingGoogleSignup: null });
-    void registerDeviceForPushNotifications().catch(() => {});
     return 'authenticated';
   },
 

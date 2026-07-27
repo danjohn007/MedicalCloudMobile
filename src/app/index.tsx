@@ -59,6 +59,13 @@ export default function SplashScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <Pressable
+          style={({ pressed }) => [styles.btnPublic, pressed && styles.btnPressed]}
+          onPress={() => router.push('/doctores')}
+        >
+          <Text style={styles.btnPublicText}>Explorar doctores</Text>
+        </Pressable>
+
+        <Pressable
           style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
           onPress={() => router.push('/(auth)/login')}
         >
@@ -135,11 +142,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
+  btnPublic: {
+    backgroundColor: MC.surface,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: MC.primary,
+  },
   btnPressed: {
     backgroundColor: MC.primaryDark,
   },
   btnPrimaryText: {
     color: MC.white,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  btnPublicText: {
+    color: MC.primary,
     fontSize: 17,
     fontWeight: '600',
   },

@@ -5,7 +5,7 @@ import * as api from "@/services/api";
 import { resolvePatientSearchLocation } from "@/services/patient-search-location";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -158,64 +158,96 @@ export default function HomeScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [reloadNonce, setReloadNonce] = useState(0);
+  const [loadError, setLoadError] = useState("");
+  const loadingRef = useRef(false);
 
   const firstName = user?.name?.split(" ")[0] ?? "Paciente";
 
-  useEffect(() => {
-    (async () => {
-      try {
-        if (reloadNonce > 0) setRefreshing(true);
-        else setLoading(true);
-        const location = await resolvePatientSearchLocation();
+  const loadDashboard = useCallback(async (isRefresh = false) => {
+    if (loadingRef.current) return;
 
-        // Use dedicated dashboard stats endpoint + specialties + doctors
-        const [specRes, docRes, statsRes, profileRes] = await Promise.all([
-          api.getSpecialties(),
-          api.getDoctors({ page: 1, lat: location.lat, lng: location.lng }),
-          api.getDashboardStats(),
-          api.getProfile(),
-        ]);
+    loadingRef.current = true;
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setLoadError("");
 
+    try {
+      // The home screen intentionally does not trigger a location permission
+      // prompt or wait for a fresh GPS reading before showing useful data.
+      const location = await resolvePatientSearchLocation();
+      const [specialtiesResult, doctorsResult, statsResult, profileResult] = await Promise.allSettled([
+        api.getSpecialties(),
+        api.getDoctors({ page: 1, lat: location.lat, lng: location.lng }),
+        api.getDashboardStats(),
+        api.getProfile(),
+      ]);
+
+      let loadedAnyData = false;
+
+      if (specialtiesResult.status === "fulfilled") {
         setSpecialties(
-          specRes.data.map((specialty) => ({
+          specialtiesResult.value.data.map((specialty) => ({
             name: specialty.name,
             icon: (specialty.icon as IconName) || "first-aid",
           })),
         );
-        setDoctorCount(docRes.total ?? docRes.data.length);
-        setDoctors(docRes.data.slice(0, 4));
-        setProfile(profileRes);
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard specialties error:", specialtiesResult.reason);
+      }
 
-        if (statsRes?.data) {
-          setKpis({
-            upcoming: statsRes.data.upcoming,
-            pendingPayment: statsRes.data.pendingPayment,
-            completed: statsRes.data.completed,
-            unreadMessages: statsRes.data.unreadMessages,
-          });
+      if (doctorsResult.status === "fulfilled") {
+        setDoctorCount(doctorsResult.value.total ?? doctorsResult.value.data.length);
+        setDoctors(doctorsResult.value.data.slice(0, 4));
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard doctors error:", doctorsResult.reason);
+      }
+
+      if (profileResult.status === "fulfilled") {
+        setProfile(profileResult.value);
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard profile error:", profileResult.reason);
+      }
+
+      if (statsResult.status === "fulfilled" && statsResult.value?.data) {
+        const stats = statsResult.value.data;
+        setKpis({
+          upcoming: stats.upcoming,
+          pendingPayment: stats.pendingPayment,
+          completed: stats.completed,
+          unreadMessages: stats.unreadMessages,
+        });
+        loadedAnyData = true;
+      } else {
+        if (statsResult.status === "rejected") {
+          console.error("Patient dashboard stats error:", statsResult.reason);
         }
-      } catch (error) {
-        console.error("Dashboard load error:", error);
-        // Fallback: load data the old way
-        try {
-          const [upcomingRes, pastRes, msgRes] = await Promise.all([
-            api.getAppointments("upcoming"),
-            api.getAppointments("past"),
-            api.getMessages(),
-          ]);
 
-          const upcoming = upcomingRes.data ?? [];
-          const past = pastRes.data ?? [];
-          const messages = msgRes.data ?? [];
+        // Keep legacy KPI data as a partial fallback. Each request is handled
+        // independently, so one unavailable endpoint cannot block the screen.
+        const [upcomingResult, pastResult, messagesResult] = await Promise.allSettled([
+          api.getAppointments("upcoming"),
+          api.getAppointments("past"),
+          api.getMessages(),
+        ]);
 
+        const upcoming = upcomingResult.status === "fulfilled" ? upcomingResult.value.data ?? [] : [];
+        const past = pastResult.status === "fulfilled" ? pastResult.value.data ?? [] : [];
+        const messages = messagesResult.status === "fulfilled" ? messagesResult.value.data ?? [] : [];
+
+        if (
+          upcomingResult.status === "fulfilled" ||
+          pastResult.status === "fulfilled" ||
+          messagesResult.status === "fulfilled"
+        ) {
           const pendingPayment = upcoming.filter(
             (appointment) =>
               appointment.payment_status &&
               appointment.payment_status !== "paid" &&
               appointment.payment_status !== "not_required",
           ).length;
-
           const unreadMessages = messages.reduce((acc, message) => {
             const count = typeof message.unread === "number" ? message.unread : 0;
             return acc + count;
@@ -225,21 +257,30 @@ export default function HomeScreen() {
             upcoming: upcoming.length,
             pendingPayment,
             completed: past.filter((appointment) =>
-              ["completed", "finished"].includes(
-                (appointment.status ?? "").toLowerCase(),
-              ),
+              ["completed", "finished"].includes((appointment.status ?? "").toLowerCase()),
             ).length,
             unreadMessages,
           });
-        } catch (fallbackError) {
-          console.error("Fallback dashboard load error:", fallbackError);
+          loadedAnyData = true;
         }
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
       }
-    })();
-  }, [reloadNonce]);
+
+      if (!loadedAnyData) {
+        setLoadError("No pudimos actualizar tu información. Revisa tu conexión e inténtalo de nuevo.");
+      }
+    } catch (error) {
+      console.error("Patient dashboard load error:", error);
+      setLoadError("No pudimos actualizar tu información. Revisa tu conexión e inténtalo de nuevo.");
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
   const handleSearch = () => {
     const query = search.trim();
@@ -289,7 +330,7 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => setReloadNonce((current) => current + 1)}
+            onRefresh={() => void loadDashboard(true)}
             tintColor={MC.primary}
             colors={[MC.primary]}
           />
@@ -326,6 +367,15 @@ export default function HomeScreen() {
             </View>
           </View>
         </FadeSlideIn>
+
+        {loadError ? (
+          <View style={s.loadErrorCard}>
+            <Text style={s.loadErrorText}>{loadError}</Text>
+            <Pressable onPress={() => void loadDashboard(true)} hitSlop={8}>
+              <Text style={s.loadErrorAction}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <FadeSlideIn delay={100}>
           <View style={s.searchCard}>
@@ -853,6 +903,31 @@ const s = StyleSheet.create({
   heroBellBadgeText: {
     color: MC.white,
     fontSize: 9,
+    fontWeight: "800",
+  },
+
+  loadErrorCard: {
+    marginTop: 12,
+    marginHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadErrorText: {
+    flex: 1,
+    color: MC.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  loadErrorAction: {
+    color: MC.error,
+    fontSize: 13,
     fontWeight: "800",
   },
 

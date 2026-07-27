@@ -15,11 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import * as api from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function DoctorProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const doctorId = parseInt(id ?? '0', 10);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const [doctor, setDoctor] = useState<api.Doctor | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -81,6 +83,15 @@ export default function DoctorProfileScreen() {
       title: `Perfil de ${doctor.name}`,
       message,
     });
+  };
+
+  const requirePatientAccount = () => {
+    if (isAuthenticated) {
+      router.push(`/doctores/${doctorId}/agendar` as any);
+      return;
+    }
+
+    router.push('/(auth)/login');
   };
 
   return (
@@ -262,17 +273,23 @@ export default function DoctorProfileScreen() {
       <View style={styles.footer}>
         <Pressable
           style={styles.favoriteBtn}
-          onPress={() => setFav(!fav)}
+          onPress={() => {
+            if (isAuthenticated) {
+              setFav(!fav);
+              return;
+            }
+            router.push('/(auth)/login');
+          }}
           hitSlop={6}
         >
           <Icon name="heart" size={22} color={fav ? MC.error : MC.textMuted} filled={fav} />
         </Pressable>
         <Pressable
           style={styles.bookBtn}
-          onPress={() => router.push(`/doctores/${doctorId}/agendar` as any)}
+          onPress={requirePatientAccount}
         >
           <Icon name="calendar" size={18} color={MC.white} style={{ marginRight: 8 }} />
-          <Text style={styles.bookBtnText}>Agendar cita</Text>
+          <Text style={styles.bookBtnText}>{isAuthenticated ? 'Agendar cita' : 'Inicia sesión para agendar'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
