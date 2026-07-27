@@ -111,6 +111,11 @@ export interface Doctor {
   stripe_connect_charges_enabled?: boolean;
 }
 
+export interface ClinicDirectoryScope {
+  kind: "clinic" | "independent";
+  clinic_name: string | null;
+}
+
 export interface Appointment {
   id: number;
   doctor_id: number;
@@ -1032,8 +1037,9 @@ export async function register(input: MobileRegisterPayload) {
 // ── Especialidades ────────────────────────────────────────
 export async function getSpecialties(): Promise<{
   data: { name: string; icon: string }[];
+  scope?: ClinicDirectoryScope;
 }> {
-  return request("/specialties", {}, false);
+  return request("/specialties");
 }
 
 // ── Doctores ─────────────────────────────────────────────
@@ -1057,11 +1063,12 @@ export async function getDoctors(params: {
     total: number;
     page: number;
     total_pages: number;
-  }>(`/doctors${qs ? "?" + qs : ""}`, {}, false);
+    scope?: ClinicDirectoryScope;
+  }>(`/doctors${qs ? "?" + qs : ""}`);
 }
 
 export async function getDoctorProfile(id: number) {
-  return request<{ data: Doctor; reviews: any[] }>(`/doctors/${id}`, {}, false);
+  return request<{ data: Doctor; reviews: any[] }>(`/doctors/${id}`);
 }
 
 export async function getDoctorAvailability(id: number, date: string) {
@@ -1077,8 +1084,6 @@ export async function getDoctorAvailability(id: number, date: string) {
     };
   }>(
     `/doctors/${id}/availability?date=${date}`,
-    {},
-    false,
   );
 }
 
@@ -1581,7 +1586,12 @@ export async function getDoctorDashboard() {
 
 export interface DoctorMobileAccess {
   can_access_mobile: boolean;
-  reason: "subscription_required" | "mobile_app_required" | "subscription_unavailable" | null;
+  reason:
+    | "subscription_required"
+    | "mobile_app_required"
+    | "subscription_unavailable"
+    | "clinic_license_inactive"
+    | null;
   message: string | null;
   plan_name: string | null;
   features: Record<"soap_notes" | "prescriptions" | "ai_assistant" | "video_consult" | "analytics" | "mobile_app", boolean>;
@@ -1603,7 +1613,11 @@ export async function getDoctorAppointments(
 }
 
 export async function getDoctorPatients() {
-  return request<{ ok?: boolean; data: DoctorPatientSummary[] }>(
+  return request<{
+    ok?: boolean;
+    scope?: ClinicDirectoryScope;
+    data: DoctorPatientSummary[];
+  }>(
     "/doctor/patients",
   );
 }
@@ -1666,10 +1680,8 @@ export async function suggestDoctorSearchTerm(data: { name: string; notes?: stri
 }
 
 export async function getDoctorSearchSuggestions(q: string) {
-  return request<{ ok?: boolean; data: string[] }>(
+  return request<{ ok?: boolean; data: string[]; scope?: ClinicDirectoryScope }>(
     `/search-suggestions?q=${encodeURIComponent(q)}`,
-    {},
-    false,
   );
 }
 

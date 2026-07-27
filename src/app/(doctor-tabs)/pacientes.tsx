@@ -31,6 +31,7 @@ export default function DoctorPatientsScreen() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<api.DoctorPatientSummary[]>([]);
+  const [scope, setScope] = useState<api.ClinicDirectoryScope | null>(null);
 
   useEffect(() => {
     void loadPatients();
@@ -44,6 +45,7 @@ export default function DoctorPatientsScreen() {
       setError("");
       const response = await api.getDoctorPatients();
       setPatients(response.data || []);
+      setScope(response.scope ?? null);
     } catch (e: any) {
       setError(e?.message || "No se pudieron cargar los pacientes.");
     } finally {
@@ -100,7 +102,9 @@ export default function DoctorPatientsScreen() {
           </View>
           <Text style={styles.heroTitle}>Base clínica</Text>
           <Text style={styles.heroSubtitle}>
-            Solo aparecen pacientes vinculados contigo por código, alta directa o una cita registrada contigo.
+            {scope?.kind === "clinic"
+              ? `Todos y solo los pacientes afiliados a ${scope.clinic_name || "tu clínica"}.`
+              : "Solo aparecen pacientes independientes vinculados contigo por código, alta directa o una cita registrada contigo."}
           </Text>
           <View style={styles.heroStats}>
             <HeroStat label="Pacientes" value={String(filteredPatients.length)} />

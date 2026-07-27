@@ -200,6 +200,8 @@ export default function DoctoresScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [directoryScope, setDirectoryScope] =
+    useState<api.ClinicDirectoryScope | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [searchLocation, setSearchLocation] = useState<PatientSearchLocation>({ source: "none" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,6 +225,7 @@ export default function DoctoresScreen() {
       });
 
       const data = res.data ?? [];
+      setDirectoryScope(res.scope ?? null);
       setDoctors((prev) => (p === 1 ? data : [...prev, ...data]));
       setHasMore(p < (res.total_pages ?? 1));
       setPage(p);
@@ -343,7 +346,9 @@ export default function DoctoresScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Encuentra tu médico</Text>
           <Text style={styles.headerSubtitle}>
-            Filtra por nombre, especialidad o ciudad
+            {directoryScope?.kind === "clinic"
+              ? `Solo médicos de ${directoryScope.clinic_name || "tu clínica"}`
+              : "Médicos independientes disponibles"}
           </Text>
         </View>
         {(search.trim() || selSpec !== "Todos") && (

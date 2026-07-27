@@ -125,7 +125,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
 - [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
-- [~] Se retiraron descripciones nativas no usadas de cámara, Face ID y ubicación permanente, y se bloquearon permisos Android de almacenamiento heredados; falta inspeccionar el AAB/IPA final.
+- [~] TestFlight rechazó la build 16 con `ITMS-90683` porque `expo-image-picker` referencia cámara aunque el flujo no la solicite. `NSCameraUsageDescription` ya quedó declarado tanto en `ios.infoPlist` como en el plugin; la introspección nativa lo confirma. Android mantiene Cámara, Micrófono y almacenamiento heredado bloqueados. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
 - [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata 7.0.0 y resolverlas en una actualización con regresión completa.
 
 ### Permisos
@@ -134,7 +134,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] Antes del primer permiso de ubicación se muestra un aviso destacado que identifica ubicación precisa, finalidad, transferencia al servidor y ausencia de uso en segundo plano/publicidad.
 - [~] Fotos/documentos se solicitan solo al iniciar una accion; el texto de Fotos ya es especifico de Doctor Cloud. Falta validarlo en iOS fisico.
 - [~] Notificaciones se solicitan mediante Firebase; validar el momento y explicacion al usuario.
-- [~] El manifiesto generado omite Cámara, Micrófono y almacenamiento heredado; se eliminó `expo-camera`, Android no permite backups automáticos e iOS rechaza cargas no seguras. Falta comprobar el AAB/IPA final.
+- [~] El manifiesto Android generado omite Cámara, Micrófono y almacenamiento heredado; se eliminó `expo-camera`, Android no permite backups automáticos e iOS rechaza cargas no seguras. iOS conserva el texto obligatorio de cámara por la referencia de `expo-image-picker`. Falta comprobar el AAB/IPA final.
 - [ ] Probar cada flujo con permiso aceptado, denegado y denegado permanentemente.
 
 ### Autenticacion y sesion
@@ -261,6 +261,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 - [~] Plantilla de cuentas de revision preparada; faltan dos cuentas funcionales con datos ficticios.
 - [ ] Mantener backend, correos y cuentas de revision activos durante todo el proceso.
 - [ ] Probar restauracion de acceso con Apple y eliminacion/revocacion de cuenta.
+- [ ] Generar y subir la build posterior a iOS build 16; confirmar que App Store Connect ya no reporta `ITMS-90683`.
 - [ ] Enviar primero a TestFlight interno/externo y despues a App Review.
 
 ## Inventario inicial para privacidad y seguridad de datos

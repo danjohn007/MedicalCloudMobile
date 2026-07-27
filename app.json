@@ -18,6 +18,7 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides tomar una foto de perfil o adjuntar una imagen clínica.",
         "NSPhotoLibraryUsageDescription": "Doctor Cloud necesita acceder a tus fotos únicamente cuando decides elegir una imagen de perfil o adjuntar información clínica.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false
@@ -99,7 +100,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Doctor Cloud necesita acceso a tus fotos para que puedas elegir una imagen de perfil.",
-          "cameraPermission": false,
+          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides tomar una foto de perfil o adjuntar una imagen clínica.",
           "microphonePermission": false
         }
       ],
