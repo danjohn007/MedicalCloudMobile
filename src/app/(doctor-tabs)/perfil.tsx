@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -178,6 +179,18 @@ export default function DoctorProfileScreen() {
               title="Soporte"
               summary="Tickets y seguimiento con el equipo."
               onPress={() => router.push("/soporte" as any)}
+            />
+            <ShortcutCard
+              icon="shield-check"
+              title="Privacidad"
+              summary="Consulta cómo tratamos y protegemos tus datos."
+              onPress={() => void Linking.openURL("https://doctorcloud.digital/app/privacidad")}
+            />
+            <ShortcutCard
+              icon="file"
+              title="Términos"
+              summary="Revisa las condiciones de uso de Doctor Cloud."
+              onPress={() => void Linking.openURL("https://doctorcloud.digital/app/terminos")}
             />
             <ShortcutCard
               icon="trash"

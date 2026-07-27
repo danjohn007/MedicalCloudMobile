@@ -186,8 +186,8 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
           <View style={styles.legalRow}>
-            <Text style={styles.legalText}>Al continuar aceptas el </Text>
-            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/terminos")}><Text style={styles.legalLink}>uso de la plataforma</Text></Pressable>
+            <Text style={styles.legalText}>En el formulario final podrás revisar y aceptar expresamente los </Text>
+            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/terminos")}><Text style={styles.legalLink}>términos</Text></Pressable>
             <Text style={styles.legalText}> y el </Text>
             <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/privacidad")}><Text style={styles.legalLink}>aviso de privacidad</Text></Pressable>
             <Text style={styles.legalText}>.</Text>

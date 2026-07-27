@@ -20,6 +20,7 @@ import MapView, {
 
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
+import { requestForegroundLocationWithDisclosure } from "@/services/location-permission";
 
 export interface LocationDraft {
   address: string;
@@ -187,7 +188,7 @@ export function LocationPicker({
   async function useCurrentLocation() {
     try {
       setLoadingCurrent(true);
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const permission = await requestForegroundLocationWithDisclosure();
       if (!permission.granted) {
         Alert.alert(
           "Permiso requerido",

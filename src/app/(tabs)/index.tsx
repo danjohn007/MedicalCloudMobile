@@ -9,7 +9,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Image,
   Pressable,
   RefreshControl,
@@ -21,10 +20,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_GAP = 10;
 const GRID_PADDING = 14;
-const HALF_CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const MONEY_FORMAT = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -1065,7 +1062,9 @@ const s = StyleSheet.create({
     paddingHorizontal: GRID_PADDING,
   },
   kpiCard: {
-    width: HALF_CARD_WIDTH,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 142,
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
@@ -1133,7 +1132,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
   },
   quickTile: {
-    width: HALF_CARD_WIDTH,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 142,
     alignItems: "center",
     borderRadius: 20,
     borderWidth: 1,

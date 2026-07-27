@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -87,6 +88,16 @@ export default function PerfilScreen() {
       icon: "info",
       label: "Ayuda y soporte",
       action: () => router.push("/soporte"),
+    },
+    {
+      icon: "shield-check",
+      label: "Aviso de privacidad",
+      action: () => void Linking.openURL("https://doctorcloud.digital/app/privacidad"),
+    },
+    {
+      icon: "file",
+      label: "Términos y condiciones",
+      action: () => void Linking.openURL("https://doctorcloud.digital/app/terminos"),
     },
     {
       icon: "trash",

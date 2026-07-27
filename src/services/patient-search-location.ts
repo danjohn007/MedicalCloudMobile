@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 
 import * as api from "@/services/api";
+import { requestForegroundLocationWithDisclosure } from "@/services/location-permission";
 
 export interface PatientSearchLocation {
   lat?: number;
@@ -44,7 +45,7 @@ export async function resolvePatientSearchLocation(
 
   try {
     const permission = await (requestPermission
-      ? Location.requestForegroundPermissionsAsync()
+      ? requestForegroundLocationWithDisclosure()
       : Location.getForegroundPermissionsAsync());
 
     if (permission.granted) {

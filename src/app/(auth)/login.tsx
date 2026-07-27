@@ -66,7 +66,7 @@ export default function LoginScreen() {
     setLoadingMode('google');
     setError('');
     try {
-      const result = await loginWithGoogle({ autoCreatePatient: true });
+      const result = await loginWithGoogle();
       if (result === 'pending_profile') {
         router.replace('/(auth)/google-register');
         return;
@@ -83,7 +83,7 @@ export default function LoginScreen() {
     setLoadingMode('apple');
     setError('');
     try {
-      const result = await loginWithApple({ autoCreatePatient: true });
+      const result = await loginWithApple();
       if (result === 'pending_profile') {
         router.replace('/(auth)/google-register');
         return;

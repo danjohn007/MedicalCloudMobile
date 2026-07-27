@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -64,6 +65,9 @@ export default function RegisterDetailsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pendingApprovalMessage, setPendingApprovalMessage] = useState("");
+  const [acceptedTermsPrivacy, setAcceptedTermsPrivacy] = useState(false);
+  const [acceptedSensitiveHealthData, setAcceptedSensitiveHealthData] = useState(false);
+  const [confirmedAdultOrGuardian, setConfirmedAdultOrGuardian] = useState(false);
 
   useEffect(() => {
     if (!role) {
@@ -136,6 +140,22 @@ export default function RegisterDetailsScreen() {
       setError("Cédula, especialidad y ciudad son obligatorios para doctores.");
       return;
     }
+    if (!acceptedTermsPrivacy) {
+      setError("Debes leer y aceptar los términos y el aviso de privacidad.");
+      return;
+    }
+    if (!acceptedSensitiveHealthData) {
+      setError("Debes autorizar expresamente el tratamiento de datos sensibles de salud.");
+      return;
+    }
+    if (!confirmedAdultOrGuardian) {
+      setError(
+        role === "doctor"
+          ? "Debes confirmar que eres mayor de edad y estás facultado para crear esta cuenta."
+          : "Debes confirmar que eres mayor de edad o que actúas como madre, padre o tutor.",
+      );
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -150,6 +170,9 @@ export default function RegisterDetailsScreen() {
             specialty: specialty.trim() || undefined,
             city: city.trim() || undefined,
             state: stateProv.trim() || undefined,
+            accepted_terms_privacy: true,
+            sensitive_health_data_consent: true,
+            adult_or_guardian_confirmation: true,
           });
 
         if (result === "pending_approval") {
@@ -173,6 +196,9 @@ export default function RegisterDetailsScreen() {
         specialty: specialty.trim() || undefined,
         city: city.trim() || undefined,
         state: stateProv.trim() || undefined,
+        accepted_terms_privacy: true,
+        sensitive_health_data_consent: true,
+        adult_or_guardian_confirmation: true,
       });
 
       if (result === "pending_approval") {
@@ -336,6 +362,62 @@ export default function RegisterDetailsScreen() {
                 )}
               </View>
 
+              <View style={styles.consentCard}>
+                <Text style={styles.consentTitle}>Privacidad y autorizaciones</Text>
+                <Text style={styles.consentIntro}>
+                  Estas autorizaciones quedan registradas junto con la versión vigente de los
+                  documentos y la fecha de aceptación.
+                </Text>
+                <ConsentRow
+                  checked={acceptedTermsPrivacy}
+                  onToggle={() => setAcceptedTermsPrivacy((value) => !value)}
+                >
+                  <Text style={styles.consentText}>
+                    He leído y acepto los{" "}
+                    <Text
+                      style={styles.consentLink}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        void Linking.openURL("https://doctorcloud.digital/app/terminos");
+                      }}
+                    >
+                      términos
+                    </Text>
+                    {" "}y el{" "}
+                    <Text
+                      style={styles.consentLink}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        void Linking.openURL("https://doctorcloud.digital/app/privacidad");
+                      }}
+                    >
+                      aviso de privacidad
+                    </Text>
+                    .
+                  </Text>
+                </ConsentRow>
+                <ConsentRow
+                  checked={acceptedSensitiveHealthData}
+                  onToggle={() => setAcceptedSensitiveHealthData((value) => !value)}
+                >
+                  <Text style={styles.consentText}>
+                    {role === "doctor"
+                      ? "Reconozco que Doctor Cloud tratará datos sensibles de los pacientes que gestione y confirmo que sólo incorporaré información cuando cuente con las facultades y autorizaciones necesarias."
+                      : "Consiento de manera expresa el tratamiento de mis datos personales sensibles de salud para prestar las funciones médicas que decida utilizar."}
+                  </Text>
+                </ConsentRow>
+                <ConsentRow
+                  checked={confirmedAdultOrGuardian}
+                  onToggle={() => setConfirmedAdultOrGuardian((value) => !value)}
+                >
+                  <Text style={styles.consentText}>
+                    {role === "doctor"
+                      ? "Confirmo que soy mayor de edad y estoy facultado para crear y administrar esta cuenta profesional."
+                      : "Confirmo que soy mayor de edad o que actúo como madre, padre o tutor con facultades para proporcionar estos datos."}
+                  </Text>
+                </ConsentRow>
+              </View>
+
               <Pressable
                 style={({ pressed }) => [
                   styles.btnPrimary,
@@ -420,6 +502,30 @@ function ReadonlyField({
   );
 }
 
+function ConsentRow({
+  checked,
+  onToggle,
+  children,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      onPress={onToggle}
+      style={styles.consentRow}
+    >
+      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+        {checked ? <Icon name="check" size={15} color={MC.white} /> : null}
+      </View>
+      <View style={styles.consentCopy}>{children}</View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   scroll: { flexGrow: 1, padding: 24, gap: 18 },
@@ -499,6 +605,32 @@ const styles = StyleSheet.create({
   },
   patientHintTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
   patientHintText: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
+  consentCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.card,
+    padding: 16,
+    gap: 13,
+  },
+  consentTitle: { color: MC.textPrimary, fontSize: 16, fontWeight: "800" },
+  consentIntro: { color: MC.textSecondary, fontSize: 12.5, lineHeight: 19 },
+  consentRow: { flexDirection: "row", alignItems: "flex-start", gap: 11 },
+  checkbox: {
+    width: 23,
+    height: 23,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: MC.border,
+    backgroundColor: MC.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  checkboxChecked: { borderColor: MC.primary, backgroundColor: MC.primary },
+  consentCopy: { flex: 1 },
+  consentText: { color: MC.textSecondary, fontSize: 13, lineHeight: 20 },
+  consentLink: { color: MC.primary, fontWeight: "800", textDecorationLine: "underline" },
   btnPrimary: {
     backgroundColor: MC.primary,
     borderRadius: 16,

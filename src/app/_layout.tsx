@@ -198,10 +198,6 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
         <Stack.Screen name="patient" />
-        <Stack.Screen name="doctor" />
-        <Stack.Screen name="stripe-connect" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="account" />
         <Stack.Screen name="subscription-required" options={{ gestureEnabled: false }} />
       </Stack>
       {validationOverlay}

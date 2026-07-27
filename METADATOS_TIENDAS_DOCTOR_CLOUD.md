@@ -1,6 +1,6 @@
 # Borrador de metadatos para Google Play y App Store
 
-Estado: borrador para la versión 7.0.0. No cargar hasta que las URLs legales públicas respondan correctamente y se valide cada declaración contra producción.
+Estado: borrador para la versión 7.0.0. Las URLs legales fueron comprobadas públicamente el 27 de julio de 2026; aún debe validarse cada declaración contra producción y obtener revisión legal.
 
 ## Identidad común
 
@@ -16,7 +16,7 @@ Estado: borrador para la versión 7.0.0. No cargar hasta que las URLs legales p�
 | Política de privacidad | `https://doctorcloud.digital/app/privacidad` |
 | Opciones de privacidad y eliminación | `https://doctorcloud.digital/app/eliminar-cuenta` |
 
-Las dos URLs legales todavía deben desplegarse y verificarse públicamente antes de usarlas en las consolas.
+Las URLs de privacidad y eliminación ya responden públicamente. Antes de enviar, comprobar de nuevo su disponibilidad y que `soporte@doctorcloud.digital` esté atendido.
 
 ## Texto de Google Play
 
@@ -38,7 +38,7 @@ Para profesionales, Doctor Cloud ofrece una agenda de consultas, gestión de pac
 
 La ubicación se usa únicamente cuando la persona la solicita para facilitar la búsqueda de profesionales, completar direcciones o ubicar un consultorio. Las notificaciones se usan para avisos de citas, mensajes y actividad relevante de la cuenta.
 
-Doctor Cloud no es un servicio de emergencias ni sustituye la valoración de un profesional de la salud. Las funciones de inteligencia artificial son de apoyo informativo y clínico; no sustituyen el criterio profesional, una consulta ni la atención urgente.
+Doctor Cloud no es un dispositivo médico y no diagnostica, trata, cura ni previene ninguna condición médica. Consulta a un profesional de la salud para obtener consejo, diagnóstico o tratamiento. Doctor Cloud tampoco es un servicio de emergencias. Las funciones de inteligencia artificial son de apoyo informativo y clínico; pueden cometer errores y no sustituyen el criterio profesional, una consulta ni la atención urgente.
 
 Cuando un profesional habilita cobros, los pagos se procesan con los medios disponibles para ese servicio. Revisa la política de privacidad y los términos antes de usar la aplicación.
 
@@ -78,7 +78,9 @@ Doctor Cloud tiene dos experiencias: paciente y profesional de la salud. La mism
 - Inicio de sesión: correo y contraseña; también se ofrecen Google Sign-In y Sign in with Apple en iOS.
 - Ubicación: solo al usar la acción para buscar cercanos, completar una dirección o localizar un consultorio.
 - Notificaciones: recordatorios de cita, mensajes y avisos de cuenta.
-- IA: apoyo informativo/operativo; no diagnostica ni sustituye una consulta o atención de emergencia.
+- IA: antes del primer uso se explica qué contexto clínico se transferirá al proveedor externo y se solicita una autorización separada. Puede rechazarse sin perder las demás funciones. Es apoyo informativo/operativo; no diagnostica ni sustituye una consulta o atención de emergencia.
+- Acceso público: el directorio y detalle de profesionales pueden explorarse sin registro. Citas, mensajes, expedientes, configuración e IA requieren autenticación.
+- Eliminación: disponible en `Perfil > Privacidad y cuenta > Eliminar cuenta`. Las excepciones de conservación de expedientes se explican en el aviso público.
 - Pagos: si están visibles en la build de revisión, describir el flujo real, el proveedor y una cuenta de prueba que no requiera dinero real.
 
 Antes de enviar, reemplazar los siguientes datos por credenciales activas con información ficticia:
@@ -113,6 +115,8 @@ Pendientes de archivo:
 
 Este inventario es una guía de captura, no una declaración legal definitiva. Debe confirmarse en producción, junto con Firebase, Google, Apple, Stripe, PayPal, Jitsi y Gemini.
 
+La captura detallada, con las selecciones propuestas para Health Apps, Google Data Safety, Apple App Privacy y los permisos sensibles, está en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md`.
+
 | Datos a declarar/revisar | Finalidad principal | Vinculado a identidad | Posibles proveedores |
 |---|---|---:|---|
 | Nombre, correo, teléfono, foto e ID de cuenta | Cuenta, autenticación y contacto | Sí | Backend, Google, Apple, Firebase |
@@ -140,4 +144,8 @@ Al llenar Google Data safety y App Privacy:
 - Capturas finales y feature graphic aprobadas.
 - Confirmación de que no hay anuncios.
 - Respuestas legales revisadas sobre menores, datos de salud, retención y pagos.
-- URLs legales públicas funcionando y correo de soporte atendido.
+- Correo de soporte atendido durante toda la revisión (las URLs legales públicas ya responden).
+
+## Notas de versión 7.0.0
+
+`Doctor Cloud conecta pacientes y profesionales con búsqueda pública de doctores, gestión de citas, perfiles, mensajería y herramientas clínicas según el rol y el plan contratado. Esta versión también incorpora mejoras de estabilidad, accesibilidad, privacidad y notificaciones.`

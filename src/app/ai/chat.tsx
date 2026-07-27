@@ -1,6 +1,7 @@
 import { Icon } from "@/components/Icon";
 import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
+import { ensureAiClinicalDataConsent } from "@/services/ai-data-consent";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "expo-router";
@@ -98,6 +99,17 @@ export default function AiChatScreen() {
   async function sendMessage(textOverride?: string) {
     const text = (textOverride ?? input).trim();
     if (!text || sending) return;
+
+    try {
+      const accepted = await ensureAiClinicalDataConsent({
+        userId: user?.id ?? 0,
+        role: user?.role ?? "patient",
+      });
+      if (!accepted) return;
+    } catch (e: any) {
+      setError(e?.message || "No se pudo guardar tu autorización para usar la IA.");
+      return;
+    }
 
     setInput("");
     setError("");

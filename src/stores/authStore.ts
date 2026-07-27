@@ -20,25 +20,9 @@ function normalizeAuthErrorMessage(error: unknown): string {
 
 async function completeSocialLogin(
   res: api.GoogleLoginResult,
-  options: { autoCreatePatient?: boolean } | undefined,
   set: (state: Partial<AuthState>) => void,
 ): Promise<'authenticated' | 'pending_profile'> {
   if (res.status === 'pending_profile') {
-    if (options?.autoCreatePatient) {
-      const completed = await api.completeGoogleRegistration({
-        pending_token: res.pending.pending_token,
-        role: 'patient',
-        name: res.pending.name,
-      });
-      if (completed.status !== 'authenticated') {
-        throw new Error('No se pudo completar el inicio de sesión.');
-      }
-      await api.saveToken(completed.token);
-      await api.saveUser(completed.user);
-      set({ user: completed.user, isAuthenticated: true, pendingGoogleSignup: null });
-      return 'authenticated';
-    }
-
     set({ pendingGoogleSignup: res.pending, user: null, isAuthenticated: false });
     return 'pending_profile';
   }
@@ -58,8 +42,8 @@ interface AuthState {
   // Actions
   loadSaved: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (options?: { autoCreatePatient?: boolean }) => Promise<'authenticated' | 'pending_profile'>;
-  loginWithApple: (options?: { autoCreatePatient?: boolean }) => Promise<'authenticated' | 'pending_profile'>;
+  loginWithGoogle: () => Promise<'authenticated' | 'pending_profile'>;
+  loginWithApple: () => Promise<'authenticated' | 'pending_profile'>;
   completeGoogleSignup: (payload: {
     role: 'doctor' | 'patient';
     name?: string;
@@ -70,6 +54,9 @@ interface AuthState {
     birth_date?: string;
     gender?: string;
     phone?: string;
+    accepted_terms_privacy: boolean;
+    sensitive_health_data_consent: boolean;
+    adult_or_guardian_confirmation: boolean;
   }) => Promise<'authenticated' | 'pending_approval'>;
   clearPendingGoogleSignup: () => void;
   register: (payload: api.MobileRegisterPayload) => Promise<'authenticated' | 'pending_approval'>;
@@ -106,21 +93,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  loginWithGoogle: async (options) => {
+  loginWithGoogle: async () => {
     try {
       const identity = await getNativeGoogleIdentity();
       const res = await api.loginWithNativeSocial({ provider: 'google', id_token: identity.idToken, name: identity.name });
-      return completeSocialLogin(res, options, set);
+      return completeSocialLogin(res, set);
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
     }
   },
 
-  loginWithApple: async (options) => {
+  loginWithApple: async () => {
     try {
       const identity = await getNativeAppleIdentity();
       const res = await api.loginWithNativeSocial({ provider: 'apple', id_token: identity.idToken, name: identity.name });
-      return completeSocialLogin(res, options, set);
+      return completeSocialLogin(res, set);
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));
     }

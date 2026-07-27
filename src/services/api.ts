@@ -151,6 +151,9 @@ export interface MobileRegisterPayload {
   specialty?: string;
   city?: string;
   state?: string;
+  accepted_terms_privacy: boolean;
+  sensitive_health_data_consent: boolean;
+  adult_or_guardian_confirmation: boolean;
 }
 
 export type MobileRegisterResult =
@@ -992,6 +995,9 @@ export async function completeGoogleRegistration(input: {
   birth_date?: string;
   gender?: string;
   phone?: string;
+  accepted_terms_privacy: boolean;
+  sensitive_health_data_consent: boolean;
+  adult_or_guardian_confirmation: boolean;
 }) {
   return request<
     | {
@@ -1468,6 +1474,16 @@ export async function sendAiChatMessage(input: {
   return request<AiChatResponse>("/ai/chat", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export async function acceptAiClinicalDataConsent(documentVersion: string) {
+  return request<{ ok: boolean; document_version: string }>("/legal/ai-consent", {
+    method: "POST",
+    body: JSON.stringify({
+      accepted: true,
+      document_version: documentVersion,
+    }),
   });
 }
 

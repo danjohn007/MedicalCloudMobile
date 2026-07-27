@@ -16,7 +16,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
+import { ensureAiClinicalDataConsent } from "@/services/ai-data-consent";
 import * as api from "@/services/api";
+import { useAuthStore } from "@/stores/authStore";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
@@ -45,6 +47,7 @@ function fetchAppointmentDetail(appointmentId: number) {
 
 export default function DoctorAppointmentDetailScreen() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const appointmentId = Number(Array.isArray(params.id) ? params.id[0] : params.id);
 
@@ -151,9 +154,15 @@ export default function DoctorAppointmentDetailScreen() {
       return;
     }
 
+    setAiBriefingLoading(true);
+    setError("");
     try {
-      setAiBriefingLoading(true);
-      setError("");
+      const accepted = await ensureAiClinicalDataConsent({
+        userId: user?.id ?? 0,
+        role: user?.role ?? "doctor",
+      });
+      if (!accepted) return;
+
       const response = await api.getAiBriefing(appointmentId);
       setAiBriefing(response.briefing || "La IA no devolvió contenido para esta cita.");
     } catch (e: any) {

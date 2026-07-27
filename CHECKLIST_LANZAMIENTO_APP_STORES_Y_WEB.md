@@ -1,6 +1,7 @@
 # Checklist maestro de lanzamiento de DoctorCloud
 
 Fecha de auditoria inicial: 22 de julio de 2026  
+Ultima actualizacion tecnica: 27 de julio de 2026
 Repositorios revisados:
 
 - App movil: `MedicalCloudMobile`
@@ -26,12 +27,12 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Identidad de la app | `com.doctorcloud.app` en Android e iOS | `[x]` |
 | Version publica | `7.0.0` | `[x]` |
 | EAS | Proyecto `@impactos-digitales/doctorcloud-app` enlazado | `[x]` |
-| iOS | Build de produccion 7.0.0 (build 11) terminada el 22/07/2026 | `[x]` |
+| iOS | Build de produccion 7.0.0 (build 15) terminada el 27/07/2026; corresponde al commit `aef24c5`, anterior a los cambios actuales | `[~]` |
 | Android | Builds recientes son APK de desarrollo; falta confirmar un AAB final de produccion | `[ ]` |
 | Salud del proyecto | `npx expo-doctor`: 18/18 validaciones correctas | `[x]` |
-| Calidad estatica | TypeScript y lint pasaron en la revision previa | `[x]` |
-| Icono iOS | PNG 1024 x 1024 | `[x]` |
-| Iconos Android | Assets adaptativos presentes | `[x]` |
+| Calidad estatica | TypeScript, lint y exportación web de 62 rutas pasaron el 27/07/2026 sin advertencias | `[x]` |
+| Icono iOS | PNG 1024 x 1024 presente, pero conserva canal alfa/transparencia | `[ ] BLOQUEADOR de asset` |
+| Iconos Android | Assets adaptativos presentes; el fondo actual contiene una guía/cuadrícula visible y debe reemplazarse | `[ ] BLOQUEADOR de asset` |
 | Push iOS | FCM/APNs ya probado en TestFlight | `[x]` |
 | Push Android | Implementacion FCM nativa presente; falta prueba de la build final | `[~]` |
 | Mapa iOS | Funciona con Apple Maps | `[x]` |
@@ -39,10 +40,11 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Mapa Android | Reportado funcional tras ajustar Google Cloud; falta validarlo en AAB firmado/Play Internal Testing | `[~]` |
 | Login social | Google nativo y Sign in with Apple implementados | `[~]` |
 | Web publica | HTTPS y landing activa | `[x]` |
-| Privacidad/terminos/eliminacion | Paginas y enlaces preparados en codigo; falta desplegarlos y probar URLs publicas | `[~] BLOQUEADOR hasta desplegar` |
+| Privacidad/terminos/eliminacion | Las tres URLs públicas responden 200; la app las enlaza desde autenticación y perfiles | `[~] Falta revisión legal` |
 | Eliminacion de cuenta en app | Flujo, endpoint y migracion v70 preparados; la migracion ya fue aplicada y falta prueba de produccion/build final | `[~]` |
 | Acceso doctor por suscripcion | Backend y app exigen suscripcion activa con `has_app=1` y bloquean modulos por plan; falta desplegar y probar con cuentas de cada plan | `[~]` |
 | Build contra cambios actuales | Hay cambios locales posteriores a las builds de EAS | `[ ] BLOQUEADOR` |
+| Acceso público sin cuenta | La app permite explorar el directorio y detalle de doctores; para agendar o usar datos privados exige iniciar sesión | `[x]` |
 
 ## Decisiones que deben definirse primero
 
@@ -51,14 +53,15 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] Responsable legal definido: Dan Jonathan Raso Rios. Falta verificar que el nombre publico de cada cuenta de tienda coincida.
 - [x] Lanzamiento inicial definido: Mexico.
 - [~] Se admitiran menores; el diseno tecnico esta en `DISENO_CONSENTIMIENTO_MENORES.md` y falta implementar consentimiento verificable de madre, padre o tutor antes de publicar para ese publico.
-- [ ] Confirmar que la app se presentara como plataforma de gestion y servicios medicos, no como dispositivo medico ni sustituto de un profesional.
+- [x] La app y los metadatos se presentarán como plataforma de gestión y servicios médicos, no como dispositivo médico, servicio de emergencias ni sustituto de un profesional.
 - [x] Correo oficial definido: `soporte@doctorcloud.digital`.
 - [x] Responsable de privacidad y domicilio definidos; falta revision legal del texto final.
 - [~] Solicitud de eliminacion con plazo operativo de 30 dias definida; falta documentar la retencion clinica, contable y las excepciones legales con revision profesional.
 - [ ] Decidir si pagos estaran visibles en la primera version. Si no estan en modo real y totalmente probados, ocultar sus acciones en produccion.
-- [ ] Decidir si se migra Expo SDK 54 a SDK 56 antes del primer lanzamiento o en la primera actualizacion. SDK 54 pasa `expo-doctor` y apunta a Android API 36; la migracion no debe mezclarse sin una regresion completa.
+- [x] Mantener Expo SDK 54 para la versión 7.0.0: ya apunta a Android API 36 y EAS se fijó a Xcode 26.0. Migrar a SDK 56 después del primer lanzamiento, con regresión separada, porque también eleva las versiones nativas y de React Native.
 - [ ] Confirmar si se distribuira en la Union Europea. En ese caso completar estado de comerciante DSA en App Store Connect.
 - [ ] Confirmar si la cuenta de Play Console es personal y fue creada despues del 13/11/2023; de ser asi, reservar 14 dias para prueba cerrada con al menos 12 testers.
+- [ ] `BLOQUEADOR APPLE` Confirmar que la cuenta de Apple Developer pertenece a una organizacion/entidad legal responsable del servicio sanitario; Apple indica que este tipo de app no debe enviarse desde una cuenta individual.
 
 ## P0: bloqueadores comunes antes de enviar
 
@@ -71,30 +74,35 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [~] El JWT movil ya falla cerrado si `MOBILE_JWT_SECRET` falta o conserva un marcador de ejemplo; falta desplegarlo y confirmar que la configuracion privada contiene un secreto aleatorio real.
 - [x] `core/Config.php` y cuentas de servicio estan ignorados por Git.
 - [~] La cuenta de servicio FCM existe fuera de Git en `storage/firebase/`; confirmar el mismo archivo y permisos restrictivos en produccion.
-- [ ] `BLOQUEADOR` `test_connection.php` responde 200 actualmente en produccion; debe devolver 404 al desplegar el cambio.
-- [~] El archivo de diagnostico fue eliminado del repositorio y la regla defensiva 404 se mantiene; falta desplegar y comprobar produccion.
+- [x] `test_connection.php` y `/app/test_connection.php` responden 404 en producción.
+- [x] El archivo de diagnostico fue eliminado del repositorio y la regla defensiva 404 se mantiene.
 
 ### Privacidad, terminos y eliminacion de cuenta
 
-- [~] Aviso integral preparado en `https://doctorcloud.digital/app/privacidad` con responsable, contacto, datos clínicos, proveedores, derechos ARCO y retención; falta desplegarlo y obtener revisión legal.
-- [~] Términos preparados en `https://doctorcloud.digital/app/terminos` para pacientes, doctores, menores, IA, pagos y proveedores; falta desplegarlos y obtener revisión legal.
-- [~] Recurso web preparado en `https://doctorcloud.digital/app/eliminar-cuenta` con canal de solicitud y aviso de verificación de identidad; falta desplegarlo y confirmar que el correo de soporte está atendido.
+- [~] Aviso integral publicado en `https://doctorcloud.digital/app/privacidad` con responsable, contacto, datos clínicos, proveedores, derechos ARCO y retención; falta revisión legal.
+- [~] Términos publicados en `https://doctorcloud.digital/app/terminos` para pacientes, doctores, menores, IA, pagos y proveedores; falta revisión legal.
+- [~] Recurso web publicado en `https://doctorcloud.digital/app/eliminar-cuenta` con canal de solicitud y aviso de verificación de identidad; falta confirmar que el correo de soporte está atendido.
 - [~] La app ya incluye una opcion visible para solicitar la eliminacion de cuenta en ambos perfiles; falta desplegarla y probarla desde builds de tienda.
 - [~] API y migracion `v70` preparadas para solicitar/cancelar eliminacion; falta ejecutar la migracion y desplegar el backend.
 - [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar en produccion y completar la revocacion de Apple.
 - [ ] Para cuentas Apple, implementar revocacion del token de Sign in with Apple.
 - [ ] Eliminar o anonimizar datos que no deban conservarse y documentar claramente las excepciones clinicas/legales.
 - [~] La app confirma la solicitud y cierra sesion; falta definir el plazo legal y enviar la confirmacion por correo.
-- [~] Privacidad y términos están enlazados desde login/registro y las páginas legales se enlazan entre sí; falta agregarlos al perfil y al pie de la landing al desplegar el sitio.
+- [~] Privacidad y términos están enlazados desde login/registro y desde los perfiles de paciente y doctor. También quedaron preparados en el pie de la landing; falta desplegar ese cambio web.
+- [~] El registro móvil ya exige aceptaciones separadas para términos/privacidad, datos sensibles y mayoría de edad/tutor; la API guarda versión, usuario, canal y fecha mediante la migración `v76`. Falta desplegar migración, backend y build en ese orden y probarlos.
+- [ ] Archivar una copia inmutable del texto exacto de cada versión de términos, privacidad y aviso de IA; el identificador guardado en `v76` sólo es útil si puede reconstruirse qué aceptó la persona.
+- [~] El aviso público ya describe los datos clínicos enviados a Gemini, retención de solicitudes/respuestas y proveedores; falta desplegarlo y obtener revisión legal.
+- [ ] Definir por escrito la relación responsable/encargado entre Doctor Cloud, médicos, clínicas y proveedores; documentar regiones, contratos y plazos de conservación.
+- [ ] La NOM-004-SSA3-2012 puede exigir conservar expedientes al menos cinco años desde el último acto médico. Diseñar eliminación/anonimización por tipo de dato sin prometer borrado incompatible con esa obligación.
 - [ ] Obtener revision legal del texto aplicable a datos personales sensibles y expedientes clinicos en Mexico. Este checklist no sustituye asesoria legal.
 
 ### Coherencia publica de DoctorCloud
 
-- [ ] `BLOQUEADOR` Corregir precios de prueba visibles en la landing (`$1` y `$2`).
+- [~] Los precios de prueba menores a $100 quedaron ocultos y sin contratación desde la landing; falta fijar el precio real del plan Esencial en Superadmin y desplegar.
 - [ ] Unificar correos `@doctorcloud.digital`; actualmente conviven `@doctorcloud.com`, `@doctorcloud.digital` y `@idactivos.digital`.
-- [ ] Sustituir el correo `noreply` del footer por un contacto de soporte atendido.
-- [ ] Corregir o justificar “videoconsulta sin apps de terceros”, porque la app movil abre Jitsi Meet.
-- [ ] Revisar afirmaciones como “datos seguros y privados”, “+500 citas” y funciones incluidas para que sean demostrables.
+- [~] El footer quedó cambiado a `soporte@doctorcloud.digital`; falta desplegar.
+- [~] La descripción de videoconsulta ya reconoce que usa un proveedor especializado; falta desplegar.
+- [~] Se retiraron “+500 citas”, “sugerencias diagnósticas” y las afirmaciones absolutas de privacidad; falta desplegar.
 - [ ] Unificar marca visible: decidir `DoctorCloud` o `Doctor Cloud` para app, tiendas, correos y sitio.
 
 ### Calidad funcional minima
@@ -112,19 +120,21 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] `app.json` declara version `7.0.0`.
 - [x] EAS usa versionado remoto y `autoIncrement` en produccion.
 - [x] `package.json` y el texto visible de perfil están alineados con la versión pública `7.0.0`.
-- [ ] Definir una politica simple: version publica `major.minor.patch`; build number/versionCode siempre incremental.
+- [x] Politica definida: version publica `major.minor.patch`; `ios.buildNumber` y `android.versionCode` siempre incrementales mediante versionado remoto y `autoIncrement`.
 - [ ] Agregar identificadores de envio a `eas.json` cuando ya existan las apps en ambas consolas, sin guardar secretos en Git.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
-- [ ] Decidir si `expo-updates` se configurara realmente con `runtimeVersion` y canales o si se retirara. Hoy esta instalado principalmente para recargar apariencia.
-- [ ] Revisar advertencias de privacidad de SDKs iOS y manifiestos de razones aprobadas antes del binario final.
+- [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
+- [~] Se retiraron descripciones nativas no usadas de cámara, Face ID y ubicación permanente, y se bloquearon permisos Android de almacenamiento heredados; falta inspeccionar el AAB/IPA final.
+- [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata 7.0.0 y resolverlas en una actualización con regresión completa.
 
 ### Permisos
 
 - [x] Ubicacion tiene texto de uso en iOS/Android mediante `expo-location`.
+- [x] Antes del primer permiso de ubicación se muestra un aviso destacado que identifica ubicación precisa, finalidad, transferencia al servidor y ausencia de uso en segundo plano/publicidad.
 - [~] Fotos/documentos se solicitan solo al iniciar una accion; el texto de Fotos ya es especifico de Doctor Cloud. Falta validarlo en iOS fisico.
 - [~] Notificaciones se solicitan mediante Firebase; validar el momento y explicacion al usuario.
-- [~] El manifiesto generado ya omite Camara y Microfono, se elimino `expo-camera`, Android no permite backups automaticos e iOS rechaza cargas no seguras. Falta comprobar el AAB/IPA final.
+- [~] El manifiesto generado omite Cámara, Micrófono y almacenamiento heredado; se eliminó `expo-camera`, Android no permite backups automáticos e iOS rechaza cargas no seguras. Falta comprobar el AAB/IPA final.
 - [ ] Probar cada flujo con permiso aceptado, denegado y denegado permanentemente.
 
 ### Autenticacion y sesion
@@ -177,6 +187,8 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 ### IA y contenido medico
 
 - [~] La app ya muestra avisos de que la IA no reemplaza el criterio profesional en algunas vistas.
+- [x] Antes del primer chat o briefing de IA se muestra una autorización separada con los datos clínicos transferidos, proveedor externo, retención y opción de cancelar.
+- [~] La API exige un consentimiento vigente y registra su versión mediante `v76`; falta despliegue y prueba autenticada en producción.
 - [ ] `BLOQUEADOR` Actualizar en Superadmin la configuracion global de IA a `gemini-2.5-flash`: el export actual aun contiene `gemini-2.0-flash`, que invalida el cambio hecho en el archivo de configuracion.
 - [ ] Revisar todos los accesos de IA para que no afirmen diagnosticar ni sustituir atencion medica.
 - [ ] Mostrar aviso de consultar a un profesional antes de decisiones medicas, especialmente al paciente.
@@ -206,15 +218,17 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 ### Ficha y declaraciones
 
 - [~] Borrador de nombre, descripciones y categoria Medica preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion del propietario de la ficha.
-- [~] Icono maestro 1024 x 1024 disponible; faltan exportacion Play 512 x 512, feature graphic 1024 x 500 y capturas reales sin datos personales.
-- [ ] Correo, web y URL de privacidad.
-- [ ] URL publica de eliminacion de cuenta.
+- [x] Matriz detallada preparada en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md` para Health Apps, Data Safety, permisos sensibles y App Privacy.
+- [ ] El icono maestro actual tiene transparencia y el fondo adaptativo Android conserva una cuadrícula; deben corregirse antes de exportar Play 512 x 512. También faltan feature graphic 1024 x 500 y capturas reales sin datos personales.
+- [x] Correo, web y URL pública de privacidad definidos y accesibles.
+- [x] URL pública de eliminación de cuenta accesible.
 - [ ] Declaracion de anuncios: actualmente deberia ser “no contiene anuncios”, si se confirma.
 - [ ] Acceso a la app: entregar cuentas e instrucciones para paciente y doctor.
 - [ ] Publico objetivo y contenido; evitar seleccionar menores si el producto no esta preparado para ellos.
 - [ ] Cuestionario de clasificacion de contenido.
 - [~] Borrador de Data safety preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validarlo contra produccion, SDKs y revision legal.
-- [~] Borrador de declaracion de salud preparado; falta completarlo con los nombres exactos que muestre Play Console.
+- [~] Declaracion de salud preparada con tres categorias: Healthcare Services and Management, Medication and Treatment Management y Clinical Decision Support. Falta capturarla en Play Console.
+- [x] La descripción propuesta incluye el aviso exigido: no es dispositivo médico, no diagnostica/trata/cura/previene y se debe consultar a un profesional.
 - [ ] Declaracion de funciones financieras; declarar con precision el procesamiento de pagos si queda visible.
 - [ ] Verificar politicas de permisos sensibles despues de subir el AAB.
 - [ ] Notas de version en espanol.
@@ -228,8 +242,9 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 - [x] Sign in with Apple declarado e implementado.
 - [x] Push Notifications/APNs funcional en TestFlight.
 - [ ] Confirmar Apple Developer Program activo, contratos vigentes y roles correctos.
+- [ ] `BLOQUEADOR` Confirmar cuenta Organization/legal entity; una cuenta individual supone un riesgo directo bajo la guía de apps sanitarias con información sensible.
 - [ ] Confirmar que la app 7.0.0 existe en App Store Connect y que build 11 esta procesada sin advertencias.
-- [ ] Confirmar que el binario fue construido con el Xcode/iOS SDK aceptado por Apple desde el 28/04/2026.
+- [~] El perfil de producción quedó fijado a la imagen EAS `macos-sequoia-15.6-xcode-26.0`; falta generar y procesar el nuevo binario.
 - [ ] Completar las preguntas nuevas de clasificacion por edad vigentes desde 2026.
 - [ ] Si se distribuye en UE, completar y verificar estado de comerciante DSA.
 
@@ -237,10 +252,11 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 
 - [~] Borrador de nombre, subtitulo, descripcion, palabras clave, categoria Medica y copyright preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`.
 - [ ] URL de soporte publica con contacto real.
-- [ ] URL de politica de privacidad.
+- [x] URL de política de privacidad pública y accesible.
 - [~] Borrador de App Privacy y proveedores preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion legal y de produccion.
+- [x] Matriz campo por campo de App Privacy preparada en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md`.
 - [~] Guion de capturas preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; faltan capturas reales para los tamanos de iPhone solicitados.
-- [ ] Decidir si la app sera solo iPhone. No activar iPad sin revisar toda la interfaz y preparar capturas.
+- [x] La versión 7.0.0 será solo iPhone (`supportsTablet: false`). iPad se evaluará después de revisar interfaz y capturas específicas.
 - [~] Borrador de notas de revision preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; completar flujo de pagos visible en la build candidata.
 - [~] Plantilla de cuentas de revision preparada; faltan dos cuentas funcionales con datos ficticios.
 - [ ] Mantener backend, correos y cuentas de revision activos durante todo el proceso.
@@ -311,7 +327,7 @@ Para cada fila falta definir:
 
 ### Legal, confianza y contenido
 
-- [ ] Publicar privacidad, terminos, eliminacion de cuenta y contacto.
+- [~] Privacidad, términos y eliminación de cuenta ya están publicados; falta desplegar en la landing el footer con el contacto y los enlaces.
 - [ ] Corregir precios, correos, telefonos ficticios y afirmaciones no verificadas.
 - [ ] Explicar que DoctorCloud facilita gestion y comunicacion; no sustituye una emergencia ni el criterio medico.
 - [ ] Indicar claramente quien presta el servicio medico y quien procesa el pago.
@@ -373,7 +389,7 @@ Tambien probar:
 - [ ] Nombre oficial y tagline coherente.
 - [ ] Descripcion corta y larga en espanol.
 - [ ] Palabras clave de App Store.
-- [ ] Iconos finales sin transparencias o contenido fuera de zona segura.
+- [ ] `BLOQUEADOR` Iconos finales sin transparencias ni la cuadrícula visible del asset adaptativo actual.
 - [ ] Feature graphic de Google Play.
 - [ ] Capturas de paciente y doctor con datos ficticios consistentes.
 - [ ] Video opcional solo si muestra el producto real.
@@ -458,6 +474,8 @@ Al aprobar este checklist, comenzar en este orden:
 - Requisitos vigentes de Apple: <https://developer.apple.com/news/upcoming-requirements/>
 - App Review Guidelines: <https://developer.apple.com/app-store/review/guidelines/>
 - App Privacy: <https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/>
+- Apps de salud y requisito de entidad legal en Apple: <https://developer.apple.com/health-fitness/>
+- Declaracion de dispositivo medico regulado en Apple: <https://developer.apple.com/help/app-store-connect/manage-app-information/declare-regulated-medical-device-status>
 - Eliminacion de cuenta en Apple: <https://developer.apple.com/support/offering-account-deletion-in-your-app/>
 - Target API de Google Play: <https://developer.android.com/google/play/requirements/target-sdk>
 - Preparar app para revision en Play: <https://support.google.com/googleplay/android-developer/answer/9859455>
@@ -466,3 +484,5 @@ Al aprobar este checklist, comenzar en este orden:
 - Declaracion de apps de salud: <https://support.google.com/googleplay/android-developer/answer/14738291>
 - Politica de salud: <https://support.google.com/googleplay/android-developer/answer/16679511>
 - Prueba cerrada para cuentas personales nuevas: <https://support.google.com/googleplay/android-developer/answer/14151465>
+- LFPDPPP vigente: <https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf>
+- NOM-004-SSA3-2012 vigente: <https://platiica.economia.gob.mx/normalizacion/nom-004-ssa3-2012/>
