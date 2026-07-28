@@ -70,7 +70,7 @@ export default function DoctorAppointmentCheckinScreen() {
     if (!isAppointmentCode(normalized)) {
       Alert.alert(
         "Código inválido",
-        "Ingresa o escanea el código de check-in de 6 caracteres del paciente.",
+        "Ingresa o escanea el código de inicio de 6 caracteres del paciente.",
       );
       return;
     }
@@ -79,10 +79,10 @@ export default function DoctorAppointmentCheckinScreen() {
       setSaving(true);
       setError("");
       const response = await api.doctorCheckinAppointment(appointmentId, normalized);
-      Alert.alert("Check-in listo", response.message || "La consulta fue iniciada.");
+      Alert.alert("Consulta iniciada", response.message || "La consulta fue iniciada.");
       router.replace(`/doctor/appointments/${appointmentId}/soap` as any);
     } catch (e: any) {
-      setError(e?.message || "No se pudo registrar el check-in.");
+      setError(e?.message || "No se pudo validar el código de inicio.");
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export default function DoctorAppointmentCheckinScreen() {
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={22} color={MC.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Check-in</Text>
+          <Text style={styles.headerTitle}>Inicio de consulta</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -113,7 +113,7 @@ export default function DoctorAppointmentCheckinScreen() {
           <Text style={styles.heroEyebrow}>Consulta presencial</Text>
           <Text style={styles.heroTitle}>{appointment?.patient_name || "Paciente"}</Text>
           <Text style={styles.heroSubtitle}>
-            Pide al paciente el código que ve en su app para registrar su llegada e iniciar la consulta.
+            Pide al paciente el QR o código de inicio que ve en su app para iniciar la consulta.
           </Text>
         </View>
 
@@ -127,7 +127,7 @@ export default function DoctorAppointmentCheckinScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Cómo funciona</Text>
           <Text style={styles.infoText}>
-            1. El paciente abre su módulo de check-in.
+            1. El paciente abre el QR de inicio de su cita.
           </Text>
           <Text style={styles.infoText}>
             2. Te comparte el código de 6 caracteres.
@@ -138,7 +138,7 @@ export default function DoctorAppointmentCheckinScreen() {
         </View>
 
         <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Código de check-in</Text>
+          <Text style={styles.fieldLabel}>Código de inicio</Text>
           <TextInput
             value={code}
             onChangeText={(value) =>
@@ -158,7 +158,7 @@ export default function DoctorAppointmentCheckinScreen() {
           style={[styles.scanButton, saving && styles.saveButtonDisabled]}
         >
           <Icon name="video-camera" size={19} color={MC.primary} />
-          <Text style={styles.scanButtonText}>Escanear QR del paciente</Text>
+          <Text style={styles.scanButtonText}>Escanear QR de inicio</Text>
         </Pressable>
 
         <Pressable
@@ -171,7 +171,7 @@ export default function DoctorAppointmentCheckinScreen() {
           ) : (
             <>
               <Icon name="check-circle" size={18} color={MC.white} />
-              <Text style={styles.saveButtonText}>Registrar check-in e iniciar</Text>
+              <Text style={styles.saveButtonText}>Validar código e iniciar</Text>
             </>
           )}
         </Pressable>
@@ -180,8 +180,8 @@ export default function DoctorAppointmentCheckinScreen() {
       {scannerOpen ? (
         <AppointmentQrScanner
           visible
-          title="Escanear check-in"
-          hint="Centra el QR de entrada que aparece en la app del paciente dentro del recuadro."
+          title="Escanear QR de inicio"
+          hint="Centra el QR de inicio que aparece en la app del paciente dentro del recuadro."
           onClose={() => setScannerOpen(false)}
           onCodeScanned={(scannedCode) => {
             setCode(scannedCode);

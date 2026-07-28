@@ -314,6 +314,8 @@ export default function DoctorSoapScreen() {
       !Number.isFinite(appointmentId) ||
       appointmentId <= 0 ||
       isReadOnly ||
+      saving ||
+      signing ||
       !soapCoreDirty
     ) {
       return;
@@ -346,7 +348,17 @@ export default function DoctorSoapScreen() {
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, [appointmentId, form, hasAppointment, isReadOnly, loading, soapCoreDirty, soapCoreServerKey]);
+  }, [
+    appointmentId,
+    form,
+    hasAppointment,
+    isReadOnly,
+    loading,
+    saving,
+    signing,
+    soapCoreDirty,
+    soapCoreServerKey,
+  ]);
 
   async function handleSave() {
     if (isReadOnly) {
@@ -386,25 +398,28 @@ export default function DoctorSoapScreen() {
     ? templateLibrary
     : FALLBACK_SOAP_TEMPLATES;
 
-  async function handleSignNote() {
-    if (!noteId) {
-      setError("Guarda primero la nota para poder firmarla.");
-      return;
-    }
-
-    if (isDirty) {
-      Alert.alert(
-        "Guarda antes de firmar",
-        "La firma bloquea la nota. Guarda cualquier cambio pendiente y luego firma.",
-      );
-      return;
-    }
-
+  async function confirmSignNote() {
     try {
       setSigning(true);
       setError("");
       setSuccess("");
-      const result = await api.signDoctorNote(noteId);
+      let targetNoteId = noteId;
+
+      if (isDirty || targetNoteId <= 0) {
+        const saved = await api.saveDoctorAppointmentSoap(appointmentId, form);
+        targetNoteId = Number(saved.note_id || 0);
+      }
+
+      if (targetNoteId <= 0) {
+        const refreshedBeforeSign = await api.getDoctorAppointmentSoap(appointmentId);
+        targetNoteId = Number(refreshedBeforeSign.note?.id || 0);
+      }
+
+      if (targetNoteId <= 0) {
+        throw new Error("No se pudo identificar la nota guardada para firmarla.");
+      }
+
+      const result = await api.signDoctorNote(targetNoteId);
       await removeSecure(soapDraftKey(appointmentId));
       const refreshed = await api.getDoctorAppointmentSoap(appointmentId);
       setData(refreshed);
@@ -417,6 +432,22 @@ export default function DoctorSoapScreen() {
     } finally {
       setSigning(false);
     }
+  }
+
+  function handleSignNote() {
+    Alert.alert(
+      "Firmar nota clínica",
+      "Se guardarán los cambios pendientes y la nota quedará bloqueada como versión final. Esta acción no se puede deshacer desde la app.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Guardar y firmar",
+          onPress: () => {
+            void confirmSignNote();
+          },
+        },
+      ],
+    );
   }
 
   async function handleCompleteConsultation() {
@@ -770,14 +801,14 @@ export default function DoctorSoapScreen() {
             )}
           </Pressable>
 
-          {noteId > 0 && !noteSigned && !consultationCompleted ? (
+          {!noteSigned && !consultationCompleted ? (
             <>
               <Pressable
                 onPress={handleSignNote}
-                disabled={saving || signing || isDirty}
+                disabled={saving || signing}
                 style={[
                   styles.signButton,
-                  (saving || signing || isDirty) && styles.saveButtonDisabled,
+                  (saving || signing) && styles.saveButtonDisabled,
                 ]}
               >
                 {signing ? (
@@ -791,7 +822,7 @@ export default function DoctorSoapScreen() {
               </Pressable>
               {isDirty ? (
                 <Text style={styles.signHint}>
-                  Guarda los cambios pendientes antes de firmar para bloquear la versión final.
+                  Los cambios pendientes se guardarán antes de bloquear la versión final.
                 </Text>
               ) : null}
             </>

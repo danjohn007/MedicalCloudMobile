@@ -75,7 +75,7 @@ const STATUS_META: Record<
     dot: themed("#F97316", "#FB923C"),
   },
   missed: {
-    label: "No atendida",
+    label: "No asistió",
     bg: MC.orangeSoft,
     fg: themed("#C2410C", "#FB923C"),
     dot: themed("#F97316", "#FB923C"),
@@ -145,8 +145,7 @@ type FilterKey =
   | "in_consultation"
   | "completed"
   | "cancelled"
-  | "no_show"
-  | "missed";
+  | "no_show";
 const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: "all", label: "Todas", color: MC.primary },
   { key: "pending", label: "Pendiente", color: "#F59E0B" },
@@ -155,7 +154,6 @@ const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: "completed", label: "Completada", color: "#6366F1" },
   { key: "cancelled", label: "Cancelada", color: "#EF4444" },
   { key: "no_show", label: "No asistió", color: "#F97316" },
-  { key: "missed", label: "No atendida", color: "#F97316" },
 ];
 
 const fmtDayHeader = (dayKey: string) => {
@@ -184,18 +182,26 @@ const extractReason = (appt: api.Appointment) => {
   return note || "—";
 };
 
-const groupByDay = (items: api.Appointment[]) => {
+const groupByDay = (items: api.Appointment[], order: "asc" | "desc") => {
   const map: Record<string, api.Appointment[]> = {};
-  items.forEach((a) => {
-    const key = new Date(a.scheduled_at).toISOString().slice(0, 10);
-    (map[key] = map[key] || []).push(a);
-  });
-  return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  const direction = order === "asc" ? 1 : -1;
+  [...items]
+    .sort(
+      (a, b) =>
+        (new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()) *
+        direction,
+    )
+    .forEach((a) => {
+      const key = new Date(a.scheduled_at).toISOString().slice(0, 10);
+      (map[key] = map[key] || []).push(a);
+    });
+  return Object.entries(map).sort(([a], [b]) => a.localeCompare(b) * direction);
 };
 
 export default function CitasScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [items, setItems] = useState<api.Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +213,7 @@ export default function CitasScreen() {
   const load = useCallback(async () => {
     try {
       setError("");
-      const res = await api.getAppointments(tab);
+      const res = await api.getAppointments(tab, order);
       setItems(res.data);
     } catch (e: any) {
       setError(e.message ?? "Error al cargar citas");
@@ -215,7 +221,7 @@ export default function CitasScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [tab]);
+  }, [order, tab]);
   useEffect(() => {
     load();
   }, [load]);
@@ -234,7 +240,6 @@ export default function CitasScreen() {
     no_show: items.filter((a) =>
       ["no_show", "missed"].includes(normStatus(a.status)),
     ).length,
-    missed: items.filter((a) => normStatus(a.status) === "missed").length,
   };
 
   const filtered = items.filter((a) => {
@@ -249,6 +254,14 @@ export default function CitasScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     load();
+  };
+
+  const changeTab = (nextTab: "upcoming" | "past") => {
+    setItems([]);
+    setLoading(true);
+    setTab(nextTab);
+    setFilter("all");
+    setOrder(nextTab === "upcoming" ? "asc" : "desc");
   };
 
   const handleCancel = (a: api.Appointment) => {
@@ -332,16 +345,16 @@ export default function CitasScreen() {
       <View style={s.tabRow}>
         <Pressable
           style={[s.tabBtn, tab === "upcoming" && s.tabActive]}
-          onPress={() => setTab("upcoming")}
+          onPress={() => changeTab("upcoming")}
         >
           <Text style={[s.tabText, tab === "upcoming" && s.tabTextActive]}>
-            Próximas
+            Próximas y en curso
           </Text>
           {tab === "upcoming" && <View style={s.tabLine} />}
         </Pressable>
         <Pressable
           style={[s.tabBtn, tab === "past" && s.tabActive]}
-          onPress={() => setTab("past")}
+          onPress={() => changeTab("past")}
         >
           <Text style={[s.tabText, tab === "past" && s.tabTextActive]}>
             Pasadas
@@ -358,7 +371,7 @@ export default function CitasScreen() {
           contentContainerStyle={s.statRow}
         >
           <StatChip
-            label={tab === "upcoming" ? "Próximas" : "Total"}
+            label={tab === "upcoming" ? "Activas" : "Total"}
             value={counts.all}
             color={MC.primary}
             icon="calendar"
@@ -448,6 +461,28 @@ export default function CitasScreen() {
             );
           })}
         </ScrollView>
+        {filtered.length > 1 ? (
+          <View style={s.orderRow}>
+            <Text style={s.orderCaption}>Orden</Text>
+            <Pressable
+              style={s.orderButton}
+              onPress={() => setOrder((current) => (current === "asc" ? "desc" : "asc"))}
+              accessibilityRole="button"
+              accessibilityLabel="Invertir el orden de las citas"
+            >
+              <Icon name="arrow-clockwise" size={15} color={MC.primary} />
+              <Text style={s.orderButtonText}>
+                {tab === "upcoming"
+                  ? order === "asc"
+                    ? "Más cercanas"
+                    : "Más lejanas"
+                  : order === "desc"
+                    ? "Más recientes"
+                    : "Más antiguas"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       {/* Scrollable list */}
@@ -473,12 +508,16 @@ export default function CitasScreen() {
           </View>
           <Text style={s.emptyTitle}>
             {filter === "all"
-              ? "No tienes citas próximas"
+              ? tab === "upcoming"
+                ? "No tienes citas próximas o en curso"
+                : "No tienes citas pasadas"
               : "Sin citas en esta categoría"}
           </Text>
           <Text style={s.emptySub}>
             {filter === "all"
-              ? "Agenda tu primera consulta"
+              ? tab === "upcoming"
+                ? "Agenda tu primera consulta"
+                : "Tu historial aparecerá aquí"
               : "Cambia el filtro"}
           </Text>
           {filter === "all" && tab === "upcoming" && (
@@ -503,7 +542,7 @@ export default function CitasScreen() {
             />
           }
         >
-          {groupByDay(filtered).map(([day, appts]) => (
+          {groupByDay(filtered, order).map(([day, appts]) => (
             <View key={day}>
               <View style={s.dayHeader}>
                 <Text style={s.dayHeaderText}>{fmtDayHeader(day)}</Text>
@@ -783,13 +822,15 @@ function AppointmentDetail(props: {
               <Icon name="chat-circle" size={18} color={MC.primary} />
               <Text style={s.actionSecondaryText}>Mensaje</Text>
             </Pressable>
-            {isPresential && status === "confirmed" && (
+            {isPresential && ["confirmed", "in_consultation"].includes(status) && (
               <Pressable
                 style={s.actionSecondary}
                 onPress={() => onCheckin(appt)}
               >
                 <Icon name="share-network" size={18} color={MC.primary} />
-                <Text style={s.actionSecondaryText}>QR Check-in</Text>
+                <Text style={s.actionSecondaryText}>
+                  {status === "in_consultation" ? "QR de cierre" : "QR de inicio"}
+                </Text>
               </Pressable>
             )}
             {isVirtual && ["confirmed", "in_consultation"].includes(status) && (
@@ -942,6 +983,27 @@ const s = StyleSheet.create({
   },
   filterDot: { width: 8, height: 8, borderRadius: 4 },
   filterText: { fontSize: 12, fontWeight: "600", color: MC.textSecondary },
+  orderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  orderCaption: { fontSize: 12, color: MC.textMuted },
+  orderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: MC.primary,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: MC.primaryLight,
+  },
+  orderButtonText: { fontSize: 12, fontWeight: "700", color: MC.primary },
 
   center: {
     flex: 1,

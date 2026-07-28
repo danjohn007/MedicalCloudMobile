@@ -323,7 +323,7 @@ export default function DoctorAppointmentDetailScreen() {
                 !appointment.checked_in_at ? (
                   <ActionButton
                     icon="shield-check"
-                    label="Check-in paciente"
+                    label="Iniciar con QR"
                     tone="primary"
                     busy={false}
                     onPress={() =>
@@ -377,7 +377,7 @@ export default function DoctorAppointmentDetailScreen() {
               <InfoRow label="Teléfono paciente" value={appointment.patient_phone || "Sin teléfono"} />
               <InfoRow label="Correo paciente" value={appointment.patient_email || "Sin correo"} />
               <InfoRow
-                label="Check-in"
+                label="Inicio validado"
                 value={appointment.checked_in_at ? formatDate(appointment.checked_in_at) : "Pendiente"}
               />
             </Section>
@@ -869,7 +869,7 @@ function getPrimaryFlowAction(
       color: MC.success,
       backgroundColor: MC.successSoft,
       title: "Primero confirma la cita",
-      text: "Deja resuelta la aprobación antes de pasar a check-in o a la nota clínica.",
+      text: "Deja resuelta la aprobación antes de validar el inicio o abrir la nota clínica.",
       buttonLabel: "Confirmar consulta",
     };
   }
@@ -885,9 +885,9 @@ function getPrimaryFlowAction(
       icon: "shield-check",
       color: "#2563EB",
       backgroundColor: MC.infoSoft,
-      title: "Pide el check-in del paciente",
-      text: "La cita ya está confirmada; el siguiente paso es registrar llegada para iniciar consulta.",
-      buttonLabel: "Abrir check-in",
+      title: "Valida el QR de inicio",
+      text: "El paciente muestra su QR o código; al validarlo, la cita pasa a consulta.",
+      buttonLabel: "Abrir QR de inicio",
     };
   }
 
@@ -943,7 +943,7 @@ function buildFlowSteps(appointment: api.DoctorAppointmentDetailData["data"]) {
           : "upcoming",
     },
     {
-      label: appointment.type === "presential" ? "Check-in" : "Ingreso",
+      label: appointment.type === "presential" ? "Inicio" : "Ingreso",
       tone: checkinDone ? "done" : appointment.status === "confirmed" ? "current" : "upcoming",
     },
     {

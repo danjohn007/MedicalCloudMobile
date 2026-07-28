@@ -702,6 +702,14 @@ export interface DoctorSoapAutosaveResult {
   saved_at?: string | null;
 }
 
+export interface DoctorSoapSaveResult {
+  ok?: boolean;
+  message: string;
+  note_id: number;
+  note_saved: boolean;
+  prescription_saved: boolean;
+}
+
 export interface DoctorSignNoteResult {
   ok?: boolean;
   message: string;
@@ -1090,9 +1098,10 @@ export async function getDoctorAvailability(id: number, date: string) {
 // ── Citas ─────────────────────────────────────────────────
 export async function getAppointments(
   status: "upcoming" | "past" = "upcoming",
+  order: "asc" | "desc" = status === "past" ? "desc" : "asc",
 ) {
   const response = await request<{ data: Record<string, any>[] }>(
-    `/appointments?status=${status}`,
+    `/appointments?status=${status}&order=${order}`,
   );
 
   return {
@@ -1230,29 +1239,26 @@ export async function cancelAccountDeletion() {
   });
 }
 
-// ── QR / Check-in / Checkout ────────────────────────────
-export async function getAppointmentQr(id: number) {
-  return request<{
-    data: {
-      id: number;
-      checkin_code: string | null;
-      checkin_expires: string | null;
-      checked_in: boolean;
-      checkout_code: string | null;
-      checkout_expires: string | null;
-    };
-  }>(`/appointments/${id}/qr`);
+// ── QR de inicio / cierre de consulta ───────────────────
+export interface AppointmentQrData {
+  id: number;
+  status: "confirmed" | "in_consultation";
+  phase: "start" | "close";
+  checkin_available: boolean;
+  checkin_window: "too_early" | "available" | "expired" | "completed";
+  checkin_code: string | null;
+  checkin_expires: string | null;
+  checked_in: boolean;
+  checkout_code: string | null;
+  checkout_expires: string | null;
 }
 
-export async function checkinAppointment(id: number, code: string) {
-  return request<{ message: string; in_consultation: boolean }>(
-    `/appointments/${id}/checkin`,
-    { method: "POST", body: JSON.stringify({ code }) },
-  );
+export async function getAppointmentQr(id: number) {
+  return request<{ data: AppointmentQrData }>(`/appointments/${id}/qr`);
 }
 
 export async function checkoutAppointment(id: number) {
-  return request<{ data: { checkout_code: string; expires_at: string } }>(
+  return request<{ data: { phase: "close"; checkout_code: string; expires_at: string } }>(
     `/appointments/${id}/checkout`,
     { method: "POST" },
   );
@@ -1845,7 +1851,7 @@ export async function saveDoctorAppointmentSoap(
   appointmentId: number,
   payload: DoctorSoapPayload,
 ) {
-  return request<{ ok?: boolean; message: string; note_saved: boolean; prescription_saved: boolean }>(
+  return request<DoctorSoapSaveResult>(
     `/doctor/appointments/${appointmentId}/soap`,
     {
       method: "POST",

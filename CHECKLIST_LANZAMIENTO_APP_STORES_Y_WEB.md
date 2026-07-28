@@ -125,7 +125,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
 - [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
-- [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de entrada y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
+- [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de inicio y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
 - [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata 7.0.0 y resolverlas en una actualización con regresión completa.
 
 ### Permisos
@@ -135,7 +135,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [~] Fotos/documentos se solicitan solo al iniciar una accion; el texto de Fotos ya es especifico de Doctor Cloud. Falta validarlo en iOS fisico.
 - [~] Notificaciones se solicitan mediante Firebase; validar el momento y explicacion al usuario.
 - [~] `expo-camera` está habilitado únicamente para leer QR de citas y solicita Cámara al abrir el escáner. Android sigue bloqueando Micrófono y almacenamiento heredado; no permite backups automáticos e iOS rechaza cargas no seguras. Falta probar permiso aceptado, denegado y denegado permanentemente en builds nativas físicas, además de inspeccionar el AAB/IPA final.
-- [~] El paciente ya muestra QR y código de 6 caracteres tanto para check-in como para cierre; el doctor puede escanearlos o capturarlos manualmente. Falta la prueba física completa paciente → doctor → API → cita en consulta/completada.
+- [~] Hay dos códigos distintos: el paciente muestra el QR/código de inicio y el doctor o asistente lo valida para pasar la cita a `in_consultation`; ya iniciada, el paciente genera el QR/código de cierre y el doctor lo valida para pasarla a `completed`. El paciente no puede auto-validar el inicio. Falta la prueba física completa paciente → doctor → API → cita en consulta/completada.
 - [ ] Probar cada flujo con permiso aceptado, denegado y denegado permanentemente.
 
 ### Autenticacion y sesion

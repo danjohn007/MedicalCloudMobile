@@ -330,7 +330,7 @@ function getScopeSummary(
       icon: "calendar" as const,
       color: MC.primaryDark,
       title: "Vista de hoy",
-      text: "Empieza por confirmar pendientes, luego registra check-in o entra directo a la nota SOAP.",
+      text: "Empieza por confirmar pendientes, luego valida el inicio o entra a la nota SOAP.",
       priorityCount,
     };
   }
