@@ -17,6 +17,7 @@ import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { isAppointmentCode } from "@/utils/appointmentCodes";
+import { isPresentialAppointmentType } from "@/utils/appointmentTypes";
 
 export default function DoctorAppointmentCompleteScreen() {
   const router = useRouter();
@@ -65,9 +66,9 @@ export default function DoctorAppointmentCompleteScreen() {
     };
   }, [appointmentId]);
 
-  async function handleComplete(force = false, scannedCode?: string) {
+  async function handleComplete(scannedCode?: string) {
     const normalized = (scannedCode ?? code).trim().toUpperCase();
-    if (detail?.data?.type === "presential" && !force && !isAppointmentCode(normalized)) {
+    if (isPresentialAppointmentType(detail?.data?.type) && !isAppointmentCode(normalized)) {
       Alert.alert(
         "Código inválido",
         "Ingresa o escanea el código de cierre de 6 caracteres que generó el paciente.",
@@ -80,7 +81,6 @@ export default function DoctorAppointmentCompleteScreen() {
       setError("");
       const response = await api.completeDoctorAppointment(appointmentId, {
         checkout_code: normalized,
-        force,
       });
       Alert.alert("Consulta completada", response.message || "La cita ya quedó cerrada.");
       router.replace(`/doctor/appointments/${appointmentId}` as any);
@@ -100,7 +100,7 @@ export default function DoctorAppointmentCompleteScreen() {
   }
 
   const appointment = detail?.data ?? null;
-  const isPresential = appointment?.type === "presential";
+  const isPresential = isPresentialAppointmentType(appointment?.type);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -118,7 +118,7 @@ export default function DoctorAppointmentCompleteScreen() {
           <Text style={styles.heroTitle}>{appointment?.patient_name || "Paciente"}</Text>
           <Text style={styles.heroSubtitle}>
             {isPresential
-              ? "Para citas presenciales, válida el código de cierre del paciente antes de marcarla completada."
+              ? "Para citas presenciales, valida el código de cierre del paciente antes de marcarla completada."
               : "En consultas virtuales puedes cerrarla directamente desde la app."}
           </Text>
         </View>
@@ -164,7 +164,7 @@ export default function DoctorAppointmentCompleteScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => handleComplete(false)}
+              onPress={() => handleComplete()}
               disabled={saving}
               style={[styles.primaryButton, saving && styles.buttonDisabled]}
             >
@@ -178,18 +178,10 @@ export default function DoctorAppointmentCompleteScreen() {
               )}
             </Pressable>
 
-            <Pressable
-              onPress={() => handleComplete(true)}
-              disabled={saving}
-              style={[styles.secondaryButton, saving && styles.buttonDisabled]}
-            >
-              <Icon name="warning" size={18} color={MC.star} />
-              <Text style={styles.secondaryButtonText}>Forzar cierre sin código</Text>
-            </Pressable>
           </>
         ) : (
           <Pressable
-            onPress={() => handleComplete(false)}
+            onPress={() => handleComplete()}
             disabled={saving}
             style={[styles.primaryButton, saving && styles.buttonDisabled]}
           >
@@ -214,7 +206,7 @@ export default function DoctorAppointmentCompleteScreen() {
           onCodeScanned={(scannedCode) => {
             setCode(scannedCode);
             setScannerOpen(false);
-            void handleComplete(false, scannedCode);
+            void handleComplete(scannedCode);
           }}
         />
       ) : null}
@@ -311,17 +303,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: { fontSize: 15, fontWeight: "700", color: MC.white },
-  secondaryButton: {
-    borderRadius: 18,
-    backgroundColor: MC.orangeSoft,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: MC.warningBorder,
-  },
-  secondaryButtonText: { fontSize: 15, fontWeight: "700", color: MC.star },
   buttonDisabled: { opacity: 0.6 },
 });

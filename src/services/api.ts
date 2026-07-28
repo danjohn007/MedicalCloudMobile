@@ -565,7 +565,6 @@ export interface DoctorAppointmentDetailData {
 export type DoctorAppointmentStatusAction =
   | "confirmed"
   | "in_consultation"
-  | "completed"
   | "cancelled"
   | "no_show";
 
@@ -746,7 +745,6 @@ export interface DoctorAppointmentCheckinResult {
 
 export interface DoctorAppointmentCompletePayload {
   checkout_code?: string;
-  force?: boolean;
 }
 
 export interface DoctorAppointmentCompleteResult {

@@ -19,6 +19,7 @@ import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { getSecure, removeSecure, setSecure } from "@/services/storage";
+import { isPresentialAppointmentType } from "@/utils/appointmentTypes";
 
 type SoapFormState = Required<api.DoctorSoapPayload>;
 type SoapDraftPayload = {
@@ -30,7 +31,7 @@ type SoapCorePayload = Pick<
   "subjective" | "objective" | "assessment" | "plan_text"
 >;
 
-const SOAP_DRAFT_PREFIX = "doctor-soap-draft:";
+const SOAP_DRAFT_PREFIX = "doctor-soap-draft-";
 const dateTimeFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
   month: "short",
@@ -91,6 +92,14 @@ function emptyForm(): SoapFormState {
 
 function soapDraftKey(appointmentId: number): string {
   return `${SOAP_DRAFT_PREFIX}${appointmentId}`;
+}
+
+async function removeSoapDraft(appointmentId: number): Promise<void> {
+  try {
+    await removeSecure(soapDraftKey(appointmentId));
+  } catch {
+    // The server copy is authoritative; local cleanup must never block saving or closing.
+  }
 }
 
 function parseSoapDraft(raw: string | null): SoapDraftPayload | null {
@@ -229,7 +238,7 @@ export default function DoctorSoapScreen() {
         try {
           const savedDraft = parseSoapDraft(await getSecure(soapDraftKey(appointmentId)));
           if (lockedNote && savedDraft) {
-            await removeSecure(soapDraftKey(appointmentId));
+            await removeSoapDraft(appointmentId);
           } else if (savedDraft && !formsEqual(savedDraft.form, nextServerForm)) {
             nextForm = mergeServerSoapWithDraft(nextServerForm, savedDraft.form);
             restoredDraftRef.current = true;
@@ -280,7 +289,7 @@ export default function DoctorSoapScreen() {
 
     const key = soapDraftKey(appointmentId);
     if (isReadOnly) {
-      void removeSecure(key);
+      void removeSoapDraft(appointmentId);
       return;
     }
 
@@ -379,7 +388,7 @@ export default function DoctorSoapScreen() {
       const refreshed = await api.getDoctorAppointmentSoap(appointmentId);
       setData(refreshed);
       setForm(buildFormFromResponse(refreshed));
-      await removeSecure(soapDraftKey(appointmentId));
+      await removeSoapDraft(appointmentId);
       setAutosaveState("saved");
       setAutosaveMessage("SOAP y receta sincronizados correctamente.");
       setSuccess(result.message || "Nota clínica guardada correctamente.");
@@ -420,7 +429,7 @@ export default function DoctorSoapScreen() {
       }
 
       const result = await api.signDoctorNote(targetNoteId);
-      await removeSecure(soapDraftKey(appointmentId));
+      await removeSoapDraft(appointmentId);
       const refreshed = await api.getDoctorAppointmentSoap(appointmentId);
       setData(refreshed);
       setForm(buildFormFromResponse(refreshed));
@@ -463,8 +472,8 @@ export default function DoctorSoapScreen() {
       if (!noteSigned) {
         await api.saveDoctorAppointmentSoap(appointmentId, form);
       }
-      await removeSecure(soapDraftKey(appointmentId));
-      if (appointment?.type === "presential") {
+      await removeSoapDraft(appointmentId);
+      if (isPresentialAppointmentType(appointment?.type)) {
         router.push(`/doctor/appointments/${appointmentId}/complete` as any);
       } else {
         await api.completeDoctorAppointment(appointmentId);
@@ -839,7 +848,7 @@ export default function DoctorSoapScreen() {
             >
               <Icon name="check-circle" size={18} color={MC.primaryDark} />
               <Text style={styles.finishButtonText}>
-                {appointment?.type === "presential"
+                {isPresentialAppointmentType(appointment?.type)
                   ? "Guardar y pasar a cierre"
                   : "Guardar y completar consulta"}
               </Text>

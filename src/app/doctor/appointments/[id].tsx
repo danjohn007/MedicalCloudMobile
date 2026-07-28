@@ -19,6 +19,7 @@ import { MC } from "@/constants/theme";
 import { ensureAiClinicalDataConsent } from "@/services/ai-data-consent";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
+import { isPresentialAppointmentType } from "@/utils/appointmentTypes";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
@@ -318,7 +319,7 @@ export default function DoctorAppointmentDetailScreen() {
 
             <Section title="Acciones de la consulta">
               <View style={styles.actionGrid}>
-                {appointment.type === "presential" &&
+                {isPresentialAppointmentType(appointment.type) &&
                 appointment.status === "confirmed" &&
                 !appointment.checked_in_at ? (
                   <ActionButton
@@ -819,13 +820,16 @@ function getAvailableActions(appointment: api.DoctorAppointmentDetailData["data"
 
   if (
     ["confirmed", "pending_doctor", "pending_patient"].includes(status) &&
-    !(appointment.type === "presential" && status === "confirmed" && !appointment.checked_in_at)
+    !(isPresentialAppointmentType(appointment.type) && status === "confirmed" && !appointment.checked_in_at)
   ) {
     actions.push({ action: "in_consultation", label: "Iniciar", icon: "pulse", tone: "primary" });
   }
 
-  if (!["completed", "cancelled"].includes(status)) {
+  if (["pending", "pending_doctor", "pending_patient", "pending_payment", "confirmed"].includes(status)) {
     actions.push({ action: "cancelled", label: "Cancelar", icon: "x", tone: "danger" });
+  }
+
+  if (status === "confirmed") {
     actions.push({ action: "no_show", label: "No asistió", icon: "warning", tone: "neutral" });
   }
 
@@ -875,7 +879,7 @@ function getPrimaryFlowAction(
   }
 
   if (
-    appointment.type === "presential" &&
+    isPresentialAppointmentType(appointment.type) &&
     appointment.status === "confirmed" &&
     !appointment.checked_in_at
   ) {
@@ -925,7 +929,7 @@ function buildFlowSteps(appointment: api.DoctorAppointmentDetailData["data"]) {
     appointment.status,
   );
   const checkinDone =
-    appointment.type === "presential"
+    isPresentialAppointmentType(appointment.type)
       ? !!appointment.checked_in_at || ["in_consultation", "completed"].includes(appointment.status)
       : ["in_consultation", "completed"].includes(appointment.status);
   const soapDone = !!appointment.note || appointment.status === "completed";
@@ -943,7 +947,7 @@ function buildFlowSteps(appointment: api.DoctorAppointmentDetailData["data"]) {
           : "upcoming",
     },
     {
-      label: appointment.type === "presential" ? "Inicio" : "Ingreso",
+      label: isPresentialAppointmentType(appointment.type) ? "Inicio" : "Ingreso",
       tone: checkinDone ? "done" : appointment.status === "confirmed" ? "current" : "upcoming",
     },
     {

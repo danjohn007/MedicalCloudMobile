@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     Linking,
     Modal,
+    Platform,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -209,6 +210,24 @@ export default function CitasScreen() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<api.Appointment | null>(null);
   const [busy, setBusy] = useState(false);
+  const pendingDetailActionRef = useRef<(() => void) | null>(null);
+
+  const flushPendingDetailAction = useCallback(() => {
+    const action = pendingDetailActionRef.current;
+    pendingDetailActionRef.current = null;
+    action?.();
+  }, []);
+
+  const dismissDetailThen = useCallback(
+    (action: () => void) => {
+      pendingDetailActionRef.current = action;
+      setSelected(null);
+      if (Platform.OS !== "ios") {
+        setTimeout(flushPendingDetailAction, 0);
+      }
+    },
+    [flushPendingDetailAction],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -297,24 +316,29 @@ export default function CitasScreen() {
     ]);
   };
 
-  const handlePay = async (a: api.Appointment) => {
-    router.push({
-      pathname: "/doctores/[id]/pago",
-      params: {
-        id: String(a.doctor_id),
-        appointmentId: String(a.id),
-        doctorName: a.doctor_name,
-        specialty: a.specialty,
-        scheduledAt: a.scheduled_at,
-        type: a.type,
-        fee: String(a.fee),
-      },
-    } as any);
+  const handlePay = (a: api.Appointment) => {
+    dismissDetailThen(() => {
+      router.push({
+        pathname: "/doctores/[id]/pago",
+        params: {
+          id: String(a.doctor_id),
+          appointmentId: String(a.id),
+          doctorName: a.doctor_name,
+          specialty: a.specialty,
+          scheduledAt: a.scheduled_at,
+          type: a.type,
+          fee: String(a.fee),
+        },
+      } as any);
+    });
   };
 
-  const handleCheckin = (a: api.Appointment) =>
-    router.push(`/patient/checkin?id=${a.id}`);
-  const handleMessage = () => router.push("/(tabs)/mensajes" as any);
+  const handleCheckin = (a: api.Appointment) => {
+    dismissDetailThen(() => router.push(`/patient/checkin?id=${a.id}`));
+  };
+  const handleMessage = () => {
+    dismissDetailThen(() => router.push("/(tabs)/mensajes" as any));
+  };
   const handleVideo = (appt: api.Appointment) => {
     const qs = new URLSearchParams({
       scheduled_at: appt.scheduled_at,
@@ -322,7 +346,7 @@ export default function CitasScreen() {
       doctor_name: appt.doctor_name ?? "",
       duration: String(appt.duration_minutes ?? ""),
     }).toString();
-    router.push(`/videoconsulta/${appt.id}?${qs}` as any);
+    dismissDetailThen(() => router.push(`/videoconsulta/${appt.id}?${qs}` as any));
   };
 
   return (
@@ -564,6 +588,7 @@ export default function CitasScreen() {
         appt={selected}
         visible={!!selected}
         onClose={() => setSelected(null)}
+        onDismiss={flushPendingDetailAction}
         onCancel={handleCancel}
         onPay={handlePay}
         onCheckin={handleCheckin}
@@ -667,6 +692,7 @@ function AppointmentDetail(props: {
   appt: api.Appointment | null;
   visible: boolean;
   onClose: () => void;
+  onDismiss: () => void;
   onCancel: (a: api.Appointment) => void;
   onPay: (a: api.Appointment) => void;
   onCheckin: (a: api.Appointment) => void;
@@ -678,6 +704,7 @@ function AppointmentDetail(props: {
     appt,
     visible,
     onClose,
+    onDismiss,
     onCancel,
     onPay,
     onCheckin,
@@ -720,6 +747,7 @@ function AppointmentDetail(props: {
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      onDismiss={onDismiss}
     >
       <Pressable style={s.modalBackdrop} onPress={onClose} />
       <View style={s.modalSheet}>

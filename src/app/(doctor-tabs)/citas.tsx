@@ -15,6 +15,7 @@ import { Icon } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { isPresentialAppointmentType } from "@/utils/appointmentTypes";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
@@ -395,7 +396,7 @@ function getAppointmentActionHint(appointment: api.DoctorAppointmentItem) {
 
   if (
     appointment.status === "confirmed" &&
-    appointment.type === "presential" &&
+    isPresentialAppointmentType(appointment.type) &&
     !appointment.checked_in_at
   ) {
     return {
