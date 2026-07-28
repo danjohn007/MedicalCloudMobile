@@ -125,7 +125,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
 - [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
-- [~] TestFlight rechazó la build 16 con `ITMS-90683` porque `expo-image-picker` referencia cámara aunque el flujo no la solicite. `NSCameraUsageDescription` ya quedó declarado tanto en `ios.infoPlist` como en el plugin; la introspección nativa lo confirma. Android mantiene Cámara, Micrófono y almacenamiento heredado bloqueados. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
+- [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de entrada y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
 - [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata 7.0.0 y resolverlas en una actualización con regresión completa.
 
 ### Permisos
@@ -134,7 +134,8 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] Antes del primer permiso de ubicación se muestra un aviso destacado que identifica ubicación precisa, finalidad, transferencia al servidor y ausencia de uso en segundo plano/publicidad.
 - [~] Fotos/documentos se solicitan solo al iniciar una accion; el texto de Fotos ya es especifico de Doctor Cloud. Falta validarlo en iOS fisico.
 - [~] Notificaciones se solicitan mediante Firebase; validar el momento y explicacion al usuario.
-- [~] El manifiesto Android generado omite Cámara, Micrófono y almacenamiento heredado; se eliminó `expo-camera`, Android no permite backups automáticos e iOS rechaza cargas no seguras. iOS conserva el texto obligatorio de cámara por la referencia de `expo-image-picker`. Falta comprobar el AAB/IPA final.
+- [~] `expo-camera` está habilitado únicamente para leer QR de citas y solicita Cámara al abrir el escáner. Android sigue bloqueando Micrófono y almacenamiento heredado; no permite backups automáticos e iOS rechaza cargas no seguras. Falta probar permiso aceptado, denegado y denegado permanentemente en builds nativas físicas, además de inspeccionar el AAB/IPA final.
+- [~] El paciente ya muestra QR y código de 6 caracteres tanto para check-in como para cierre; el doctor puede escanearlos o capturarlos manualmente. Falta la prueba física completa paciente → doctor → API → cita en consulta/completada.
 - [ ] Probar cada flujo con permiso aceptado, denegado y denegado permanentemente.
 
 ### Autenticacion y sesion
@@ -307,7 +308,7 @@ Para cada fila falta definir:
 ### Integridad y autorizacion
 
 - [ ] Probar autorizacion objeto por objeto: un paciente no puede ver otro expediente y un doctor solo ve pacientes vinculados.
-- [ ] Probar aislamiento entre doctor independiente, asistentes, clinicas y superadmin.
+- [~] El aislamiento usa `doctor_profiles.hospital_license_id` y `patient_profiles.hospital_license_id` como fuente canónica. Directorios, citas, chats, notas y recetas ya filtran por clínica/independiente y las acciones directas críticas vuelven a validar el ámbito. Falta ejecutar la matriz física con dos clínicas, un doctor independiente, pacientes de cada ámbito, asistentes, hospital admin y superadmin.
 - [ ] Validar MIME, extension, tamano y nombre de archivos subidos.
 - [ ] Confirmar que archivos clinicos no se pueden enumerar ni abrir sin autorizacion.
 - [ ] Probar idempotencia de webhooks y endpoints de confirmacion de pago.

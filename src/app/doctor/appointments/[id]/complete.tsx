@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppointmentQrScanner } from "@/components/AppointmentQrScanner";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { isAppointmentCode } from "@/utils/appointmentCodes";
 
 export default function DoctorAppointmentCompleteScreen() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function DoctorAppointmentCompleteScreen() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<api.DoctorAppointmentDetailData | null>(null);
   const [code, setCode] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
@@ -62,12 +65,21 @@ export default function DoctorAppointmentCompleteScreen() {
     };
   }, [appointmentId]);
 
-  async function handleComplete(force = false) {
+  async function handleComplete(force = false, scannedCode?: string) {
+    const normalized = (scannedCode ?? code).trim().toUpperCase();
+    if (detail?.data?.type === "presential" && !force && !isAppointmentCode(normalized)) {
+      Alert.alert(
+        "Código inválido",
+        "Ingresa o escanea el código de cierre de 6 caracteres que generó el paciente.",
+      );
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
       const response = await api.completeDoctorAppointment(appointmentId, {
-        checkout_code: code.trim().toUpperCase(),
+        checkout_code: normalized,
         force,
       });
       Alert.alert("Consulta completada", response.message || "La cita ya quedó cerrada.");
@@ -131,13 +143,25 @@ export default function DoctorAppointmentCompleteScreen() {
               <Text style={styles.fieldLabel}>Código del paciente</Text>
               <TextInput
                 value={code}
-                onChangeText={(value) => setCode(value.toUpperCase())}
+                onChangeText={(value) =>
+                  setCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6))
+                }
                 placeholder="Ej: QWE789"
                 autoCapitalize="characters"
-                maxLength={8}
+                autoCorrect={false}
+                maxLength={6}
                 style={styles.fieldInput}
               />
             </View>
+
+            <Pressable
+              onPress={() => setScannerOpen(true)}
+              disabled={saving}
+              style={[styles.scanButton, saving && styles.buttonDisabled]}
+            >
+              <Icon name="video-camera" size={19} color={MC.primary} />
+              <Text style={styles.scanButtonText}>Escanear QR de cierre</Text>
+            </Pressable>
 
             <Pressable
               onPress={() => handleComplete(false)}
@@ -180,6 +204,20 @@ export default function DoctorAppointmentCompleteScreen() {
           </Pressable>
         )}
       </ScrollView>
+
+      {scannerOpen ? (
+        <AppointmentQrScanner
+          visible
+          title="Escanear cierre"
+          hint="Centra el QR de cierre que aparece en la app del paciente dentro del recuadro."
+          onClose={() => setScannerOpen(false)}
+          onCodeScanned={(scannedCode) => {
+            setCode(scannedCode);
+            setScannerOpen(false);
+            void handleComplete(false, scannedCode);
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -251,6 +289,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "800",
   },
+  scanButton: {
+    alignItems: "center",
+    backgroundColor: MC.primaryLight,
+    borderColor: MC.primary,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 15,
+  },
+  scanButtonText: { color: MC.primary, fontSize: 15, fontWeight: "700" },
   primaryButton: {
     borderRadius: 18,
     backgroundColor: MC.primary,

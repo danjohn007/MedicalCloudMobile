@@ -95,8 +95,14 @@ export default function CheckinScreen() {
             {checkoutCode ? (
               <View style={s.codeCard}>
                 <Text style={s.codeTitle}>Código de cierre</Text>
+                <View style={s.checkoutQrWrap}>
+                  <QRCode value={checkoutCode} size={220} color={MC.primary} />
+                </View>
                 <Text style={s.codeBig}>{checkoutCode}</Text>
-                <Text style={s.codeHint}>Comparte este código con tu doctor para finalizar la consulta.</Text>
+                <Text style={s.codeHint}>
+                  El doctor puede escanear este QR o ingresar los 6 caracteres para finalizar la
+                  consulta.
+                </Text>
               </View>
             ) : (
               <Pressable style={s.checkoutBtn} onPress={handleRequestCheckout}>
@@ -194,6 +200,7 @@ const s = StyleSheet.create({
   checkoutBtnText: { fontSize: 16, fontWeight: "700", color: MC.white },
   codeCard: { backgroundColor: MC.primaryLight, borderRadius: 16, padding: 20, alignItems: "center", marginBottom: 16 },
   codeTitle: { fontSize: 14, fontWeight: "700", color: MC.textSecondary, marginBottom: 8 },
+  checkoutQrWrap: { backgroundColor: MC.white, borderRadius: 12, borderWidth: 1, borderColor: MC.border, marginBottom: 16, padding: 12 },
   codeBig: { fontSize: 32, fontWeight: "800", color: MC.primary, letterSpacing: 6, marginBottom: 8 },
   codeHint: { fontSize: 12, color: MC.textSecondary, textAlign: "center" },
 });

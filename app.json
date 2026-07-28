@@ -18,7 +18,7 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides tomar una foto de perfil o adjuntar una imagen clínica.",
+        "NSCameraUsageDescription": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
         "NSPhotoLibraryUsageDescription": "Doctor Cloud necesita acceder a tus fotos únicamente cuando decides elegir una imagen de perfil o adjuntar información clínica.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false
@@ -44,7 +44,6 @@
       },
       "allowBackup": false,
       "blockedPermissions": [
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -97,10 +96,18 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Doctor Cloud necesita acceso a tus fotos para que puedas elegir una imagen de perfil.",
-          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides tomar una foto de perfil o adjuntar una imagen clínica.",
+          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
           "microphonePermission": false
         }
       ],

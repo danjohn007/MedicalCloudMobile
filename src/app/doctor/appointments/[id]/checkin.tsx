@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppointmentQrScanner } from "@/components/AppointmentQrScanner";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { isAppointmentCode } from "@/utils/appointmentCodes";
 
 export default function DoctorAppointmentCheckinScreen() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function DoctorAppointmentCheckinScreen() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<api.DoctorAppointmentDetailData | null>(null);
   const [code, setCode] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
@@ -62,10 +65,13 @@ export default function DoctorAppointmentCheckinScreen() {
     };
   }, [appointmentId]);
 
-  async function handleCheckin() {
-    const normalized = code.trim().toUpperCase();
-    if (normalized.length < 4) {
-      Alert.alert("Código requerido", "Ingresa el código de check-in del paciente.");
+  async function handleCheckin(scannedCode?: string) {
+    const normalized = (scannedCode ?? code).trim().toUpperCase();
+    if (!isAppointmentCode(normalized)) {
+      Alert.alert(
+        "Código inválido",
+        "Ingresa o escanea el código de check-in de 6 caracteres del paciente.",
+      );
       return;
     }
 
@@ -135,16 +141,28 @@ export default function DoctorAppointmentCheckinScreen() {
           <Text style={styles.fieldLabel}>Código de check-in</Text>
           <TextInput
             value={code}
-            onChangeText={(value) => setCode(value.toUpperCase())}
+            onChangeText={(value) =>
+              setCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6))
+            }
             placeholder="Ej: ABC123"
             autoCapitalize="characters"
-            maxLength={8}
+            autoCorrect={false}
+            maxLength={6}
             style={styles.fieldInput}
           />
         </View>
 
         <Pressable
-          onPress={handleCheckin}
+          onPress={() => setScannerOpen(true)}
+          disabled={saving}
+          style={[styles.scanButton, saving && styles.saveButtonDisabled]}
+        >
+          <Icon name="video-camera" size={19} color={MC.primary} />
+          <Text style={styles.scanButtonText}>Escanear QR del paciente</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => handleCheckin()}
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
@@ -158,6 +176,20 @@ export default function DoctorAppointmentCheckinScreen() {
           )}
         </Pressable>
       </ScrollView>
+
+      {scannerOpen ? (
+        <AppointmentQrScanner
+          visible
+          title="Escanear check-in"
+          hint="Centra el QR de entrada que aparece en la app del paciente dentro del recuadro."
+          onClose={() => setScannerOpen(false)}
+          onCodeScanned={(scannedCode) => {
+            setCode(scannedCode);
+            setScannerOpen(false);
+            void handleCheckin(scannedCode);
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -229,6 +261,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "800",
   },
+  scanButton: {
+    alignItems: "center",
+    backgroundColor: MC.primaryLight,
+    borderColor: MC.primary,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 15,
+  },
+  scanButtonText: { color: MC.primary, fontSize: 15, fontWeight: "700" },
   saveButton: {
     borderRadius: 18,
     backgroundColor: MC.primary,
