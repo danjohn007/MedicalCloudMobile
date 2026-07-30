@@ -195,6 +195,7 @@ export default function RootLayout() {
         <Stack.Screen name="soporte" />
         <Stack.Screen name="ai/chat" />
         <Stack.Screen name="confirmacion" />
+        <Stack.Screen name="payment-result" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="videoconsulta/[id]" />
         <Stack.Screen name="patient" />

@@ -1,7 +1,7 @@
 # Checklist maestro de lanzamiento de DoctorCloud
 
 Fecha de auditoria inicial: 22 de julio de 2026  
-Ultima actualizacion tecnica: 27 de julio de 2026
+Ultima actualizacion tecnica: 30 de julio de 2026
 Repositorios revisados:
 
 - App movil: `MedicalCloudMobile`
@@ -27,12 +27,12 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Identidad de la app | `com.doctorcloud.app` en Android e iOS | `[x]` |
 | Version publica | `7.0.0` | `[x]` |
 | EAS | Proyecto `@impactos-digitales/doctorcloud-app` enlazado | `[x]` |
-| iOS | Build de produccion 7.0.0 (build 15) terminada el 27/07/2026; corresponde al commit `aef24c5`, anterior a los cambios actuales | `[~]` |
+| iOS | Build de produccion 7.0.0 (build 21) terminada el 29/07/2026; falta una build nueva con el icono blanco y los cambios actuales | `[~]` |
 | Android | Builds recientes son APK de desarrollo; falta confirmar un AAB final de produccion | `[ ]` |
 | Salud del proyecto | `npx expo-doctor`: 18/18 validaciones correctas | `[x]` |
-| Calidad estatica | TypeScript, lint y exportación web de 62 rutas pasaron el 27/07/2026 sin advertencias | `[x]` |
-| Icono iOS | PNG 1024 x 1024 presente, pero conserva canal alfa/transparencia | `[ ] BLOQUEADOR de asset` |
-| Iconos Android | Assets adaptativos presentes; el fondo actual contiene una guía/cuadrícula visible y debe reemplazarse | `[ ] BLOQUEADOR de asset` |
+| Calidad estatica | TypeScript, lint, Expo Doctor 18/18 y exportación Android/iOS/web de 63 rutas pasaron el 30/07/2026 | `[x]` |
+| Icono iOS | Variante 1024 x 1024 sin alpha enlazada en `ios.icon`; falta comprobarla en una build nueva | `[~]` |
+| Iconos Android | El adaptive icon usa fondo solido y ya no referencia la imagen con cuadricula; falta comprobarlo en una build nueva | `[~]` |
 | Push iOS | FCM/APNs ya probado en TestFlight | `[x]` |
 | Push Android | Implementacion FCM nativa presente; falta prueba de la build final | `[~]` |
 | Mapa iOS | Funciona con Apple Maps | `[x]` |
@@ -181,6 +181,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 - [ ] Elegir una de dos salidas: credenciales live y flujo completo, o funciones de pago ocultas/deshabilitadas.
 - [ ] Probar Stripe Connect para doctor independiente, onboarding, retorno, refresh y dashboard.
 - [ ] Probar pago de consulta con Stripe y PayPal, cancelacion, webhook y conciliacion.
+- [~] La cancelacion PayPal movil exige token firmado por intento y el retorno usa `doctorcloud://payment-result`; falta desplegar y probar contra PayPal live.
 - [ ] Confirmar que los importes, moneda MXN, comisiones, reembolsos y estados coinciden en app, web y BD.
 - [ ] Confirmar que la tienda entiende que se pagan servicios medicos prestados fuera de la app, no contenido digital.
 - [ ] No incluir tarjetas, cuentas bancarias ni secretos de pasarela en logs o respuestas de API.
@@ -220,7 +221,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 
 - [~] Borrador de nombre, descripciones y categoria Medica preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion del propietario de la ficha.
 - [x] Matriz detallada preparada en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md` para Health Apps, Data Safety, permisos sensibles y App Privacy.
-- [ ] El icono maestro actual tiene transparencia y el fondo adaptativo Android conserva una cuadrícula; deben corregirse antes de exportar Play 512 x 512. También faltan feature graphic 1024 x 500 y capturas reales sin datos personales.
+- [~] iOS ya usa una variante sin alpha y Android usa fondo adaptativo solido; faltan build nativa, feature graphic 1024 x 500 y capturas reales sin datos personales.
 - [x] Correo, web y URL pública de privacidad definidos y accesibles.
 - [x] URL pública de eliminación de cuenta accesible.
 - [ ] Declaracion de anuncios: actualmente deberia ser “no contiene anuncios”, si se confirma.
@@ -310,7 +311,7 @@ Para cada fila falta definir:
 - [ ] Probar autorizacion objeto por objeto: un paciente no puede ver otro expediente y un doctor solo ve pacientes vinculados.
 - [~] El aislamiento usa `doctor_profiles.hospital_license_id` y `patient_profiles.hospital_license_id` como fuente canónica. Directorios, citas, chats, notas y recetas ya filtran por clínica/independiente y las acciones directas críticas vuelven a validar el ámbito. Falta ejecutar la matriz física con dos clínicas, un doctor independiente, pacientes de cada ámbito, asistentes, hospital admin y superadmin.
 - [ ] Validar MIME, extension, tamano y nombre de archivos subidos.
-- [ ] Confirmar que archivos clinicos no se pueden enumerar ni abrir sin autorizacion.
+- [~] El codigo ya bloquea las rutas fisicas y transmite documentos/adjuntos mediante autorizacion web o enlaces moviles firmados; falta desplegar y ejecutar la matriz autorizada/no autorizada.
 - [ ] Probar idempotencia de webhooks y endpoints de confirmacion de pago.
 - [ ] Revisar que bajas de cuenta no rompan integridad contable ni clinica.
 
@@ -351,7 +352,7 @@ Para cada fila falta definir:
 
 - [ ] Mantener contratos de API compatibles con la version 7.0.0.
 - [ ] Versionar cambios destructivos de API antes de publicar clientes que no se puedan actualizar de inmediato.
-- [ ] Confirmar que enlaces de correo, Stripe, PayPal y soporte regresan a la vista correcta.
+- [~] El retorno PayPal movil ya usa el esquema `doctorcloud`; faltan prueba nativa y validacion de los demas enlaces.
 - [ ] Decidir si se implementaran Universal Links/App Links. Si se usan, publicar `apple-app-site-association` y `assetlinks.json`.
 - [ ] Confirmar que los enlaces compartidos de doctores tienen fallback web funcional.
 
@@ -415,7 +416,8 @@ Tambien probar:
 
 - [ ] Terminar modo oscuro/claro y regresiones visuales.
 - [ ] Cerrar auth, push, mapas, chat, documentos, IA y soporte.
-- [ ] Decidir SDK 54/56 y `expo-updates`.
+- [x] Mantener SDK 54 y `expo-updates` actuales para 7.0.0; migrar a SDK 56
+  como regresion separada despues del primer lanzamiento.
 - [ ] Ejecutar pruebas de autorizacion y seguridad del backend.
 - [ ] Congelar cambios funcionales.
 

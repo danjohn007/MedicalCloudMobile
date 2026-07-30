@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import {
   useCallback,
@@ -291,8 +292,44 @@ export default function PagoScreen() {
     setStep("opening_paypal");
 
     try {
-      const { approve_url } = await api.createAppointmentPayment(appointmentId);
-      await WebBrowser.openBrowserAsync(approve_url);
+      const returnUrl =
+        Platform.OS === "web"
+          ? undefined
+          : Linking.createURL("payment-result", { scheme: "doctorcloud" });
+      const { approve_url } = await api.createAppointmentPayment(
+        appointmentId,
+        returnUrl,
+      );
+
+      if (Platform.OS === "web" || !returnUrl) {
+        await WebBrowser.openBrowserAsync(approve_url);
+      } else {
+        const result = await WebBrowser.openAuthSessionAsync(
+          approve_url,
+          returnUrl,
+        );
+        if (result.type === "success" && result.url) {
+          const callback = Linking.parse(result.url);
+          const callbackStatus =
+            typeof callback.queryParams?.status === "string"
+              ? callback.queryParams.status
+              : "";
+          if (callbackStatus === "cancelled") {
+            setStep("idle");
+            Alert.alert(
+              "Pago cancelado",
+              "PayPal no realizo ningun cargo y la cita sigue pendiente de pago.",
+            );
+            return;
+          }
+          if (callbackStatus === "error") {
+            throw new Error(
+              "PayPal no pudo confirmar el pago. La cita no fue marcada como pagada.",
+            );
+          }
+        }
+      }
+
       await verifyPaymentOutcome(appointmentId);
     } catch (err: any) {
       setError(err.message ?? "No se pudo abrir PayPal.");

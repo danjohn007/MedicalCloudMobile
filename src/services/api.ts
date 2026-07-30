@@ -1948,10 +1948,18 @@ export async function getDoctorFinancialHistory() {
   return request<DoctorFinancialHistoryData>("/doctor/financial-history");
 }
 
-export async function createAppointmentPayment(appointmentId: number) {
+export async function createAppointmentPayment(
+  appointmentId: number,
+  returnUrl?: string,
+) {
   return request<{ approve_url: string; order_id: string }>(
     `/appointments/${appointmentId}/pay`,
-    { method: "POST" },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        return_url: returnUrl?.trim() || undefined,
+      }),
+    },
   );
 }
 
