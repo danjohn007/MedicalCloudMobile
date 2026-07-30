@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { formatPatientGender } from "@/utils/patient-gender";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
@@ -155,7 +156,10 @@ export default function DoctorPatientDetailScreen() {
                 <View style={styles.heroChips}>
                   <MetaChip icon="clock" label={patient.age != null ? `${patient.age} años` : "Edad s/d"} />
                   <MetaChip icon="drop" label={patient.blood_type || "Sangre s/d"} />
-                  <MetaChip icon="user-circle" label={patient.gender || "Género s/d"} />
+                  <MetaChip
+                    icon="user-circle"
+                    label={formatPatientGender(patient.gender)}
+                  />
                 </View>
               </View>
             </View>

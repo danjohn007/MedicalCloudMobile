@@ -50,6 +50,7 @@
     "@types/react": "~19.1.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "jimp-compact": "^0.16.1",
     "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
   },
@@ -59,7 +60,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "assets:store": "node scripts/generate-store-assets.js"
   },
   "private": true
 }

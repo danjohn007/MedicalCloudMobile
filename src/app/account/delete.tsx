@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { getNativeAppleIdentity } from "@/services/native-social-auth";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function DeleteAccountScreen() {
@@ -37,7 +38,26 @@ export default function DeleteAccountScreen() {
           onPress: async () => {
             setSubmitting(true);
             try {
-              const response = await api.requestAccountDeletion(reason);
+              const status = await api.getAccountDeletionStatus();
+              let appleAuthorizationCode: string | undefined;
+              if (status.requires_apple_reauth) {
+                if (Platform.OS !== "ios") {
+                  throw new Error(
+                    "Abre DoctorCloud en tu dispositivo Apple para volver a autenticarte y revocar el acceso antes de eliminar la cuenta.",
+                  );
+                }
+                const appleIdentity = await getNativeAppleIdentity();
+                appleAuthorizationCode = appleIdentity.authorizationCode;
+                if (!appleAuthorizationCode) {
+                  throw new Error(
+                    "Apple no devolvió la autorización necesaria. Intenta de nuevo.",
+                  );
+                }
+              }
+              const response = await api.requestAccountDeletion(
+                reason,
+                appleAuthorizationCode,
+              );
               await logout();
               Alert.alert("Solicitud recibida", response.message, [
                 { text: "Entendido", onPress: () => router.replace("/(auth)/login") },

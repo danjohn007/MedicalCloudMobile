@@ -28,7 +28,11 @@ export async function getNativeGoogleIdentity(): Promise<{ idToken: string; name
   return { idToken, name: result.data.user.name ?? undefined };
 }
 
-export async function getNativeAppleIdentity(): Promise<{ idToken: string; name?: string }> {
+export async function getNativeAppleIdentity(): Promise<{
+  idToken: string;
+  authorizationCode?: string;
+  name?: string;
+}> {
   if (Platform.OS !== "ios" || !(await AppleAuthentication.isAvailableAsync())) {
     throw new Error("Iniciar sesión con Apple solo está disponible en dispositivos iPhone o iPad compatibles.");
   }
@@ -44,5 +48,9 @@ export async function getNativeAppleIdentity(): Promise<{ idToken: string; name?
   const name = [credential.fullName?.givenName, credential.fullName?.familyName]
     .filter((part): part is string => Boolean(part && part.trim()))
     .join(" ");
-  return { idToken: credential.identityToken, name: name || undefined };
+  return {
+    idToken: credential.identityToken,
+    authorizationCode: credential.authorizationCode ?? undefined,
+    name: name || undefined,
+  };
 }

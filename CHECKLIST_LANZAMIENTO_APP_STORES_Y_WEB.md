@@ -41,10 +41,11 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Login social | Google nativo y Sign in with Apple implementados | `[~]` |
 | Web publica | HTTPS y landing activa | `[x]` |
 | Privacidad/terminos/eliminacion | Las tres URLs públicas responden 200; la app las enlaza desde autenticación y perfiles | `[~] Falta revisión legal` |
-| Eliminacion de cuenta en app | Flujo, endpoint y migracion v70 preparados; la migracion ya fue aplicada y falta prueba de produccion/build final | `[~]` |
+| Eliminacion de cuenta en app | Flujo y v70 responden en producción; revocación Apple y v79 quedaron preparados, pendientes de secretos/configuración y prueba autenticada | `[~]` |
 | Acceso doctor por suscripcion | Backend y app exigen suscripcion activa con `has_app=1` y bloquean modulos por plan; falta desplegar y probar con cuentas de cada plan | `[~]` |
 | Build contra cambios actuales | Hay cambios locales posteriores a las builds de EAS | `[ ] BLOQUEADOR` |
 | Acceso público sin cuenta | La app permite explorar el directorio y detalle de doctores; para agendar o usar datos privados exige iniciar sesión | `[x]` |
+| Base de datos real | Export del 30/07 auditado contra app/API; `v78`, `v79` y la nueva reconciliacion `v80` siguen sin aplicarse | `[ ] BLOQUEADOR` |
 
 ## Decisiones que deben definirse primero
 
@@ -57,7 +58,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] Correo oficial definido: `soporte@doctorcloud.digital`.
 - [x] Responsable de privacidad y domicilio definidos; falta revision legal del texto final.
 - [~] Solicitud de eliminacion con plazo operativo de 30 dias definida; falta documentar la retencion clinica, contable y las excepciones legales con revision profesional.
-- [ ] Decidir si pagos estaran visibles en la primera version. Si no estan en modo real y totalmente probados, ocultar sus acciones en produccion.
+- [~] Las consultas quedan sin Stripe/PayPal mediante `v78` hasta completar QA live. Todavía debe decidirse si suscripciones web/Connect quedan visibles en la primera versión y probarse en modo real si se conservan.
 - [x] Mantener Expo SDK 54 para la versión 7.0.0: ya apunta a Android API 36 y EAS se fijó a Xcode 26.0. Migrar a SDK 56 después del primer lanzamiento, con regresión separada, porque también eleva las versiones nativas y de React Native.
 - [ ] Confirmar si se distribuira en la Union Europea. En ese caso completar estado de comerciante DSA en App Store Connect.
 - [ ] Confirmar si la cuenta de Play Console es personal y fue creada despues del 13/11/2023; de ser asi, reservar 14 dias para prueba cerrada con al menos 12 testers.
@@ -77,20 +78,45 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] `test_connection.php` y `/app/test_connection.php` responden 404 en producción.
 - [x] El archivo de diagnostico fue eliminado del repositorio y la regla defensiva 404 se mantiene.
 
+### Contrato de base de datos real
+
+- [x] Export reciente inventariado sin copiar datos ni secretos al repositorio;
+  se compararon 60 tablas contra migraciones y SQL actual.
+- [x] `v80` preparado para completar `force_password_change`, columnas de
+  renovacion, metadatos de payouts y enums usados por reembolsos/asistente/
+  superadmin.
+- [x] App y backend usan ahora valores canonicos de genero compatibles con el
+  enum real; la interfaz sigue mostrando etiquetas en español.
+- [x] El health check privado valida tablas, columnas y valores de enum, no solo
+  conectividad.
+- [ ] `BLOQUEADOR` Tomar backup verificado y aplicar `v78`, `v79`, `v80` en ese
+  orden.
+- [ ] Exigir HTTP 200 de `/superadmin/system-health` despues de migrar.
+- [ ] Probar en runtime cambio obligatorio de contraseña, renovacion de
+  licencia, alta de cita por asistente/superadmin, reembolso y perfil de
+  paciente.
+- [ ] Identificar por evidencia operativa las cuentas que recibieron contraseña
+  temporal mientras faltaba `force_password_change`; no forzar a todos los
+  usuarios existentes indiscriminadamente.
+- [ ] Confirmar el precio definitivo del plan Esencial; la base real conserva
+  `$10/$20` y no se modifico sin autorizacion de negocio.
+- [ ] Mantener consultas Stripe/PayPal ocultas: el export sigue en sandbox y
+  todavia tenia ambos metodos de consulta habilitados antes de `v78`.
+
 ### Privacidad, terminos y eliminacion de cuenta
 
 - [~] Aviso integral publicado en `https://doctorcloud.digital/app/privacidad` con responsable, contacto, datos clínicos, proveedores, derechos ARCO y retención; falta revisión legal.
 - [~] Términos publicados en `https://doctorcloud.digital/app/terminos` para pacientes, doctores, menores, IA, pagos y proveedores; falta revisión legal.
 - [~] Recurso web publicado en `https://doctorcloud.digital/app/eliminar-cuenta` con canal de solicitud y aviso de verificación de identidad; falta confirmar que el correo de soporte está atendido.
 - [~] La app ya incluye una opcion visible para solicitar la eliminacion de cuenta en ambos perfiles; falta desplegarla y probarla desde builds de tienda.
-- [~] API y migracion `v70` preparadas para solicitar/cancelar eliminacion; falta ejecutar la migracion y desplegar el backend.
-- [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar en produccion y completar la revocacion de Apple.
-- [ ] Para cuentas Apple, implementar revocacion del token de Sign in with Apple.
+- [~] API y migración `v70` están desplegadas: la ruta de estado alcanza autenticación en producción; falta la prueba completa con una cuenta controlada.
+- [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar el flujo autenticado en producción.
+- [~] Para cuentas Apple, el cliente ya envía `authorizationCode`, el servidor intercambia y cifra el refresh token, la eliminación exige reautenticación cuando falta y revoca antes de desactivar. Falta aplicar `v79`, configurar Team ID/Key ID/`.p8`/clave de cifrado y probarlo con Apple real.
 - [ ] Eliminar o anonimizar datos que no deban conservarse y documentar claramente las excepciones clinicas/legales.
-- [~] La app confirma la solicitud y cierra sesion; falta definir el plazo legal y enviar la confirmacion por correo.
+- [~] La app confirma y cierra sesión; el backend envía acuse al solicitar y al cancelar. El aviso publica un plazo normal de 30 días; falta probar SMTP y enviar la notificación final del procesamiento.
 - [~] Privacidad y términos están enlazados desde login/registro y desde los perfiles de paciente y doctor. También quedaron preparados en el pie de la landing; falta desplegar ese cambio web.
 - [~] El registro móvil ya exige aceptaciones separadas para términos/privacidad, datos sensibles y mayoría de edad/tutor; la API guarda versión, usuario, canal y fecha mediante la migración `v76`. Falta desplegar migración, backend y build en ese orden y probarlos.
-- [ ] Archivar una copia inmutable del texto exacto de cada versión de términos, privacidad y aviso de IA; el identificador guardado en `v76` sólo es útil si puede reconstruirse qué aceptó la persona.
+- [x] La versión `2026-07-27` puede reconstruirse mediante commit y hashes SHA-256 documentados en `MedicalUniverse/LEGAL_VERSION_ARCHIVE.md`.
 - [~] El aviso público ya describe los datos clínicos enviados a Gemini, retención de solicitudes/respuestas y proveedores; falta desplegarlo y obtener revisión legal.
 - [ ] Definir por escrito la relación responsable/encargado entre Doctor Cloud, médicos, clínicas y proveedores; documentar regiones, contratos y plazos de conservación.
 - [ ] La NOM-004-SSA3-2012 puede exigir conservar expedientes al menos cinco años desde el último acto médico. Diseñar eliminación/anonimización por tipo de dato sin prometer borrado incompatible con esa obligación.
@@ -99,7 +125,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 ### Coherencia publica de DoctorCloud
 
 - [~] Los precios de prueba menores a $100 quedaron ocultos y sin contratación desde la landing; falta fijar el precio real del plan Esencial en Superadmin y desplegar.
-- [ ] Unificar correos `@doctorcloud.digital`; actualmente conviven `@doctorcloud.com`, `@doctorcloud.digital` y `@idactivos.digital`.
+- [~] Los contactos runtime y plantillas quedaron unificados en `soporte@doctorcloud.digital` y se retiró el teléfono ficticio; falta desplegar y confirmar que el buzón está atendido.
 - [~] El footer quedó cambiado a `soporte@doctorcloud.digital`; falta desplegar.
 - [~] La descripción de videoconsulta ya reconoce que usa un proveedor especializado; falta desplegar.
 - [~] Se retiraron “+500 citas”, “sugerencias diagnósticas” y las afirmaciones absolutas de privacidad; falta desplegar.
@@ -111,7 +137,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] `BLOQUEADOR` Generar las builds finales desde un commit limpio que contenga todos los cambios aprobados.
 - [ ] Probar los dos roles principales con cuentas de revision sin datos reales: paciente y doctor.
 - [ ] Corregir contrastes, textos invisibles, fondos pastel y cambios de tema pendientes en claro/oscuro.
-- [ ] Confirmar que no hay errores, datos demo, fechas futuras de prueba ni mensajes tecnicos visibles al usuario.
+- [~] Se retiró del checkout normal el ciclo de suscripción de prueba de `$1` y se sanearon respuestas técnicas de Stripe, PayPal, IA y FCM; falta la regresión visual/runtime completa para descartar otros datos demo o mensajes internos.
 
 ## App movil: trabajo transversal
 
@@ -122,7 +148,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] `package.json` y el texto visible de perfil están alineados con la versión pública `7.0.0`.
 - [x] Politica definida: version publica `major.minor.patch`; `ios.buildNumber` y `android.versionCode` siempre incrementales mediante versionado remoto y `autoIncrement`.
 - [ ] Agregar identificadores de envio a `eas.json` cuando ya existan las apps en ambas consolas, sin guardar secretos en Git.
-- [ ] Separar claramente perfiles `development`, `preview` y `production` y sus variables de entorno.
+- [~] `eas.json` ya separa `development`, `dev-client`, `preview` y `production`; falta revisar en EAS que las variables y credenciales estén aisladas por perfil.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
 - [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
 - [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de inicio y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
@@ -158,7 +184,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [ ] Probar renovacion de token, reinstalacion, cambio de usuario y cierre de sesion.
 - [ ] Confirmar que no aparece push cuando el receptor ya esta dentro de esa misma conversacion.
 - [ ] Confirmar badge, sonido, icono, titulo, cuerpo y navegacion al tocar cada tipo de notificacion.
-- [ ] Limpiar de la base los tokens Expo heredados despues de respaldo; conservar `mobile_push_tokens` para FCM.
+- [~] La migración `database_migration_v70_fcm_token_ownership.sql` elimina tokens Expo y restringe el proveedor a FCM; falta respaldar, aplicarla y verificar conteos en producción.
 - [ ] Verificar que los cron de recordatorios realmente corren y registrar ultima ejecucion/resultado.
 
 ### Mapas y ubicacion
@@ -178,23 +204,23 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles los botones en produccion.
 
-- [ ] Elegir una de dos salidas: credenciales live y flujo completo, o funciones de pago ocultas/deshabilitadas.
+- [~] Se eligió la salida segura para la primera versión: `v78` deshabilita Stripe/PayPal de consultas y los endpoints fallan cerrados si falta configuración. Falta aplicar la migración y comprobar que app/web ya no muestran acciones de pago.
 - [ ] Probar Stripe Connect para doctor independiente, onboarding, retorno, refresh y dashboard.
 - [ ] Probar pago de consulta con Stripe y PayPal, cancelacion, webhook y conciliacion.
 - [~] La cancelacion PayPal movil exige token firmado por intento y el retorno usa `doctorcloud://payment-result`; falta desplegar y probar contra PayPal live.
 - [ ] Confirmar que los importes, moneda MXN, comisiones, reembolsos y estados coinciden en app, web y BD.
 - [ ] Confirmar que la tienda entiende que se pagan servicios medicos prestados fuera de la app, no contenido digital.
-- [ ] No incluir tarjetas, cuentas bancarias ni secretos de pasarela en logs o respuestas de API.
+- [~] El escaneo de respuestas retiró mensajes técnicos directos de Stripe/PayPal y no encontró secretos literales en el árbol actual; falta comprobar logs y respuestas reales durante QA live.
 
 ### IA y contenido medico
 
 - [~] La app ya muestra avisos de que la IA no reemplaza el criterio profesional en algunas vistas.
 - [x] Antes del primer chat o briefing de IA se muestra una autorización separada con los datos clínicos transferidos, proveedor externo, retención y opción de cancelar.
 - [~] La API exige un consentimiento vigente y registra su versión mediante `v76`; falta despliegue y prueba autenticada en producción.
-- [ ] `BLOQUEADOR` Actualizar en Superadmin la configuracion global de IA a `gemini-2.5-flash`: el export actual aun contiene `gemini-2.0-flash`, que invalida el cambio hecho en el archivo de configuracion.
+- [~] `v78` actualiza únicamente el valor obsoleto/default de Superadmin a `gemini-2.5-flash` y conserva elecciones personalizadas; falta aplicarla y verificar el valor efectivo en producción.
 - [ ] Revisar todos los accesos de IA para que no afirmen diagnosticar ni sustituir atencion medica.
 - [ ] Mostrar aviso de consultar a un profesional antes de decisiones medicas, especialmente al paciente.
-- [ ] Documentar proveedor, datos enviados, retencion y controles de privacidad en el aviso de privacidad.
+- [~] El aviso local ya documenta Gemini, datos enviados, finalidad y retención; falta desplegarlo, contrastarlo con la configuración efectiva y obtener revisión legal.
 - [ ] Evitar enviar mas expediente del necesario y excluir datos sensibles de logs.
 - [ ] Preparar explicacion para revision de tiendas sobre el alcance del asistente clinico.
 
@@ -221,7 +247,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 
 - [~] Borrador de nombre, descripciones y categoria Medica preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion del propietario de la ficha.
 - [x] Matriz detallada preparada en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md` para Health Apps, Data Safety, permisos sensibles y App Privacy.
-- [~] iOS ya usa una variante sin alpha y Android usa fondo adaptativo solido; faltan build nativa, feature graphic 1024 x 500 y capturas reales sin datos personales.
+- [~] iOS ya usa una variante sin alpha, Android usa fondo adaptativo sólido y existe `assets/store/play-feature-graphic-1024x500.png`; faltan build nativa y capturas reales sin datos personales.
 - [x] Correo, web y URL pública de privacidad definidos y accesibles.
 - [x] URL pública de eliminación de cuenta accesible.
 - [ ] Declaracion de anuncios: actualmente deberia ser “no contiene anuncios”, si se confirma.
@@ -297,21 +323,22 @@ Para cada fila falta definir:
 
 ### Produccion y secretos
 
-- [ ] Mantener `Config.php`, llaves Firebase, Stripe, PayPal y Apple fuera de Git.
+- [~] El árbol web actual ya no contiene coincidencias de llaves privadas/API/Stripe; `Config.php`, FCM y `.p8` están ignorados. Los identificadores públicos Firebase/Maps permanecen en los binarios móviles y deben restringirse en consola.
+- [~] `migrations/database.sql` ya fue retirado del árbol actual y el README exige un export sólo de estructura; falta purgar su historial Git coordinadamente.
 - [ ] Documentar en un inventario privado donde vive cada secreto, propietario, fecha de rotacion y recuperacion.
 - [ ] Confirmar permisos del archivo de cuenta de servicio FCM y que no sea descargable por HTTP.
-- [ ] Rotar cualquier secreto que haya aparecido en codigo, capturas, tickets o logs.
-- [ ] Confirmar TLS valido, redireccion HTTPS y headers de seguridad.
-- [ ] Revisar rate limiting en login, registro, recuperacion, IA, soporte y endpoints de archivos.
-- [ ] Revisar CORS y rechazar origenes no necesarios.
-- [ ] Evitar stack traces, SQL, rutas internas y secretos en respuestas de produccion.
+- [ ] `BLOQUEADOR` Rotar PayPal/Stripe/Google y cualquier otro valor expuesto, y purgar el historial Git: retirar los valores del árbol actual no invalida copias históricas.
+- [~] Producción redirige HTTP a HTTPS y expone HSTS/CSP/X-Frame-Options/nosniff; falta auditar certificado y configuración TLS con una herramienta externa completa.
+- [~] Login web/móvil y verificación social comparten bloqueo por IP; IA aplica límites por usuario. Faltan límites específicos para registro, recuperación, soporte y archivos, más pruebas de 429.
+- [~] El backend local ya acepta requests nativos sin `Origin`, permite sólo los orígenes DoctorCloud configurados y bloquea preflight desconocido; producción aún devolvió `Access-Control-Allow-Origin: *`, por lo que falta desplegar y repetir la prueba.
+- [~] Se retiraron mensajes técnicos directos de Stripe, PayPal, IA, FCM y operaciones de citas; falta ejecutar una matriz runtime de errores 4xx/5xx y revisar todos los endpoints en producción.
 
 ### Integridad y autorizacion
 
 - [ ] Probar autorizacion objeto por objeto: un paciente no puede ver otro expediente y un doctor solo ve pacientes vinculados.
 - [~] El aislamiento usa `doctor_profiles.hospital_license_id` y `patient_profiles.hospital_license_id` como fuente canónica. Directorios, citas, chats, notas y recetas ya filtran por clínica/independiente y las acciones directas críticas vuelven a validar el ámbito. Falta ejecutar la matriz física con dos clínicas, un doctor independiente, pacientes de cada ámbito, asistentes, hospital admin y superadmin.
-- [ ] Validar MIME, extension, tamano y nombre de archivos subidos.
-- [~] El codigo ya bloquea las rutas fisicas y transmite documentos/adjuntos mediante autorizacion web o enlaces moviles firmados; falta desplegar y ejecutar la matriz autorizada/no autorizada.
+- [~] Los flujos de carga revisados aplican `finfo`, límites de tamaño, extensiones permitidas y nombres generados/saneados; falta probar archivos maliciosos y casos límite contra cada endpoint desplegado.
+- [~] Producción ya devuelve 403 en rutas físicas privadas y 401 a enlaces firmados inválidos; falta ejecutar la matriz con usuarios autorizados/no autorizados y archivos reales.
 - [ ] Probar idempotencia de webhooks y endpoints de confirmacion de pago.
 - [ ] Revisar que bajas de cuenta no rompan integridad contable ni clinica.
 
@@ -320,7 +347,7 @@ Para cada fila falta definir:
 - [ ] Respaldar BD y archivos antes de migraciones de lanzamiento.
 - [ ] Confirmar que produccion tiene todas las migraciones requeridas, incluidas FCM, sesiones activas de chat, mapas y Apple Sign-In.
 - [ ] Ejecutar una restauracion de prueba, no solo comprobar que existe un backup.
-- [ ] Crear health check privado para BD, correo, Firebase, almacenamiento y pasarelas.
+- [~] Existe `/superadmin/system-health`, protegido por sesión superadmin, para BD/migraciones, correo, FCM, almacenamiento, Apple y pasarelas sin exponer secretos. Falta desplegarlo, probar 200/503 y conectarlo al monitoreo.
 - [ ] Registrar ultima ejecucion, duracion y resultado de cron jobs.
 - [ ] Configurar alertas por fallas de cron, webhooks, FCM, correo y errores 5xx.
 - [ ] Definir retencion y sanitizacion de logs.
@@ -331,11 +358,11 @@ Para cada fila falta definir:
 ### Legal, confianza y contenido
 
 - [~] Privacidad, términos y eliminación de cuenta ya están publicados; falta desplegar en la landing el footer con el contacto y los enlaces.
-- [ ] Corregir precios, correos, telefonos ficticios y afirmaciones no verificadas.
-- [ ] Explicar que DoctorCloud facilita gestion y comunicacion; no sustituye una emergencia ni el criterio medico.
+- [~] Precios de prueba, correos/teléfono ficticios y afirmaciones no verificadas quedaron retirados de la landing local; falta desplegar y repetir el escaneo público.
+- [~] La landing y los textos legales locales explican que DoctorCloud facilita gestión/comunicación y que la IA no sustituye criterio profesional ni emergencias; falta desplegar.
 - [ ] Indicar claramente quien presta el servicio medico y quien procesa el pago.
 - [ ] Revisar cookies y tecnologias de terceros; mostrar consentimiento si legalmente corresponde.
-- [ ] Agregar enlaces legales visibles en landing, registro, login y area autenticada.
+- [~] Los enlaces legales ya están en landing, autenticación y perfiles locales; falta desplegar la landing y verificar navegación con ambos roles.
 
 ### Flujos web
 
@@ -389,28 +416,28 @@ Tambien probar:
 
 ## Material de tienda por preparar
 
-- [ ] Nombre oficial y tagline coherente.
-- [ ] Descripcion corta y larga en espanol.
-- [ ] Palabras clave de App Store.
-- [ ] `BLOQUEADOR` Iconos finales sin transparencias ni la cuadrícula visible del asset adaptativo actual.
-- [ ] Feature graphic de Google Play.
+- [~] Nombre y tagline tienen borrador en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta resolver la grafía final `DoctorCloud`/`Doctor Cloud`.
+- [~] Descripciones corta y larga en español están preparadas en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta aprobación del propietario y contraste final con producción.
+- [~] Palabras clave de App Store están propuestas en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validarlas en App Store Connect.
+- [~] Iconos finales sin transparencia/cuadrícula preparados; falta verificarlos en AAB/IPA nuevos.
+- [x] Feature graphic de Google Play 1024 x 500 generado de forma reproducible con el logotipo original sobre fondo blanco.
 - [ ] Capturas de paciente y doctor con datos ficticios consistentes.
 - [ ] Video opcional solo si muestra el producto real.
 - [ ] URL de soporte, privacidad y eliminacion.
 - [ ] Correo y telefono atendidos.
-- [ ] Notas de revision con pasos para probar cada rol.
+- [~] Existe un borrador de notas de revisión y plantilla de cuentas; faltan credenciales reales de revisión y completar los pasos según la build candidata.
 - [ ] Credenciales de revision con vigencia amplia y sin 2FA bloqueante.
-- [ ] Notas de version 7.0.0.
+- [~] Existe un borrador de notas de versión 7.0.0 en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta aprobación final.
 
 ## Orden recomendado de ejecucion
 
 ### Fase 1: cerrar riesgos y politicas
 
 - [ ] Rotar/mover secreto de cron.
-- [ ] Implementar privacidad, terminos y eliminacion de cuenta en web/API/app.
-- [ ] Corregir contenido publico, precios y contactos.
-- [ ] Resolver mapa Android.
-- [ ] Definir publico, paises, titular legal y retencion de datos.
+- [~] Privacidad, términos y solicitud de eliminación existen en web/API/app; falta despliegue completo, revocación Apple real, procesamiento final y revisión legal.
+- [~] Contenido público, precios de prueba y contactos están corregidos localmente; falta despliegue y verificación pública.
+- [~] Mapa Android está implementado y reportado funcional; falta AAB firmado, restricciones/SHA-1 y prueba desde Play.
+- [~] México, responsable y alcance inicial están definidos; faltan decisión UE, tratamiento verificable de menores y matriz legal de retención.
 
 ### Fase 2: estabilizar producto
 
@@ -418,7 +445,7 @@ Tambien probar:
 - [ ] Cerrar auth, push, mapas, chat, documentos, IA y soporte.
 - [x] Mantener SDK 54 y `expo-updates` actuales para 7.0.0; migrar a SDK 56
   como regresion separada despues del primer lanzamiento.
-- [ ] Ejecutar pruebas de autorizacion y seguridad del backend.
+- [~] Pasaron validaciones estáticas, rutas físicas privadas y pruebas aisladas de firma/CORS; falta la matriz autenticada por objeto y por rol en producción.
 - [ ] Congelar cambios funcionales.
 
 ### Fase 3: candidato de lanzamiento

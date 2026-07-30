@@ -309,7 +309,10 @@ export default function NotificacionesScreen() {
 
       const response = await api.testPushNotification();
       const hasDeliveryReport =
-        typeof response.token_count === "number" || typeof response.sent === "number" || Array.isArray(response.errors);
+        typeof response.token_count === "number" ||
+        typeof response.sent === "number" ||
+        typeof response.error_count === "number" ||
+        Array.isArray(response.errors);
       if (!hasDeliveryReport) {
         setError("El servidor respondió con el endpoint anterior de notificaciones. Sube al cPanel la versión actualizada de MobileApiController.php y core/PushNotification.php.");
         return;
@@ -317,10 +320,11 @@ export default function NotificacionesScreen() {
 
       const tokenCount = Number(response.token_count ?? 0);
       const sent = Number(response.sent ?? 0);
+      const errorCount = Number(response.error_count ?? response.errors?.length ?? 0);
       const serverMessage = response.message || response.errors?.join(" | ") || "";
       if (tokenCount <= 0) {
         setError("El servidor no encontró tokens activos aunque la app generó uno. Vuelve a iniciar sesión e inténtalo de nuevo.");
-      } else if (sent <= 0 && serverMessage) {
+      } else if ((sent <= 0 || errorCount > 0) && serverMessage) {
         setError(`FCM no acepto la push: ${serverMessage}`);
       } else {
         await load(true);

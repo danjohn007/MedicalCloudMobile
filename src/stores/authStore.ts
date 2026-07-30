@@ -106,7 +106,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginWithApple: async () => {
     try {
       const identity = await getNativeAppleIdentity();
-      const res = await api.loginWithNativeSocial({ provider: 'apple', id_token: identity.idToken, name: identity.name });
+      const res = await api.loginWithNativeSocial({
+        provider: 'apple',
+        id_token: identity.idToken,
+        authorization_code: identity.authorizationCode,
+        name: identity.name,
+      });
       return completeSocialLogin(res, set);
     } catch (error) {
       throw new Error(normalizeAuthErrorMessage(error));

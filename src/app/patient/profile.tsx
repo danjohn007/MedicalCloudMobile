@@ -4,6 +4,11 @@ import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCar
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import {
+  normalizePatientGender,
+  PATIENT_GENDER_OPTIONS,
+  type PatientGender,
+} from "@/utils/patient-gender";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,7 +28,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const GENDERS = ["Masculino", "Femenino", "Otro"];
 
 export default function PatientProfileScreen() {
   const router = useRouter();
@@ -35,7 +39,7 @@ export default function PatientProfileScreen() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<PatientGender | "">("");
   const [bloodType, setBloodType] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -61,7 +65,7 @@ export default function PatientProfileScreen() {
       setAvatarUrl(p.avatar_url ?? null);
       setPhone(p.phone ?? "");
       setBirthDate(p.birth_date ?? "");
-      setGender(p.gender ?? "");
+      setGender(normalizePatientGender(p.gender));
       setBloodType(p.blood_type ?? "");
       setHeightCm(p.height_cm ? String(p.height_cm) : "");
       setWeightKg(p.weight_kg ? String(p.weight_kg) : "");
@@ -262,14 +266,19 @@ export default function PatientProfileScreen() {
               <Col>
                 <Lbl t="GÉNERO" />
                 <View style={s.chipRow}>
-                  {GENDERS.map((g) => (
+                  {PATIENT_GENDER_OPTIONS.map((option) => (
                     <Pressable
-                      key={g}
-                      style={[s.chip, gender === g && s.chipAct]}
-                      onPress={() => setGender(g)}
+                      key={option.value}
+                      style={[s.chip, gender === option.value && s.chipAct]}
+                      onPress={() => setGender(option.value)}
                     >
-                      <Text style={[s.chipTxt, gender === g && s.chipTxtAct]}>
-                        {g}
+                      <Text
+                        style={[
+                          s.chipTxt,
+                          gender === option.value && s.chipTxtAct,
+                        ]}
+                      >
+                        {option.label}
                       </Text>
                     </Pressable>
                   ))}

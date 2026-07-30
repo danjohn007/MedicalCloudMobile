@@ -20,6 +20,7 @@ import { ensureAiClinicalDataConsent } from "@/services/ai-data-consent";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
 import { isPresentialAppointmentType } from "@/utils/appointmentTypes";
+import { formatPatientGender } from "@/utils/patient-gender";
 
 const dateFmt = new Intl.DateTimeFormat("es-MX", {
   day: "2-digit",
@@ -795,7 +796,9 @@ function normalizePriceAdjustment(type: string) {
 function buildProfileLine(appointment: api.DoctorAppointmentDetailData["data"]) {
   const parts = [
     appointment.patient_age != null ? `${appointment.patient_age} años` : "",
-    appointment.patient_gender || "",
+    appointment.patient_gender
+      ? formatPatientGender(appointment.patient_gender, "")
+      : "",
     appointment.patient_blood_type || "",
   ].filter(Boolean);
 

@@ -986,6 +986,7 @@ export async function loginWithGoogle(): Promise<GoogleLoginResult> {
 export async function loginWithNativeSocial(input: {
   provider: "google" | "apple";
   id_token: string;
+  authorization_code?: string;
   name?: string;
 }): Promise<GoogleLoginResult> {
   return request<GoogleLoginResult>(
@@ -1221,13 +1222,23 @@ export interface AccountDeletionStatus {
 }
 
 export async function getAccountDeletionStatus() {
-  return request<{ data: AccountDeletionStatus | null }>("/account/deletion");
+  return request<{
+    data: AccountDeletionStatus | null;
+    requires_apple_reauth: boolean;
+  }>("/account/deletion");
 }
 
-export async function requestAccountDeletion(reason?: string) {
+export async function requestAccountDeletion(
+  reason?: string,
+  appleAuthorizationCode?: string,
+) {
   return request<{ success: boolean; message: string }>("/account/deletion", {
     method: "POST",
-    body: JSON.stringify({ confirmation: "ELIMINAR", reason: reason?.trim() || undefined }),
+    body: JSON.stringify({
+      confirmation: "ELIMINAR",
+      reason: reason?.trim() || undefined,
+      apple_authorization_code: appleAuthorizationCode,
+    }),
   });
 }
 
@@ -1461,6 +1472,7 @@ export async function testPushNotification() {
     success: boolean;
     token_count?: number;
     sent?: number;
+    error_count?: number;
     errors?: string[];
     message?: string;
   }>("/push/test", {

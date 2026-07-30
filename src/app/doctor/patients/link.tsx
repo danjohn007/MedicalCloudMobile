@@ -19,8 +19,10 @@ import { Icon } from "@/components/Icon";
 import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
-
-const GENDERS = ["Masculino", "Femenino", "Otro"];
+import {
+  PATIENT_GENDER_OPTIONS,
+  type PatientGender,
+} from "@/utils/patient-gender";
 
 export default function DoctorLinkPatientScreen() {
   const router = useRouter();
@@ -33,7 +35,7 @@ export default function DoctorLinkPatientScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<PatientGender | "">("");
   const [birthDate, setBirthDate] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
@@ -199,16 +201,16 @@ export default function DoctorLinkPatientScreen() {
 
               <Text style={styles.fieldLabel}>Género</Text>
               <View style={styles.genderRow}>
-                {GENDERS.map((item) => {
-                  const active = gender === item;
+                {PATIENT_GENDER_OPTIONS.map((option) => {
+                  const active = gender === option.value;
                   return (
                     <Pressable
-                      key={item}
+                      key={option.value}
                       style={[styles.genderChip, active && styles.genderChipActive]}
-                      onPress={() => setGender(item)}
+                      onPress={() => setGender(option.value)}
                     >
                       <Text style={[styles.genderChipText, active && styles.genderChipTextActive]}>
-                        {item}
+                        {option.label}
                       </Text>
                     </Pressable>
                   );
