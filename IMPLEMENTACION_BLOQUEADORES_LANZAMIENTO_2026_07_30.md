@@ -253,7 +253,7 @@ Respuesta externa obligatoria por secretos/historial:
 - `npx expo export --platform all`: genera Android, iOS y 63 rutas web.
 - La configuracion efectiva conserva `doctorcloud`, enlaza el icono blanco iOS
   y no contiene `adaptiveIcon.backgroundImage`.
-- La build permanece deliberadamente en Expo SDK 54 para 7.0.0; SDK 56 queda
+- La primera versión pública `1.0.0` permanece deliberadamente en Expo SDK 54; los builds EAS `7.0.0` quedan como historial de prepublicación y SDK 56 queda
   como migracion y regresion separada posterior al primer lanzamiento.
 - PHP lint de los 181 archivos PHP: pasa.
 - Prueba aislada del transmisor privado: acepta un archivo dentro del directorio

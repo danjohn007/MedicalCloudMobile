@@ -1,7 +1,7 @@
 # Checklist maestro de lanzamiento de DoctorCloud
 
 Fecha de auditoria inicial: 22 de julio de 2026  
-Ultima actualizacion tecnica: 30 de julio de 2026
+Ultima actualizacion tecnica: 3 de agosto de 2026
 Repositorios revisados:
 
 - App movil: `MedicalCloudMobile`
@@ -25,12 +25,12 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Area | Estado actual | Resultado |
 |---|---|---|
 | Identidad de la app | `com.doctorcloud.app` en Android e iOS | `[x]` |
-| Version publica | `7.0.0` | `[x]` |
+| Version publica | `1.0.0` para el primer lanzamiento; `7.0.0` queda como historial de builds de prepublicacion | `[x]` |
 | EAS | Proyecto `@impactos-digitales/doctorcloud-app` enlazado | `[x]` |
-| iOS | Build de produccion 7.0.0 (build 21) terminada el 29/07/2026; falta una build nueva con el icono blanco y los cambios actuales | `[~]` |
-| Android | Builds recientes son APK de desarrollo; falta confirmar un AAB final de produccion | `[ ]` |
+| iOS | El tren histórico `7.0.0` llegó al build 23; el siguiente candidato debe ser `1.0.0` (build 24) con el código actual | `[ ]` |
+| Android | Existe un AAB histórico con `versionCode` 4; el siguiente candidato debe ser `1.0.0` (`versionCode` 5) | `[ ]` |
 | Salud del proyecto | `npx expo-doctor`: 18/18 validaciones correctas | `[x]` |
-| Calidad estatica | TypeScript, lint, Expo Doctor 18/18 y exportación Android/iOS/web de 63 rutas pasaron el 30/07/2026 | `[x]` |
+| Calidad estatica | TypeScript, lint, Expo Doctor 18/18, dependencias Expo y exportación Android/iOS/web de 63 rutas pasaron el 03/08/2026 | `[x]` |
 | Icono iOS | Variante 1024 x 1024 sin alpha enlazada en `ios.icon`; falta comprobarla en una build nueva | `[~]` |
 | Iconos Android | El adaptive icon usa fondo solido y ya no referencia la imagen con cuadricula; falta comprobarlo en una build nueva | `[~]` |
 | Push iOS | FCM/APNs ya probado en TestFlight | `[x]` |
@@ -41,11 +41,11 @@ Dejar DoctorCloud listo para publicarse en App Store y Google Play con una web, 
 | Login social | Google nativo y Sign in with Apple implementados | `[~]` |
 | Web publica | HTTPS y landing activa | `[x]` |
 | Privacidad/terminos/eliminacion | Las tres URLs públicas responden 200; la app las enlaza desde autenticación y perfiles | `[~] Falta revisión legal` |
-| Eliminacion de cuenta en app | Flujo y v70 responden en producción; revocación Apple y v79 quedaron preparados, pendientes de secretos/configuración y prueba autenticada | `[~]` |
+| Eliminacion de cuenta en app | `v70` y `v79` están desplegadas; el health check confirma tabla/columna, pero `apple_revocation.configured=false` y falta prueba real | `[~] BLOQUEADOR APPLE` |
 | Acceso doctor por suscripcion | Backend y app exigen suscripcion activa con `has_app=1` y bloquean modulos por plan; falta desplegar y probar con cuentas de cada plan | `[~]` |
-| Build contra cambios actuales | Hay cambios locales posteriores a las builds de EAS | `[ ] BLOQUEADOR` |
+| Build contra cambios actuales | El candidato `1.0.0` todavía no se ha compilado; el código actual difiere de los binarios ya subidos | `[ ] BLOQUEADOR` |
 | Acceso público sin cuenta | La app permite explorar el directorio y detalle de doctores; para agendar o usar datos privados exige iniciar sesión | `[x]` |
-| Base de datos real | Export del 30/07 auditado contra app/API; `v78`, `v79` y la nueva reconciliacion `v80` siguen sin aplicarse | `[ ] BLOQUEADOR` |
+| Base de datos real | Tras aplicar `v78`, `v79` y `v80`, el health check del 03/08/2026 confirma BD, tablas, columnas y enums; falta verificar el efecto no estructural de `v78` y la revocación Apple | `[~]` |
 
 ## Decisiones que deben definirse primero
 
@@ -59,7 +59,7 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [x] Responsable de privacidad y domicilio definidos; falta revision legal del texto final.
 - [~] Solicitud de eliminacion con plazo operativo de 30 dias definida; falta documentar la retencion clinica, contable y las excepciones legales con revision profesional.
 - [~] Las consultas quedan sin Stripe/PayPal mediante `v78` hasta completar QA live. Todavía debe decidirse si suscripciones web/Connect quedan visibles en la primera versión y probarse en modo real si se conservan.
-- [x] Mantener Expo SDK 54 para la versión 7.0.0: ya apunta a Android API 36 y EAS se fijó a Xcode 26.0. Migrar a SDK 56 después del primer lanzamiento, con regresión separada, porque también eleva las versiones nativas y de React Native.
+- [x] Mantener Expo SDK 54 para la primera versión pública `1.0.0`: ya apunta a Android API 36 y EAS se fijó a Xcode 26.0. Migrar a SDK 56 después del primer lanzamiento, con regresión separada, porque también eleva las versiones nativas y de React Native.
 - [ ] Confirmar si se distribuira en la Union Europea. En ese caso completar estado de comerciante DSA en App Store Connect.
 - [ ] Confirmar si la cuenta de Play Console es personal y fue creada despues del 13/11/2023; de ser asi, reservar 14 dias para prueba cerrada con al menos 12 testers.
 - [ ] `BLOQUEADOR APPLE` Confirmar que la cuenta de Apple Developer pertenece a una organizacion/entidad legal responsable del servicio sanitario; Apple indica que este tipo de app no debe enviarse desde una cuenta individual.
@@ -80,8 +80,15 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 ### Contrato de base de datos real
 
-- [x] Export reciente inventariado sin copiar datos ni secretos al repositorio;
-  se compararon 60 tablas contra migraciones y SQL actual.
+- [x] Export del 03/08/2026 inventariado sin copiar datos ni secretos al
+  repositorio; se compararon 60 tablas contra migraciones y SQL actual.
+- [x] El export confirma el pendiente: Stripe y PayPal de consulta siguen
+  habilitados; no existen `apple_auth_tokens` ni `apple_revoked_at`; faltan las
+  columnas de usuarios, renovación y payouts de `v80`, y los enums de citas no
+  incluyen `refunded`, `assistant`, `superadmin` ni `legacy_unknown`.
+- [x] La simulación sobre el export detecta 22 pagos y 7 roles de creación con
+  enum vacío, 1 género vacío, 4 suscripciones vencidas aún activas/trial y 1
+  ciclo de facturación vacío; son exactamente los casos que normaliza `v80`.
 - [x] `v80` preparado para completar `force_password_change`, columnas de
   renovacion, metadatos de payouts y enums usados por reembolsos/asistente/
   superadmin.
@@ -89,9 +96,16 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
   enum real; la interfaz sigue mostrando etiquetas en español.
 - [x] El health check privado valida tablas, columnas y valores de enum, no solo
   conectividad.
-- [ ] `BLOQUEADOR` Tomar backup verificado y aplicar `v78`, `v79`, `v80` en ese
-  orden.
-- [ ] Exigir HTTP 200 de `/superadmin/system-health` despues de migrar.
+- [~] Existe un export previo a las migraciones y se aplicaron `v78`, `v79` y
+  `v80` en ese orden. El health check confirma el contrato estructural; falta
+  demostrar que el backup puede restaurarse y verificar los ajustes de `v78`.
+- [x] La ruta y el controlador de health check del commit `4beb0d3` están
+  desplegados desde `cambios-revision-stripe`. Integrar las ramas a `main` se
+  pospone hasta que las apps vuelvan a revisión, por decisión del propietario.
+- [~] `https://doctorcloud.digital/app/superadmin/system-health` ya funciona y
+  está protegido por sesión. Devuelve `status: degraded`: todas las
+  comprobaciones pasan salvo `apple_revocation.configured=false`; debe llegar a
+  HTTP 200 antes de enviar a App Review.
 - [ ] Probar en runtime cambio obligatorio de contraseña, renovacion de
   licencia, alta de cita por asistente/superadmin, reembolso y perfil de
   paciente.
@@ -100,8 +114,9 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
   usuarios existentes indiscriminadamente.
 - [ ] Confirmar el precio definitivo del plan Esencial; la base real conserva
   `$10/$20` y no se modifico sin autorizacion de negocio.
-- [ ] Mantener consultas Stripe/PayPal ocultas: el export sigue en sandbox y
-  todavia tenia ambos metodos de consulta habilitados antes de `v78`.
+- [ ] Confirmar en Superadmin que `v78` dejó Stripe y PayPal de consultas
+  deshabilitados; el health check confirma que las pasarelas están configuradas,
+  pero no valida el estado visible de cada método.
 
 ### Privacidad, terminos y eliminacion de cuenta
 
@@ -111,7 +126,11 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 - [~] La app ya incluye una opcion visible para solicitar la eliminacion de cuenta en ambos perfiles; falta desplegarla y probarla desde builds de tienda.
 - [~] API y migración `v70` están desplegadas: la ruta de estado alcanza autenticación en producción; falta la prueba completa con una cuenta controlada.
 - [~] La solicitud desactiva la cuenta, bloquea sus JWT por estado y desregistra tokens FCM; falta validar el flujo autenticado en producción.
-- [~] Para cuentas Apple, el cliente ya envía `authorizationCode`, el servidor intercambia y cifra el refresh token, la eliminación exige reautenticación cuando falta y revoca antes de desactivar. Falta aplicar `v79`, configurar Team ID/Key ID/`.p8`/clave de cifrado y probarlo con Apple real.
+- [~] Para cuentas Apple, el cliente ya envía `authorizationCode`, el servidor intercambia y cifra el refresh token, la eliminación exige reautenticación cuando falta y revoca antes de desactivar. `v79` ya está aplicada; falta configurar Team ID/Key ID/`.p8`/clave de cifrado en cPanel y probarlo con Apple real.
+- [x] El backend bloquea por `.htaccess` cualquier acceso HTTP a
+  `storage/apple`, `storage/firebase` y extensiones `.p8`, `.pem` o `.key`.
+  Aun así, en cPanel la clave Apple debe guardarse preferentemente fuera de
+  `public_html` y referenciarse con una ruta absoluta.
 - [ ] Eliminar o anonimizar datos que no deban conservarse y documentar claramente las excepciones clinicas/legales.
 - [~] La app confirma y cierra sesión; el backend envía acuse al solicitar y al cancelar. El aviso publica un plazo normal de 30 días; falta probar SMTP y enviar la notificación final del procesamiento.
 - [~] Privacidad y términos están enlazados desde login/registro y desde los perfiles de paciente y doctor. También quedaron preparados en el pie de la landing; falta desplegar ese cambio web.
@@ -143,16 +162,19 @@ Estas decisiones evitan rehacer fichas, textos legales y pantallas despues.
 
 ### Configuracion y versiones
 
-- [x] `app.json` declara version `7.0.0`.
+- [x] `app.json` declara version `1.0.0`.
 - [x] EAS usa versionado remoto y `autoIncrement` en produccion.
-- [x] `package.json` y el texto visible de perfil están alineados con la versión pública `7.0.0`.
+- [x] `package.json` y el texto visible de perfil están alineados con la versión pública `1.0.0`; la pantalla obtiene el valor desde la configuración de Expo para evitar desalineaciones futuras.
 - [x] Politica definida: version publica `major.minor.patch`; `ios.buildNumber` y `android.versionCode` siempre incrementales mediante versionado remoto y `autoIncrement`.
+- [x] Corrección de versión inicial (03/08/2026): Doctor Cloud aún no se ha publicado, por lo que el primer lanzamiento se prepara como `1.0.0`. Los binarios `7.0.0` ya cargados se conservan únicamente como historial de prepublicación.
+- [x] No se reinician los números internos ni se cambia el Bundle ID/package/proyecto EAS. EAS remoto reporta iOS build 23 y Android `versionCode` 4; con `autoIncrement`, los siguientes esperados son build 24 y `versionCode` 5.
+- [ ] En App Store Connect, cambiar el campo de la primera versión de `7.0.0` a `1.0.0` si el estado permite editarlo. Si queda bloqueado aun después de retirar/rechazar la entrega, solicitar la corrección a Apple Developer Support; no publicar `7.0.0` sólo para intentar bajar después a `1.0.0`.
 - [ ] Agregar identificadores de envio a `eas.json` cuando ya existan las apps en ambas consolas, sin guardar secretos en Git.
 - [~] `eas.json` ya separa `development`, `dev-client`, `preview` y `production`; falta revisar en EAS que las variables y credenciales estén aisladas por perfil.
 - [x] El cliente de produccion usa de forma fija `https://doctorcloud.digital/app/api/mobile`; no hay referencias HTTP/localhost en el codigo distribuible.
-- [x] Para 7.0.0 no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
-- [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de inicio y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Falta subir un binario iOS nuevo e inspeccionar el IPA/AAB final.
-- [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata 7.0.0 y resolverlas en una actualización con regresión completa.
+- [x] Para `1.0.0` no se habilitarán actualizaciones OTA remotas: `expo-updates` se conserva únicamente para recargar el binario embebido al cambiar apariencia. Canales y `runtimeVersion` se evaluarán después del lanzamiento.
+- [~] TestFlight rechazó la build 16 con `ITMS-90683`. La cámara ahora sí tiene una finalidad funcional: escanear los QR de inicio y cierre de citas presenciales, además de las imágenes elegidas explícitamente por el usuario. `NSCameraUsageDescription` y los plugins nativos usan el mismo texto. Los builds 17 a 23 ya pertenecen al tren posterior a ese rechazo, pero falta generar e inspeccionar el IPA/AAB final `1.0.0`.
+- [~] `npm audit --omit=dev` quedó en 35 vulnerabilidades transitivas (20 altas, 15 moderadas, 0 críticas). Las correcciones restantes que ofrece npm exigen saltos mayores a Expo 57/React Native 0.86; no usar `--force` en la candidata `1.0.0` y resolverlas en una actualización con regresión completa.
 
 ### Permisos
 
@@ -271,7 +293,7 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 - [x] Push Notifications/APNs funcional en TestFlight.
 - [ ] Confirmar Apple Developer Program activo, contratos vigentes y roles correctos.
 - [ ] `BLOQUEADOR` Confirmar cuenta Organization/legal entity; una cuenta individual supone un riesgo directo bajo la guía de apps sanitarias con información sensible.
-- [ ] Confirmar que la app 7.0.0 existe en App Store Connect y que build 11 esta procesada sin advertencias.
+- [ ] En App Store Connect, retirar de revisión/reemplazar el binario antiguo, dejar editable la entrega inicial y corregir su versión pública de `7.0.0` a `1.0.0`; después seleccionar el nuevo build 24.
 - [~] El perfil de producción quedó fijado a la imagen EAS `macos-sequoia-15.6-xcode-26.0`; falta generar y procesar el nuevo binario.
 - [ ] Completar las preguntas nuevas de clasificacion por edad vigentes desde 2026.
 - [ ] Si se distribuye en UE, completar y verificar estado de comerciante DSA.
@@ -284,12 +306,12 @@ Estado: `DIFERIDO` por decision actual, pero obligatorio antes de hacer visibles
 - [~] Borrador de App Privacy y proveedores preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta validacion legal y de produccion.
 - [x] Matriz campo por campo de App Privacy preparada en `DECLARACIONES_PRIVACIDAD_SALUD_TIENDAS.md`.
 - [~] Guion de capturas preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; faltan capturas reales para los tamanos de iPhone solicitados.
-- [x] La versión 7.0.0 será solo iPhone (`supportsTablet: false`). iPad se evaluará después de revisar interfaz y capturas específicas.
+- [x] La versión `1.0.0` será solo iPhone (`supportsTablet: false`). iPad se evaluará después de revisar interfaz y capturas específicas.
 - [~] Borrador de notas de revision preparado en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; completar flujo de pagos visible en la build candidata.
 - [~] Plantilla de cuentas de revision preparada; faltan dos cuentas funcionales con datos ficticios.
 - [ ] Mantener backend, correos y cuentas de revision activos durante todo el proceso.
 - [ ] Probar restauracion de acceso con Apple y eliminacion/revocacion de cuenta.
-- [ ] Generar y subir la build posterior a iOS build 16; confirmar que App Store Connect ya no reporta `ITMS-90683`.
+- [ ] Generar y subir iOS `1.0.0` build 24; confirmar que App Store Connect no reporta `ITMS-90683`, advertencias de privacidad ni exigencia de ATT.
 - [ ] Enviar primero a TestFlight interno/externo y despues a App Review.
 
 ## Inventario inicial para privacidad y seguridad de datos
@@ -344,10 +366,10 @@ Para cada fila falta definir:
 
 ### Operacion
 
-- [ ] Respaldar BD y archivos antes de migraciones de lanzamiento.
-- [ ] Confirmar que produccion tiene todas las migraciones requeridas, incluidas FCM, sesiones activas de chat, mapas y Apple Sign-In.
+- [~] Existe export de BD previo y las migraciones de lanzamiento se aplicaron; falta confirmar respaldo de archivos y restauración del export.
+- [~] Producción pasa las comprobaciones estructurales de FCM y Apple Sign-In; falta la configuración de revocación Apple y verificar los efectos runtime/no estructurales.
 - [ ] Ejecutar una restauracion de prueba, no solo comprobar que existe un backup.
-- [~] Existe `/superadmin/system-health`, protegido por sesión superadmin, para BD/migraciones, correo, FCM, almacenamiento, Apple y pasarelas sin exponer secretos. Falta desplegarlo, probar 200/503 y conectarlo al monitoreo.
+- [~] `/app/superadmin/system-health` está desplegado y protegido por sesión superadmin. Se comprobó el estado 503/degraded por `apple_revocation.configured=false`; falta corregirlo, obtener 200 y conectarlo al monitoreo.
 - [ ] Registrar ultima ejecucion, duracion y resultado de cron jobs.
 - [ ] Configurar alertas por fallas de cron, webhooks, FCM, correo y errores 5xx.
 - [ ] Definir retencion y sanitizacion de logs.
@@ -377,7 +399,7 @@ Para cada fila falta definir:
 
 ### Integracion app-web
 
-- [ ] Mantener contratos de API compatibles con la version 7.0.0.
+- [ ] Mantener contratos de API compatibles con la version `1.0.0`.
 - [ ] Versionar cambios destructivos de API antes de publicar clientes que no se puedan actualizar de inmediato.
 - [~] El retorno PayPal movil ya usa el esquema `doctorcloud`; faltan prueba nativa y validacion de los demas enlaces.
 - [ ] Decidir si se implementaran Universal Links/App Links. Si se usan, publicar `apple-app-site-association` y `assetlinks.json`.
@@ -427,7 +449,7 @@ Tambien probar:
 - [ ] Correo y telefono atendidos.
 - [~] Existe un borrador de notas de revisión y plantilla de cuentas; faltan credenciales reales de revisión y completar los pasos según la build candidata.
 - [ ] Credenciales de revision con vigencia amplia y sin 2FA bloqueante.
-- [~] Existe un borrador de notas de versión 7.0.0 en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta aprobación final.
+- [~] Existe un borrador de notas de versión `1.0.0` en `METADATOS_TIENDAS_DOCTOR_CLOUD.md`; falta aprobación final.
 
 ## Orden recomendado de ejecucion
 
@@ -443,7 +465,7 @@ Tambien probar:
 
 - [ ] Terminar modo oscuro/claro y regresiones visuales.
 - [ ] Cerrar auth, push, mapas, chat, documentos, IA y soporte.
-- [x] Mantener SDK 54 y `expo-updates` actuales para 7.0.0; migrar a SDK 56
+- [x] Mantener SDK 54 y `expo-updates` actuales para `1.0.0`; migrar a SDK 56
   como regresion separada despues del primer lanzamiento.
 - [~] Pasaron validaciones estáticas, rutas físicas privadas y pruebas aisladas de firma/CORS; falta la matriz autenticada por objeto y por rol en producción.
 - [ ] Congelar cambios funcionales.
@@ -451,7 +473,7 @@ Tambien probar:
 ### Fase 3: candidato de lanzamiento
 
 - [ ] Commit/tag limpio y changelog.
-- [ ] Backup y migraciones de produccion.
+- [~] Backup de BD y migraciones de producción aplicadas; falta restauración de prueba, respaldo de archivos y health check 200.
 - [ ] Build iOS de produccion y build Android AAB de produccion.
 - [ ] TestFlight e Internal Testing de Play.
 - [ ] QA completa sobre binarios distribuidos por las tiendas.
@@ -469,7 +491,7 @@ Tambien probar:
 - [ ] No cambiar backend de forma incompatible durante la revision.
 - [ ] Monitorear errores, FCM, correo, cron, webhooks y soporte.
 - [ ] Lanzamiento gradual en Play; evaluar liberacion manual en App Store.
-- [ ] Preparar version 7.0.1 para correcciones rapidas.
+- [ ] Preparar versión `1.0.1` para correcciones rápidas después del lanzamiento inicial.
 
 ## Definicion de terminado
 

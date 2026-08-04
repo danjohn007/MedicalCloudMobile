@@ -1,6 +1,6 @@
 # Borrador de metadatos para Google Play y App Store
 
-Estado: borrador para la versión 7.0.0. Las URLs legales fueron comprobadas públicamente el 27 de julio de 2026; aún debe validarse cada declaración contra producción y obtener revisión legal.
+Estado: borrador para la primera versión pública 1.0.0. Los builds 7.0.0 previos fueron candidatos de prepublicación y no una versión lanzada. Las URLs legales fueron comprobadas públicamente el 3 de agosto de 2026; aún debe validarse cada declaración contra producción y obtener revisión legal.
 
 ## Identidad común
 
@@ -82,6 +82,8 @@ Doctor Cloud tiene dos experiencias: paciente y profesional de la salud. La mism
 - Acceso público: el directorio y detalle de profesionales pueden explorarse sin registro. Citas, mensajes, expedientes, configuración e IA requieren autenticación.
 - Eliminación: disponible en `Perfil > Privacidad y cuenta > Eliminar cuenta`. Las excepciones de conservación de expedientes se explican en el aviso público.
 - Pagos: si están visibles en la build de revisión, describir el flujo real, el proveedor y una cuenta de prueba que no requiera dinero real.
+- Versión: el candidato público es `1.0.0`; los builds `7.0.0` cargados anteriormente eran binarios internos de prepublicación y nunca estuvieron disponibles en App Store.
+- Privacidad/ATT: la app no realiza tracking, no usa IDFA, anuncios ni data brokers y no vincula datos con terceros para publicidad. Antes de enviar, todos los tipos deben quedar verificados como **Used for Tracking: No**; por eso la app no muestra un permiso ATT.
 
 Antes de enviar, reemplazar los siguientes datos por credenciales activas con información ficticia:
 
@@ -126,7 +128,10 @@ La captura detallada, con las selecciones propuestas para Health Apps, Google Da
 | Identificadores de dispositivo y token push | Sesión, seguridad y notificaciones | Sí | Firebase, APNs |
 | Citas, actividad e importes/referencias de pago | Agenda, operación y conciliación | Sí | Backend, Stripe, PayPal |
 | Solicitudes de soporte y adjuntos | Atención de incidencias | Sí | Backend/equipo de soporte |
-| Logs técnicos | Seguridad y diagnóstico | Confirmar | Servidor |
+| Interacción con el producto y otros datos de uso | Funcionalidad y analítica operativa de SDK | Sí | Stripe, Google Sign-In |
+| Otros datos de diagnóstico | Funcionamiento y analítica técnica | No | Firebase Installations/Messaging, Google Data Transport |
+| Otros tipos de datos | Inicio de sesión, funcionamiento y analítica | Sí, por la práctica más amplia | Google Sign-In, Firebase Messaging |
+| Logs técnicos propios | Seguridad y diagnóstico | Confirmar | Servidor |
 
 Al llenar Google Data safety y App Privacy:
 
@@ -146,6 +151,6 @@ Al llenar Google Data safety y App Privacy:
 - Respuestas legales revisadas sobre menores, datos de salud, retención y pagos.
 - Correo de soporte atendido durante toda la revisión (las URLs legales públicas ya responden).
 
-## Notas de versión 7.0.0
+## Notas de versión 1.0.0
 
 `Doctor Cloud conecta pacientes y profesionales con búsqueda pública de doctores, gestión de citas, perfiles, mensajería y herramientas clínicas según el rol y el plan contratado. Esta versión también incorpora mejoras de estabilidad, accesibilidad, privacidad y notificaciones.`

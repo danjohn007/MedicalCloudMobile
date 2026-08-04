@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -204,7 +205,9 @@ export default function PerfilScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version}>Doctor Cloud v7.0.0</Text>
+          <Text style={styles.version}>
+            Doctor Cloud v{Constants.expoConfig?.version ?? "1.0.0"}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

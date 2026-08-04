@@ -1,7 +1,7 @@
 # Declaraciones de privacidad, salud y revisión para tiendas
 
-Auditoría técnica: 27 de julio de 2026  
-Versión objetivo: Doctor Cloud 7.0.0  
+Auditoría técnica: 3 de agosto de 2026
+Versión objetivo: Doctor Cloud 1.0.0
 Paquete y bundle: `com.doctorcloud.app`
 
 Este documento traduce el comportamiento observado en la app móvil, API y backend a los formularios de Google Play y App Store. No sustituye la revisión de una persona especialista en privacidad y regulación sanitaria.
@@ -10,7 +10,7 @@ Este documento traduce el comportamiento observado en la app móvil, API y backe
 
 - Doctor Cloud sí es una app de salud para efectos de las tiendas.
 - No usa Health Connect ni HealthKit.
-- No se encontró un SDK de anuncios, analítica publicitaria ni seguimiento entre apps.
+- No se encontró un SDK de anuncios, analítica publicitaria ni seguimiento entre apps. Los manifiestos de privacidad de los IPA firmados 11, 16 y 23 declaran `NSPrivacyTracking=false` y no contienen dominios de seguimiento.
 - No debe declararse como dispositivo médico mientras no exista una clasificación o autorización regulatoria que diga lo contrario.
 - La publicación debe hacerla una entidad legal que presta o es responsable del servicio. Apple desaconseja que una app sanitaria con datos sensibles se envíe desde una cuenta individual.
 - Google Play exige completar la declaración de apps de salud incluso en pruebas cerradas.
@@ -38,7 +38,7 @@ Proveedores observados en el producto:
 - Jitsi Meet: videoconsultas.
 - Infraestructura de hosting, almacenamiento y correo del sistema.
 
-No se observaron integraciones con Health Connect, HealthKit, anuncios ni un SDK dedicado de analítica o crash reporting. Esto debe volver a comprobarse en el AAB y el IPA finales.
+No se observaron integraciones con Health Connect, HealthKit, anuncios ni un SDK dedicado de analítica o crash reporting. Firebase, Google Sign-In, Stripe y otros SDK sí declaran datos limitados de funcionamiento, uso o diagnóstico en sus manifiestos de privacidad; se incorporan abajo. Esto debe volver a comprobarse en el AAB y el IPA finales `1.0.0`.
 
 ## Google Play: declaración de apps de salud
 
@@ -134,13 +134,14 @@ Permisos Android declarados:
 |---|---|---|
 | `ACCESS_COARSE_LOCATION` | Resultados cercanos | Aviso destacado y elección afirmativa |
 | `ACCESS_FINE_LOCATION` | Resultados cercanos y direcciones exactas | Aviso destacado y elección afirmativa |
+| `CAMERA` | Escaneo de QR de inicio/cierre de citas e imágenes iniciadas por el usuario | Explicación contextual y permiso del sistema al abrir esa función |
 | `POST_NOTIFICATIONS` | Citas, mensajes y actividad de cuenta | Explicación contextual y permiso del sistema |
 | `INTERNET`, `ACCESS_NETWORK_STATE` | API y conectividad | Sin diálogo de runtime |
 | `VIBRATE` | Notificaciones | Sin diálogo de runtime |
 
 La app no debe solicitar ubicación al entrar automáticamente. El aviso implementado aparece antes del diálogo del sistema y explica tipo de dato, propósito, transferencia al servidor y que no hay uso en segundo plano o publicidad.
 
-Permisos bloqueados o no usados en Android: cámara, micrófono y almacenamiento externo heredado. Confirmar el manifiesto final después de generar el AAB.
+Permisos bloqueados o no usados en Android: micrófono y almacenamiento externo heredado. La configuración nativa efectiva sí incluye Cámara para los flujos descritos arriba. Confirmar el manifiesto final después de generar el AAB.
 
 ## App Store: App Privacy
 
@@ -165,12 +166,16 @@ En App Store Connect, declarar la práctica más amplia de la app y de sus SDK d
 | User Content | Other User Content | Sí | App Functionality |
 | Identifiers | User ID | Sí | App Functionality / Account Management |
 | Identifiers | Device ID | Sí | App Functionality |
+| Usage Data | Product Interaction | Sí | App Functionality / Analytics (Stripe) |
+| Usage Data | Other Usage Data | Sí | Analytics (Google Sign-In) |
+| Diagnostics | Other Diagnostic Data | No | App Functionality / Analytics (Firebase/Google transport) |
+| Other Data | Other Data Types | Sí | App Functionality / Analytics (Google Sign-In; Firebase Messaging también declara una variante no vinculada) |
 
 Revisar antes de marcar:
 
 - **Search History**: marcar si las búsquedas enviadas al servidor quedan retenidas en logs más allá de atender la solicitud.
-- **Diagnostics**: marcar sólo si la build final incorpora un SDK o sistema que conserva crash logs, rendimiento u otros diagnósticos vinculados.
-- **Other Data**: marcar si los logs de producción conservan información que no encaje en las categorías anteriores.
+- **Diagnostics**: los IPA firmados 11, 16 y 23 incorporan manifiestos de Firebase Installations, Firebase Messaging y Google Data Transport que declaran **Other Diagnostic Data**, no vinculado y sin tracking. Marcar ese tipo; no marcar Crash Data ni Performance Data salvo que el IPA final u otro servicio activo los declare.
+- **Other Data**: Google Sign-In declara **Other Data Types** vinculado y Firebase Messaging una variante no vinculada. En App Store Connect usar la práctica más amplia, vinculada, y revisar también los logs propios de producción.
 
 Para todos los datos anteriores:
 
@@ -179,6 +184,15 @@ Para todos los datos anteriores:
 - Developer advertising or marketing: **No**, salvo que se implemente una campaña o comunicación de marketing.
 - Los datos de salud nunca deben usarse para publicidad, marketing basado en uso o venta a brokers.
 
+### Corrección del rechazo automatizado de ATT
+
+La implementación y los binarios inspeccionados no realizan tracking según la definición de Apple: no incluyen `NSUserTrackingUsageDescription`, `ATTrackingManager`, `AdSupport`, acceso al identificador publicitario ni dominios de tracking; los manifiestos de los SDK declaran tracking en `false`. Por tanto:
+
+1. En App Store Connect, abrir **App Privacy** y cambiar a **No** cualquier respuesta “Used for Tracking” de todos los tipos de datos.
+2. Mantener declarados los datos recopilados y sus finalidades de funcionalidad/analítica indicadas arriba; analítica operativa no equivale por sí sola a tracking.
+3. Publicar los cambios de App Privacy antes de volver a enviar la versión.
+4. No agregar App Tracking Transparency ni mostrar un permiso de seguimiento mientras el producto siga sin rastrear usuarios.
+
 Aunque Doctor Cloud no lea HealthKit, Apple considera “Health” la información médica transmitida a la app y al backend.
 
 ## App Store: declaraciones adicionales
@@ -186,7 +200,7 @@ Aunque Doctor Cloud no lea HealthKit, Apple considera “Health” la informaci�
 - Categoría principal: **Medical**.
 - Dispositivo médico regulado: **No**, mientras no exista una determinación regulatoria distinta.
 - Cifrado: la configuración actual declara que sólo se usan mecanismos exentos/estándar del sistema; responder el cuestionario de exportación conforme al binario final.
-- App Tracking Transparency: no aplica mientras no exista tracking.
+- App Tracking Transparency: no aplica mientras no exista tracking; la respuesta correcta en App Privacy es **Tracking: No** para todos los tipos.
 - Cuenta de desarrollador: confirmar que pertenece a una **Organization/legal entity** responsable del servicio. Si es individual, resolverlo antes de App Review.
 - Acceso de revisión: proporcionar cuentas de paciente y profesional con información ficticia, backend activo y un plan con acceso móvil.
 - El directorio público de profesionales puede explorarse sin cuenta; citas, expedientes, mensajes, configuración, IA y datos privados requieren autenticación.
@@ -247,6 +261,8 @@ No guardar credenciales en Git. Copiar este texto a las notas privadas y complet
 >  
 > El directorio de profesionales se puede explorar sin cuenta desde [RUTA]. Las citas, mensajes, expediente, configuración e IA exigen autenticación. La ubicación sólo se solicita cuando el revisor pulsa una función de cercanía o dirección. La IA solicita una autorización separada antes de transferir contexto clínico al proveedor. La eliminación de cuenta está en Perfil > Privacidad y cuenta > Eliminar cuenta.  
 >  
+> Doctor Cloud no realiza tracking, no usa IDFA, anuncios ni data brokers y no vincula datos de la app con datos de terceros para publicidad. Por ello no solicita App Tracking Transparency. Todas las selecciones “Used for Tracking” están configuradas en No; los datos de funcionalidad y analítica sí se declaran en App Privacy.
+>
 > Doctor Cloud no es un dispositivo médico, no diagnostica de forma autónoma y no es un servicio de emergencias. Los pagos, si aparecen, corresponden a servicios médicos prestados fuera de la app y se prueban mediante [FLUJO DE PRUEBA].
 
 Mantener ambas cuentas activas, sin 2FA que bloquee al revisor y sin datos personales reales durante toda la revisión.
@@ -276,10 +292,12 @@ Los APK enviados por WhatsApp o instalados directamente no cuentan para este req
 ### Para Apple
 
 1. Desplegar backend/migraciones.
-2. Generar un IPA nuevo con los permisos y avisos actuales.
-3. Probar ambos roles en TestFlight interno.
-4. Completar App Privacy, clasificación, cuenta de revisión y declaración de dispositivo médico.
-5. Enviar a TestFlight externo si se desea ampliar QA; después seleccionar el mismo binario estable para App Review.
+2. Corregir App Privacy para que todos los tipos tengan **Used for Tracking: No** y publicar esa información.
+3. Corregir la primera versión de App Store Connect de `7.0.0` a `1.0.0` si el estado permite editarla; si queda bloqueada, retirar la entrega de revisión y solicitar ayuda a Apple Developer Support.
+4. Generar el IPA `1.0.0` build 24 con los permisos y avisos actuales.
+5. Probar ambos roles en TestFlight interno.
+6. Completar clasificación, cuenta de revisión y declaración de dispositivo médico.
+7. Enviar a TestFlight externo si se desea ampliar QA; después seleccionar el mismo binario estable para App Review.
 
 ## Bloqueadores antes de pulsar “Enviar a revisión”
 
