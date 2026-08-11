@@ -518,7 +518,7 @@ export default function DoctorCreateAppointmentScreen() {
             label="Motivo"
             value={reason}
             onChangeText={setReason}
-            placeholder="Describe brevemente el motivo de la consulta"
+            placeholder="Describe brevemente el motivo de la consulta (Mínimo 5 caracteres)"
             multiline
           />
 
