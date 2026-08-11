@@ -40,6 +40,7 @@ export default function DoctorSettingsScreen() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [name, setName] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [subspecialty, setSubspecialty] = useState("");
@@ -130,7 +131,26 @@ export default function DoctorSettingsScreen() {
     }));
   }, [consultationFee, telemedicineFee, homeVisitFee]);
 
-  async function pickAvatar() {
+  async function uploadPickedAvatar(asset: ImagePicker.ImagePickerAsset) {
+    try {
+      setAvatarUploading(true);
+      setError("");
+      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
+      const fileName = `doctor_avatar_${Date.now()}.${ext}`;
+      const type = asset.mimeType || `image/${ext === "jpg" ? "jpeg" : ext}`;
+      const upload = await api.uploadAvatar({ uri: asset.uri, name: fileName, type });
+
+      setAvatarUrl(upload.url);
+      setSuccess("Avatar actualizado.");
+      setTimeout(() => setSuccess(""), 2400);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo actualizar el avatar.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function pickAvatarFromLibrary() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -148,18 +168,42 @@ export default function DoctorSettingsScreen() {
       });
       if (result.canceled || !result.assets?.length) return;
 
-      const img = result.assets[0];
-      const ext = (img.uri.split(".").pop() || "jpg").toLowerCase();
-      const fileName = `doctor_avatar_${Date.now()}.${ext}`;
-      const type = img.mimeType || `image/${ext === "jpg" ? "jpeg" : ext}`;
-      const upload = await api.uploadAvatar({ uri: img.uri, name: fileName, type });
-
-      setAvatarUrl(upload.url);
-      setSuccess("Avatar actualizado.");
-      setTimeout(() => setSuccess(""), 2400);
+      await uploadPickedAvatar(result.assets[0]);
     } catch (e: any) {
       setError(e?.message || "No se pudo actualizar el avatar.");
     }
+  }
+
+  async function takeAvatarPhoto() {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitas permitir acceso a la cámara para tomar una foto.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      await uploadPickedAvatar(result.assets[0]);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo tomar la foto.");
+    }
+  }
+
+  function openAvatarPicker() {
+    Alert.alert("Foto de perfil", "¿Cómo quieres actualizar tu foto?", [
+      { text: "Tomar foto", onPress: () => { void takeAvatarPhoto(); } },
+      { text: "Elegir de galería", onPress: () => { void pickAvatarFromLibrary(); } },
+      { text: "Cancelar", style: "cancel" },
+    ]);
   }
 
   async function handleSave() {
@@ -266,26 +310,50 @@ export default function DoctorSettingsScreen() {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Volver"
+            >
               <Icon name="arrow-left" size={22} color={MC.textPrimary} />
             </Pressable>
             <Text style={styles.headerTitle}>Configuración general</Text>
-            <Pressable onPress={() => router.push("/doctor/availability" as any)} hitSlop={10}>
-              <Icon name="calendar" size={20} color={MC.primary} />
-            </Pressable>
+            <View style={{ width: 22 }} />
           </View>
 
           <View style={styles.hero}>
             <View style={styles.heroTop}>
-              <Pressable style={styles.avatar} onPress={pickAvatar}>
-                {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={styles.avatarText}>
-                    {(name || "D").charAt(0).toUpperCase()}
-                  </Text>
-                )}
-              </Pressable>
+              <View style={styles.avatarWrap}>
+                <Pressable
+                  style={styles.avatar}
+                  onPress={openAvatarPicker}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar foto de perfil"
+                >
+                  {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {(name || "D").charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </Pressable>
+                <Pressable
+                  style={styles.avatarBadge}
+                  onPress={openAvatarPicker}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar foto de perfil"
+                >
+                  <Icon name="camera" size={13} color="#0F766E" />
+                </Pressable>
+                {avatarUploading ? (
+                  <View style={styles.avatarSpinnerOverlay}>
+                    <ActivityIndicator size="small" color={MC.white} />
+                  </View>
+                ) : null}
+              </View>
               <View style={styles.heroBody}>
                 <Text style={styles.heroEyebrow}>Espacio del doctor</Text>
                 <Text style={styles.heroTitle}>{name || "Doctor"}</Text>
@@ -799,6 +867,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 26, fontWeight: "800", color: MC.white },
   heroSubtitle: { fontSize: 13, color: "#CCFBF1" },
+  avatarWrap: { position: "relative" },
   avatar: {
     width: 74,
     height: 74,
@@ -810,6 +879,26 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: "100%", height: "100%" },
   avatarText: { fontSize: 28, fontWeight: "800", color: MC.white },
+  avatarBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: MC.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#0F766E",
+  },
+  avatarSpinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    backgroundColor: "rgba(15, 118, 110, 0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   heroPills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   heroPill: {
     flexDirection: "row",

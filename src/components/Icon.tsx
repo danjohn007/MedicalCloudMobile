@@ -24,6 +24,7 @@ import Bone               from '../../assets/icons/regular/bone.svg';
 import Brain              from '../../assets/icons/regular/brain.svg';
 import Buildings          from '../../assets/icons/regular/buildings.svg';
 import Calendar           from '../../assets/icons/regular/calendar.svg';
+import Camera             from '../../assets/icons/regular/camera.svg';
 import CaretLeft          from '../../assets/icons/regular/caret-left.svg';
 import CaretRight         from '../../assets/icons/regular/caret-right.svg';
 import ChatCircle         from '../../assets/icons/regular/chat-circle.svg';
@@ -85,6 +86,7 @@ export type IconName =
   | 'brain'
   | 'buildings'
   | 'calendar'
+  | 'camera'
   | 'caret-left'
   | 'caret-right'
   | 'chat-circle'
@@ -146,6 +148,7 @@ const ICONS: Record<IconName, React.ComponentType<any>> = {
   'brain':              Brain,
   'buildings':          Buildings,
   'calendar':           Calendar,
+  'camera':             Camera,
   'caret-left':         CaretLeft,
   'caret-right':        CaretRight,
   'chat-circle':        ChatCircle,
