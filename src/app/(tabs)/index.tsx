@@ -19,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
 
 const GRID_GAP = 10;
 const GRID_PADDING = 14;
@@ -447,6 +448,17 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
+        {profile?.profile_completion ? (
+          <FadeSlideIn delay={230}>
+            <View style={s.sectionBlock}>
+              <ProfileCompletionCard
+                completion={profile.profile_completion}
+                onPress={() => router.push("/patient/profile")}
+              />
+            </View>
+          </FadeSlideIn>
+        ) : null}
+
         <FadeSlideIn delay={260}>
           <View style={s.sectionHeaderWrap}>
             <Text style={s.sectionTitle}>Tu actividad</Text>
@@ -607,6 +619,79 @@ function SpecialtyChip({
         <Icon name={specialty.icon} size={16} color={MC.primary} />
       </View>
       <Text style={s.specialtyChipText}>{specialty.name}</Text>
+    </Pressable>
+  );
+}
+
+function ProfileCompletionCard({
+  completion,
+  onPress,
+}: {
+  completion: api.PatientProfileCompletion;
+  onPress: () => void;
+}) {
+  const pct = completion.percentage;
+  const r = 30;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - pct / 100);
+  const ringColor = completion.complete ? "#22C55E" : pct >= 60 ? "#F59E0B" : "#EF4444";
+  const visibleMissing = completion.missing.slice(0, 3);
+  const extraMissing = completion.missing.length - visibleMissing.length;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={s.completionCard}
+      accessibilityRole="button"
+      accessibilityLabel={
+        completion.complete
+          ? "Perfil completo"
+          : `Perfil ${pct} por ciento completo. Toca para completarlo`
+      }
+    >
+      <View style={s.completionRingWrap}>
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle cx={36} cy={36} r={r} stroke={MC.border} strokeWidth={6} fill="none" />
+          <Circle
+            cx={36}
+            cy={36}
+            r={r}
+            stroke={ringColor}
+            strokeWidth={6}
+            fill="none"
+            strokeDasharray={`${circumference}, ${circumference}`}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+          />
+        </Svg>
+        <View style={s.completionRingLabel} pointerEvents="none">
+          <Text style={[s.completionPct, { color: ringColor }]}>{pct}%</Text>
+        </View>
+      </View>
+      <View style={s.completionBody}>
+        <Text style={s.completionTitle}>
+          {completion.complete ? "Perfil completo" : "Completa tu perfil"}
+        </Text>
+        {completion.complete ? (
+          <Text style={s.completionSubtitle}>
+            Tu doctor tiene toda la información necesaria para atenderte.
+          </Text>
+        ) : (
+          <View style={s.completionMissing}>
+            {visibleMissing.map((item) => (
+              <View key={item.key} style={s.completionMissingRow}>
+                <Icon name="warning" size={12} color="#F59E0B" />
+                <Text style={s.completionMissingText}>{item.label}</Text>
+              </View>
+            ))}
+            {extraMissing > 0 ? (
+              <Text style={s.completionMissingMore}>+{extraMissing} más</Text>
+            ) : null}
+          </View>
+        )}
+      </View>
+      <Icon name="caret-right" size={16} color={MC.textMuted} />
     </Pressable>
   );
 }
@@ -1054,6 +1139,37 @@ const s = StyleSheet.create({
   accessCodeCard: {
     marginHorizontal: 14,
   },
+
+  completionCard: {
+    marginHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: MC.card,
+    borderWidth: 1,
+    borderColor: MC.border,
+    padding: 14,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  completionRingWrap: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionRingLabel: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionPct: { fontSize: 14, fontWeight: "800" },
+  completionBody: { flex: 1, gap: 4 },
+  completionTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
+  completionSubtitle: { fontSize: 12, color: MC.textSecondary },
+  completionMissing: { gap: 4 },
+  completionMissingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  completionMissingText: { fontSize: 12, color: MC.textSecondary, fontWeight: "600" },
+  completionMissingMore: { fontSize: 11, color: MC.textMuted, fontWeight: "600", marginLeft: 18 },
 
   kpiGrid: {
     flexDirection: "row",

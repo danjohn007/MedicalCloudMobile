@@ -248,6 +248,18 @@ export interface ClinicalNote {
   signed_at: string | null;
 }
 
+export interface PatientProfileCompletionMissingItem {
+  key: string;
+  label: string;
+  link: string;
+}
+
+export interface PatientProfileCompletion {
+  percentage: number;
+  complete: boolean;
+  missing: PatientProfileCompletionMissingItem[];
+}
+
 export interface ProfileData extends AuthUser {
   phone?: string;
   birth_date?: string;
@@ -264,6 +276,7 @@ export interface ProfileData extends AuthUser {
   doctor_access_code?: string | null;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
+  profile_completion?: PatientProfileCompletion;
 }
 
 export interface ExpedienteData {
