@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { NotificationBellButton } from "@/components/NotificationBellButton";
@@ -125,6 +126,13 @@ export default function DoctorHomeScreen() {
             />
           </View>
         </View>
+
+        {data?.profile_completion ? (
+          <ProfileCompletionCard
+            completion={data.profile_completion}
+            onPress={() => router.push("/doctor/settings" as any)}
+          />
+        ) : null}
 
         {error ? (
           <View style={styles.errorBox}>
@@ -391,6 +399,74 @@ function HeroBadge({ icon, label }: { icon: IconName; label: string }) {
   );
 }
 
+function ProfileCompletionCard({
+  completion,
+  onPress,
+}: {
+  completion: api.DoctorProfileCompletion;
+  onPress: () => void;
+}) {
+  const pct = completion.percentage;
+  const r = 30;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - pct / 100);
+  const ringColor = completion.complete ? "#22C55E" : pct >= 60 ? "#F59E0B" : "#EF4444";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={styles.completionCard}
+      accessibilityRole="button"
+      accessibilityLabel={
+        completion.complete
+          ? "Perfil completo, con prioridad en el buscador"
+          : `Perfil ${pct} por ciento completo. Toca para completarlo`
+      }
+    >
+      <View style={styles.completionRingWrap}>
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle cx={36} cy={36} r={r} stroke={MC.border} strokeWidth={6} fill="none" />
+          <Circle
+            cx={36}
+            cy={36}
+            r={r}
+            stroke={ringColor}
+            strokeWidth={6}
+            fill="none"
+            strokeDasharray={`${circumference}, ${circumference}`}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+          />
+        </Svg>
+        <View style={styles.completionRingLabel} pointerEvents="none">
+          <Text style={[styles.completionPct, { color: ringColor }]}>{pct}%</Text>
+        </View>
+      </View>
+      <View style={styles.completionBody}>
+        <Text style={styles.completionTitle}>
+          {completion.complete ? "Perfil completo · Prioridad en el buscador" : "Completa tu perfil"}
+        </Text>
+        {completion.complete ? (
+          <Text style={styles.completionSubtitle}>
+            Tienes todo lo necesario para aparecer con prioridad ante los pacientes.
+          </Text>
+        ) : (
+          <View style={styles.completionMissing}>
+            {completion.missing.map((item) => (
+              <View key={item.key} style={styles.completionMissingRow}>
+                <Icon name="warning" size={12} color="#F59E0B" />
+                <Text style={styles.completionMissingText}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+      <Icon name="caret-right" size={16} color={MC.textMuted} />
+    </Pressable>
+  );
+}
+
 function QuickAction({
   icon,
   label,
@@ -598,6 +674,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   errorText: { flex: 1, color: MC.error, fontSize: 13 },
+  completionCard: {
+    borderRadius: 20,
+    backgroundColor: MC.card,
+    borderWidth: 1,
+    borderColor: MC.border,
+    padding: 14,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  completionRingWrap: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionRingLabel: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionPct: { fontSize: 14, fontWeight: "800" },
+  completionBody: { flex: 1, gap: 4 },
+  completionTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
+  completionSubtitle: { fontSize: 12, color: MC.textSecondary },
+  completionMissing: { gap: 4 },
+  completionMissingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  completionMissingText: { fontSize: 12, color: MC.textSecondary, fontWeight: "600" },
   liveCard: {
     borderRadius: 20,
     backgroundColor: themed("#E0F2FE", "#0E3042"),

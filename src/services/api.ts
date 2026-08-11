@@ -411,10 +411,23 @@ export interface DoctorRegisterPatientPayload {
   lng?: number | null;
 }
 
+export interface DoctorProfileCompletionMissingItem {
+  key: string;
+  label: string;
+  link: string;
+}
+
+export interface DoctorProfileCompletion {
+  percentage: number;
+  complete: boolean;
+  missing: DoctorProfileCompletionMissingItem[];
+}
+
 export interface DoctorDashboardData {
   ok?: boolean;
   doctor: DoctorDashboardProfile;
   stats: DoctorDashboardStats;
+  profile_completion: DoctorProfileCompletion;
   upcoming: DoctorAppointmentItem[];
   today: DoctorAppointmentItem[];
   recent_patients: DoctorPatientSummary[];
