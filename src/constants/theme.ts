@@ -1,5 +1,53 @@
 import { Appearance, Platform, type ColorSchemeName } from 'react-native';
 
+export type AppThemeMode = 'system' | 'light' | 'dark';
+export type ResolvedTheme = 'light' | 'dark';
+
+// Fuente unica de la llave de almacenamiento: stores/themeStore.ts la importa
+// de aqui para que la lectura sincrona (abajo) y la asincrona (el store) nunca
+// queden desincronizadas por un typo.
+export const THEME_MODE_STORAGE_KEY = 'mc_theme_mode';
+
+function normalizeStoredMode(value: string | null): AppThemeMode {
+  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+}
+
+/**
+ * Lee el modo de apariencia guardado de forma SINCRONA, antes de que se
+ * evalue el resto de los modulos de la app (incluyendo cualquier
+ * StyleSheet.create() que use MC/themed()).
+ *
+ * Por que hace falta esto: en RN/Metro, todo el grafo de imports de la app se
+ * ejecuta de un tiron al arrancar, ANTES de que React empiece a renderizar.
+ * Si MC se inicializaba solo con Appearance.getColorScheme() (el esquema del
+ * SISTEMA) y la preferencia guardada del usuario se leia despues de forma
+ * asincrona (expo-secure-store getItemAsync, dentro de un useEffect), todo
+ * StyleSheet.create() que ya hubiera capturado colores de MC quedaba
+ * "horneado" con el esquema del sistema para siempre — sin importar que el
+ * usuario hubiera elegido claro/oscuro manualmente, y sin importar cuantas
+ * veces se recargara la app despues (la misma carrera ocurre en cada arranque).
+ * expo-secure-store expone getItem() (sincrono, bloquea brevemente el hilo JS)
+ * pensado justo para casos como este: leer un valor pequeno antes de que el
+ * resto de la app arranque.
+ */
+export function readPersistedModeSync(): AppThemeMode {
+  try {
+    if (typeof window !== 'undefined' && (window as any).localStorage) {
+      return normalizeStoredMode((window as any).localStorage.getItem(THEME_MODE_STORAGE_KEY));
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const SecureStore = require('expo-secure-store');
+    if (typeof SecureStore?.getItem === 'function') {
+      return normalizeStoredMode(SecureStore.getItem(THEME_MODE_STORAGE_KEY));
+    }
+  } catch {
+    // Sin almacenamiento sincrono disponible (p.ej. Expo Go en algunas
+    // plataformas): cae a 'system', igual que antes de este fix. load()
+    // en themeStore.ts corrige esto asincrono momentos despues como respaldo.
+  }
+  return 'system';
+}
+
 // ── Doctor Cloud Brand Colors ─────────────────────────────
 const lightPalette = {
   scheme:        'light',
@@ -48,16 +96,15 @@ const darkPalette = {
   white: '#FFFFFF', overlay: 'rgba(0,0,0,0.65)',
 } as const;
 
-export type AppThemeMode = 'system' | 'light' | 'dark';
-export type ResolvedTheme = 'light' | 'dark';
-
-export const MC: { -readonly [K in keyof typeof lightPalette]: string } = {
-  ...(Appearance.getColorScheme() === 'dark' ? darkPalette : lightPalette),
-};
-
 export function resolveThemeMode(mode: AppThemeMode, systemScheme: ColorSchemeName = Appearance.getColorScheme()): ResolvedTheme {
   return mode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : mode;
 }
+
+const initialResolvedTheme: ResolvedTheme = resolveThemeMode(readPersistedModeSync());
+
+export const MC: { -readonly [K in keyof typeof lightPalette]: string } = {
+  ...(initialResolvedTheme === 'dark' ? darkPalette : lightPalette),
+};
 
 export function applyThemeMode(mode: AppThemeMode, systemScheme?: ColorSchemeName): ResolvedTheme {
   const resolved = resolveThemeMode(mode, systemScheme);

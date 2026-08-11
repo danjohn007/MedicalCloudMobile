@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import { Icon, type IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import { useRootBackExit } from "@/hooks/useRootBackExit";
+import { useThemeStore } from "@/stores/themeStore";
 
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
@@ -19,6 +20,10 @@ const DOCTOR_ROOT_SCREENS = ["index", "pacientes", "citas", "mensajes", "perfil"
 
 export default function DoctorTabsLayout() {
   useRootBackExit("(doctor-tabs)", DOCTOR_ROOT_SCREENS);
+  // Suscribirse fuerza un re-render (y por tanto screenOptions frescos) cuando
+  // el usuario cambia el modo de apariencia dentro de la app, sin depender solo
+  // del reload que dispara settings/appearance.tsx al salir de esa pantalla.
+  useThemeStore((state) => state.resolved);
 
   return (
     <Tabs

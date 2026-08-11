@@ -163,8 +163,25 @@ export default function RootLayout() {
     };
   }, [isAuthenticated, userId, userRole]);
 
+  // El tema debe quedar resuelto (MC mutado a la paleta correcta) ANTES de que
+  // monte el <Stack> por primera vez. Si (tabs)/_layout.tsx y (doctor-tabs)/_layout.tsx
+  // (el tab bar) o el dashboard inicial montan mientras loadTheme() todavia esta
+  // resolviendo, capturan MC con el esquema del SISTEMA (valor por defecto de
+  // theme.ts) en vez del modo guardado por el usuario, y como esos componentes
+  // nunca vuelven a renderizar por cambios de tema, quedan con colores
+  // incorrectos de forma permanente hasta el siguiente cold start. Por eso no
+  // basta con superponer un overlay: hay que retrasar el montaje real del Stack.
+  if (!themeLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
+        <StatusBar style={resolvedTheme === "dark" ? "light" : "dark"} />
+        <ActivityIndicator size="large" color={MC.primary} />
+      </View>
+    );
+  }
+
   let validationOverlay: ReactNode = null;
-  if (!themeLoaded || !doctorAccessChecked) {
+  if (!doctorAccessChecked) {
     validationOverlay = (
       <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center", backgroundColor: MC.background }}>
         <ActivityIndicator size="large" color={MC.primary} />

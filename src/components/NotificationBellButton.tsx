@@ -28,7 +28,11 @@ export function NotificationBellButton({ light = false }: { light?: boolean }) {
 
   return (
     <Pressable
-      style={[styles.button, light && styles.buttonLight]}
+      style={[
+        styles.button,
+        !light && { backgroundColor: MC.primaryLight, borderColor: themed("#CDEDEA", "#1F4C4A") },
+        light && styles.buttonLight,
+      ]}
       onPress={() => router.push("/notificaciones" as any)}
       hitSlop={10}
       accessibilityRole="button"
@@ -36,14 +40,20 @@ export function NotificationBellButton({ light = false }: { light?: boolean }) {
     >
       <Icon name="bell" size={21} color={light ? MC.white : MC.primaryDark} />
       {unreadCount > 0 ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+        <View style={[styles.badge, { borderColor: MC.card }]}>
+          <Text style={[styles.badgeText, { color: MC.white }]}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
         </View>
       ) : null}
     </Pressable>
   );
 }
 
+// Nota: los colores dependientes de tema (MC.xxx / themed()) se aplican
+// inline arriba, NO aqui. StyleSheet.create() corre una sola vez al importar
+// el modulo — si un color de MC quedara horneado aqui, se congelaria con la
+// paleta que tuviera MC en ese momento y nunca reflejaria un cambio de modo
+// posterior (este componente se usa en pantallas montadas desde el arranque,
+// como Mis Citas, asi que corria ese riesgo).
 const styles = StyleSheet.create({
   button: {
     width: 42,
@@ -51,9 +61,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: MC.primaryLight,
     borderWidth: 1,
-    borderColor: themed("#CDEDEA", "#1F4C4A"),
   },
   buttonLight: {
     backgroundColor: "rgba(255,255,255,0.16)",
@@ -71,10 +79,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EF4444",
     borderWidth: 2,
-    borderColor: MC.card,
   },
   badgeText: {
-    color: MC.white,
     fontSize: 9,
     fontWeight: "900",
   },

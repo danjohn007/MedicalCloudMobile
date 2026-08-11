@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Icon, IconName } from '@/components/Icon';
 import { MC } from '@/constants/theme';
 import { useRootBackExit } from '@/hooks/useRootBackExit';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface TabIconProps {
   name: IconName;
@@ -26,6 +27,10 @@ function TabIcon({ name, focused, badge }: TabIconProps) {
 
 export default function TabsLayout() {
   useRootBackExit("(tabs)", PATIENT_ROOT_SCREENS);
+  // Suscribirse fuerza un re-render (y por tanto screenOptions frescos) cuando
+  // el usuario cambia el modo de apariencia dentro de la app, sin depender solo
+  // del reload que dispara settings/appearance.tsx al salir de esa pantalla.
+  useThemeStore((state) => state.resolved);
 
   return (
     <Tabs
