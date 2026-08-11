@@ -198,11 +198,13 @@ src/app/
 
 ## ⚠️ Pendiente / Por mejorar
 
-1. **Notificaciones push** (Firebase Cloud Messaging)
-2. **Pago de citas** in-app (Stripe/PayPal)
-3. **Recordatorios locales** de citas
-4. **Subida de documentos** al expediente (fotos, PDFs)
-5. **Videoconsulta** integrada (Daily.co / Jitsi)
-6. **Cancelar cita** desde el detalle
-7. **Offline first** (caché de datos)
-8. **Modo oscuro**
+> Actualizado 2026-08-11 tras auditoría de código real (esta lista estaba desactualizada — 5 de los 8 puntos ya estaban implementados sin reflejarse aquí).
+
+1. ~~**Notificaciones push** (Firebase Cloud Messaging)~~ → ✅ **Ya implementado end-to-end** (FCM HTTP v1, `core/PushNotification.php`, `src/services/push-notifications.ts`, `google-services.json`/`GoogleService-Info.plist` presentes). Solo falta **validar en un build nativo real** (no funciona en Expo Go).
+2. **Pago de citas** in-app: Stripe ✅ ya implementado (`StripeClient.tsx`, `doctores/[id]/pago.tsx`). **PayPal in-app sigue pendiente** en móvil.
+3. **Recordatorios locales** de citas: parcial — el servidor ya envía push 24h/1h antes (`CronController::reminders()`); falta scheduling on-device. Prioridad baja.
+4. ~~**Subida de documentos** al expediente~~ → ✅ Ya implementado (`doctor/documents.tsx`, `patient/documentos.tsx`).
+5. ~~**Videoconsulta** integrada~~ → ✅ Ya implementado, vía **Jitsi** (`src/app/videoconsulta/[id].tsx`, `meet.jit.si`), no Daily.co como decía este doc.
+6. ~~**Cancelar cita** desde el detalle~~ → ✅ Ya implementado (`(tabs)/citas.tsx`, `api.cancelAppointment`).
+7. **Offline first** (caché de datos): genuinamente sin empezar — sin NetInfo/cache/persist. Único punto de esta lista sin ningún avance.
+8. ~~**Modo oscuro**~~ → ✅ Ya implementado (`settings/appearance.tsx`, `themeStore.ts`, `use-theme.ts`).
