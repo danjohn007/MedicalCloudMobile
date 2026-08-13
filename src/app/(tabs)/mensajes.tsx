@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -22,7 +23,7 @@ function FadeSlideIn({
   children,
   delay = 0,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   delay?: number;
 }) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -43,7 +44,7 @@ function FadeSlideIn({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [delay, opacity, translateY]);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
@@ -72,7 +73,6 @@ export default function MensajesScreen() {
       .then((res) => {
         const data = res.data ?? [];
         setMessages(data);
-        // Auto-hide help banner if there are messages
         if (data.length > 0) setShowHelp(false);
       })
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
@@ -92,9 +92,7 @@ export default function MensajesScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mensajes</Text>
-        <Pressable style={styles.newBtn} hitSlop={10}>
-          <Icon name="plus" size={22} color={MC.primary} />
-        </Pressable>
+        <NotificationBellButton />
       </View>
 
       <View style={styles.searchWrap}>
@@ -113,7 +111,6 @@ export default function MensajesScreen() {
         </View>
       </View>
 
-      {/* ── Help Banner ─────────────────────────────── */}
       {showHelp && (
         <FadeSlideIn delay={0}>
           <View style={styles.helpBanner}>
@@ -175,55 +172,60 @@ export default function MensajesScreen() {
             />
           }
         >
-          {messages.map((m, idx) => (
-            <FadeSlideIn key={m.id} delay={idx * 50}>
-              <Pressable
-                style={styles.row}
-                onPress={() =>
-                  router.push(
-                    `/chat/${m.id}?name=${encodeURIComponent(m.doctor_name)}&photo=${encodeURIComponent(m.doctor_photo ?? "")}` as any,
-                  )
-                }
-              >
-                <View style={styles.avatar}>
-                  {m.doctor_photo?.trim() ? (
-                    <Image
-                      source={{ uri: m.doctor_photo }}
-                      style={styles.avatarImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text style={styles.avatarText}>
-                      {m.doctor_name?.charAt(0) || "D"}
+          {messages.map((m, idx) => {
+            const displayName = m.other_name ?? m.doctor_name ?? "Doctor/a";
+            const displayPhoto = m.other_photo ?? m.doctor_photo ?? "";
+
+            return (
+              <FadeSlideIn key={m.id} delay={idx * 50}>
+                <Pressable
+                  style={styles.row}
+                  onPress={() =>
+                    router.push(
+                      `/chat/${m.id}?name=${encodeURIComponent(displayName)}&photo=${encodeURIComponent(displayPhoto)}` as any,
+                    )
+                  }
+                >
+                  <View style={styles.avatar}>
+                    {displayPhoto.trim() ? (
+                      <Image
+                        source={{ uri: displayPhoto }}
+                        style={styles.avatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.avatarText}>
+                        {displayName.charAt(0) || "D"}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.rowBody}>
+                    <Text style={[styles.name, m.unread > 0 && styles.nameBold]}>
+                      {displayName}
                     </Text>
-                  )}
-                </View>
-                <View style={styles.rowBody}>
-                  <Text style={[styles.name, m.unread > 0 && styles.nameBold]}>
-                    {m.doctor_name}
-                  </Text>
-                  <Text style={styles.lastMsg} numberOfLines={1}>
-                    {m.last_message ?? "Sin mensajes aún"}
-                  </Text>
-                </View>
-                <View style={styles.rowRight}>
-                  <Text style={styles.time}>
-                    {m.updated_at
-                      ? new Date(m.updated_at).toLocaleDateString("es-MX", {
-                          day: "numeric",
-                          month: "short",
-                        })
-                      : ""}
-                  </Text>
-                  {m.unread > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{m.unread}</Text>
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            </FadeSlideIn>
-          ))}
+                    <Text style={styles.lastMsg} numberOfLines={1}>
+                      {m.last_message ?? "Sin mensajes aún"}
+                    </Text>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Text style={styles.time}>
+                      {m.updated_at
+                        ? new Date(m.updated_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : ""}
+                    </Text>
+                    {m.unread > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{m.unread}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              </FadeSlideIn>
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -257,8 +259,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: MC.textPrimary,
   },
-
-  // ── Help Banner ──────────────────────────────────
   helpBanner: {
     flexDirection: "row",
     marginHorizontal: 20,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -298,8 +298,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ── Empty State ──────────────────────────────────
   empty: {
     flex: 1,
     justifyContent: "center",
@@ -347,8 +345,6 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primaryLight,
   },
   reloadBtnText: { color: MC.primary, fontWeight: "700", fontSize: 14 },
-
-  // ── Row ──────────────────────────────────────────
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -365,6 +361,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    overflow: "hidden",
   },
   avatarImage: { width: "100%", height: "100%", borderRadius: 25 },
   avatarText: { fontSize: 18, fontWeight: "700", color: MC.primary },

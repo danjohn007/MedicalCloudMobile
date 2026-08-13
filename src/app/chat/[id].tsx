@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -79,8 +79,8 @@ export default function ChatScreen() {
     photo?: string;
   }>();
   const conversationId = parseInt(id ?? "0", 10);
-  const doctorName = decodeURIComponent(name || "Doctor/a");
-  const doctorPhoto = decodeURIComponent(photo || "").trim();
+  const contactName = decodeURIComponent(name || "Contacto");
+  const contactPhoto = decodeURIComponent(photo || "").trim();
   const { user } = useAuthStore();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -88,10 +88,11 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [contactActive, setContactActive] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchMessages = () => {
+  const fetchMessages = useCallback(() => {
     if (!Number.isFinite(conversationId) || conversationId <= 0) {
       setLoading(false);
       return;
@@ -100,16 +101,17 @@ export default function ChatScreen() {
       .getConversation(conversationId)
       .then((res) => {
         const next = res.data ?? [];
-        // Sort by id ascending to ensure correct order
+        // Orden ascendente para que la conversación conserve su secuencia.
         next.sort((a: ChatMessage, b: ChatMessage) => a.id - b.id);
         setMessages(next);
+        setContactActive(Boolean(res.meta?.other_recently_active));
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: false });
         }, 150);
       })
       .catch((e) => setError(e.message ?? "Error al cargar mensajes"))
       .finally(() => setLoading(false));
-  };
+  }, [conversationId]);
 
   useEffect(() => {
     fetchMessages();
@@ -117,7 +119,7 @@ export default function ChatScreen() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [conversationId]);
+  }, [conversationId, fetchMessages]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -129,7 +131,7 @@ export default function ChatScreen() {
     setError("");
     try {
       await api.sendMessage(conversationId, text);
-      // Immediate fetch to show the message
+      // Refresca inmediatamente para mostrar el mensaje enviado.
       fetchMessages();
     } catch (e: any) {
       setError(e.message ?? "Error al enviar mensaje");
@@ -142,7 +144,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         {/* Header */}
@@ -152,15 +154,17 @@ export default function ChatScreen() {
           </Pressable>
           <View style={styles.headerInfo}>
             <View style={styles.avatarSmall}>
-              {doctorPhoto ? (
-                <Image source={{ uri: doctorPhoto }} style={styles.avatarImage} resizeMode="cover" />
+              {contactPhoto ? (
+                <Image source={{ uri: contactPhoto }} style={styles.avatarImage} resizeMode="cover" />
               ) : (
-                <Text style={styles.avatarText}>{doctorName?.charAt(0) || "D"}</Text>
+                <Text style={styles.avatarText}>{contactName?.charAt(0) || "C"}</Text>
               )}
             </View>
             <View>
-              <Text style={styles.headerTitle}>{doctorName}</Text>
-              <Text style={styles.headerStatus}>En línea</Text>
+              <Text style={styles.headerTitle}>{contactName}</Text>
+              <Text style={[styles.headerStatus, !contactActive && styles.headerStatusMuted]}>
+                {contactActive ? "Activo ahora" : "Disponible por chat"}
+              </Text>
             </View>
           </View>
         </View>
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
   headerInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, marginLeft: 4 },
@@ -264,6 +268,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 15, fontWeight: "700", color: MC.primary },
   headerTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
   headerStatus: { fontSize: 11, color: MC.primary, fontWeight: "600", marginTop: 1 },
+  headerStatusMuted: { color: MC.textMuted },
 
   errorBar: {
     flexDirection: "row",
@@ -271,9 +276,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: MC.errorSoft,
     borderBottomWidth: 1,
-    borderBottomColor: "#FECACA",
+    borderBottomColor: MC.errorBorder,
   },
   errorText: { flex: 1, fontSize: 12, color: MC.error },
   retryText: { fontSize: 12, fontWeight: "700", color: MC.primary },
@@ -295,7 +300,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   msgBubbleMine: { backgroundColor: MC.primary, borderBottomRightRadius: 4 },
-  msgBubbleOther: { backgroundColor: MC.white, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: MC.border },
+  msgBubbleOther: { backgroundColor: MC.card, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: MC.border },
   senderName: { fontSize: 11, fontWeight: "700", color: MC.primary, marginBottom: 4 },
   msgText: { fontSize: 15, color: MC.textPrimary, lineHeight: 21 },
   msgTextMine: { color: MC.white },
@@ -307,7 +312,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: MC.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -338,7 +343,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     gap: 8,
   },
   inputWrap: {

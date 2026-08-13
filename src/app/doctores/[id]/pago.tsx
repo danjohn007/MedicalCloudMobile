@@ -1,435 +1,1260 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { CardField, StripeProvider, useConfirmPayment } from "@/components/payments/StripeClient";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import PayPalIcon from "../../../../assets/images/PayPal_Icon.svg";
+import StripeIcon from "../../../../assets/images/Stripe_Icon.svg";
+
+type PaymentMethod = "stripe_card" | "paypal";
+type ScreenStep =
+  | "booting"
+  | "idle"
+  | "opening_paypal"
+  | "processing_stripe"
+  | "checking_payment";
+
+const FALLBACK_METHODS = {
+  stripe_card: false,
+  paypal: false,
+};
 
 export default function PagoScreen() {
   const router = useRouter();
+  const initializedRef = useRef(false);
   const {
     id,
+    appointmentId: appointmentIdParam,
     date,
     time,
     type,
     fee: feeParam,
-    reason: reasonParam,
-    notes: notesParam,
+    reason = "",
+    notes = "",
+    doctorName = "",
+    specialty = "",
+    scheduledAt = "",
   } = useLocalSearchParams<{
     id: string;
-    date: string;
-    time: string;
-    type: string;
-    fee: string;
-    reason: string;
-    notes: string;
+    appointmentId?: string;
+    date?: string;
+    time?: string;
+    type?: string;
+    fee?: string;
+    reason?: string;
+    notes?: string;
+    doctorName?: string;
+    specialty?: string;
+    scheduledAt?: string;
   }>();
-  const doctorId = parseInt(id ?? "0", 10);
-  const fee = parseFloat(feeParam ?? "0");
-  const appointmentType = (type as any) ?? "presencial";
-  const reason = decodeURIComponent(reasonParam ?? "");
-  const notes = decodeURIComponent(notesParam ?? "");
 
-  const [loading, setLoading] = useState(false);
+  const doctorId = Number.parseInt(id ?? "0", 10);
+  const initialAppointmentId = Number.parseInt(appointmentIdParam ?? "0", 10) || null;
+  const fee = Number.parseFloat(feeParam ?? "0") || 0;
+  const appointmentType = normalizeAppointmentType(type);
+  const createdFromDraft = !initialAppointmentId;
+
+  const [appointmentId, setAppointmentId] = useState<number | null>(initialAppointmentId);
+  const [appointmentDetail, setAppointmentDetail] = useState<api.Appointment | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<api.AppointmentPaymentInfo | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("paypal");
+  const [cardholderName, setCardholderName] = useState("");
   const [error, setError] = useState("");
-  const [step, setStep] = useState<"idle" | "creating" | "paying" | "checking">(
-    "idle",
+  const [step, setStep] = useState<ScreenStep>("booting");
+  const [countdown, setCountdown] = useState<string | null>(null);
+
+  const configuredMethods = paymentInfo?.methods ?? FALLBACK_METHODS;
+  const effectiveMethods = {
+    ...configuredMethods,
+    stripe_card: Platform.OS !== "web" && configuredMethods.stripe_card,
+  };
+  const stripePublishableKey = paymentInfo?.stripe_publishable_key?.trim() ?? "";
+  const stripeAccountId =
+    paymentInfo?.doctor_payment_destination?.stripe_account_id?.trim() ?? "";
+  const summary = useMemo(
+    () =>
+      buildSummary({
+        paymentInfo,
+        appointmentDetail,
+        date: date ?? "",
+        time: time ?? "",
+        scheduledAt: scheduledAt ?? "",
+        appointmentType,
+        fee,
+        doctorName: String(doctorName),
+        specialty: String(specialty),
+      }),
+    [appointmentDetail, appointmentType, date, doctorName, fee, paymentInfo, scheduledAt, specialty, time],
   );
 
-  // ── Opción 1: Crear cita sin pagar (pendiente de pago) ──────
-  const handleCreateOnly = async () => {
-    setLoading(true);
-    setError("");
-    setStep("creating");
-
-    try {
-      const apptResult = await api.createAppointment({
-        doctor_id: doctorId,
-        date: date ?? "",
-        time: time ?? "",
-        type: appointmentType,
-        reason: reason.trim() || undefined,
-        notes: notes.trim() || undefined,
-      });
-
-      const apptId = apptResult.id;
-      const apptStatus = apptResult.status; // 'pending_payment' or 'confirmed'
-
-      router.replace(
-        `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=${apptStatus}&appointmentId=${apptId}` as any,
+  const goToConfirmation = useCallback(
+    (
+      status: "confirmed" | "pending_payment",
+      options: {
+        appointmentId: number;
+        fee: number;
+        date?: string;
+        time?: string;
+        scheduledAt?: string;
+      },
+    ) => {
+      const normalized = normalizeSummaryDateTime(
+        options.date ?? "",
+        options.time ?? "",
+        options.scheduledAt ?? "",
       );
-    } catch (e: any) {
-      setError(e.message ?? "Error al crear la cita.");
-    } finally {
-      setLoading(false);
-      setStep("idle");
-    }
-  };
 
-  // ── Opción 2: Crear cita y pagar con PayPal ────────────────
-  const handlePayNow = async () => {
-    setLoading(true);
-    setError("");
-    setStep("creating");
+      router.replace({
+        pathname: "/confirmacion",
+        params: {
+          appointmentId: String(options.appointmentId),
+          status,
+          fee: String(options.fee),
+          date: normalized.date,
+          time: normalized.time,
+        },
+      } as any);
+    },
+    [router],
+  );
 
-    try {
-      // 1. Create the appointment
-      const apptResult = await api.createAppointment({
-        doctor_id: doctorId,
-        date: date ?? "",
-        time: time ?? "",
-        type: appointmentType,
-        reason: reason.trim() || undefined,
-        notes: notes.trim() || undefined,
-      });
+  const loadAppointmentContext = useCallback(
+    async (idToLoad: number) => {
+      const detail = await api.getAppointmentDetail(idToLoad);
+      setAppointmentDetail(detail.data);
 
-      const apptId = apptResult.id;
-
-      if (apptResult.status === "confirmed" || apptResult.fee <= 0) {
-        router.replace(
-          `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any,
-        );
+      if (detail.data.payment_status === "paid" || detail.data.status === "confirmed") {
+        goToConfirmation("confirmed", {
+          appointmentId: idToLoad,
+          fee: detail.data.fee,
+          scheduledAt: detail.data.scheduled_at,
+        });
         return;
       }
 
-      // 2. Create PayPal order
-      setStep("paying");
-      const payResult = await api.createAppointmentPayment(apptId);
-
-      // 3. Open PayPal in browser
-      await WebBrowser.openBrowserAsync(payResult.approve_url);
-
-      // 4. After browser closes, check the real appointment status
-      setStep("checking");
       try {
-        const detail = await request<{
-          data: { status: string; payment_status: string };
-        }>(`/appointments/${apptId}`, {}, true);
+        const info = await api.getAppointmentPaymentInfo(idToLoad);
+        setPaymentInfo(info);
+        if (
+          Platform.OS !== "web" &&
+          info.methods.stripe_card &&
+          info.stripe_publishable_key?.trim()
+        ) {
+          setSelectedMethod("stripe_card");
+        } else if (info.methods.paypal) {
+          setSelectedMethod("paypal");
+        }
+      } catch (err: any) {
+        setPaymentInfo(null);
+        if (isMissingMobilePaymentInfo(err)) {
+          setError(
+            "No se pudo cargar la configuración de pago de esta cita. Intenta de nuevo en unos segundos.",
+          );
+          return;
+        }
+        throw err;
+      }
+    },
+    [goToConfirmation],
+  );
 
-        if (detail.data.status === "confirmed") {
-          router.replace(
-            `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=confirmed` as any,
-          );
-        } else {
-          router.replace(
-            `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any,
-          );
+  const bootstrap = useCallback(async () => {
+    setStep("booting");
+    setError("");
+
+    try {
+      if (initialAppointmentId) {
+        await loadAppointmentContext(initialAppointmentId);
+        setStep("idle");
+        return;
+      }
+
+      const created = await api.createAppointment({
+        doctor_id: doctorId,
+        date: date ?? "",
+        time: time ?? "",
+        type: appointmentType,
+        reason: String(reason).trim() || undefined,
+        notes: String(notes).trim() || undefined,
+      });
+
+      if (created.status === "confirmed" || created.fee <= 0) {
+        goToConfirmation("confirmed", {
+          appointmentId: created.id,
+          fee: created.fee || fee,
+          date: date ?? "",
+          time: time ?? "",
+        });
+        return;
+      }
+
+      setAppointmentId(created.id);
+      await loadAppointmentContext(created.id);
+      setStep("idle");
+    } catch (err: any) {
+      setError(err.message ?? "No se pudo preparar el pago de tu cita.");
+      setStep("idle");
+    }
+  }, [
+    appointmentType,
+    date,
+    doctorId,
+    fee,
+    goToConfirmation,
+    initialAppointmentId,
+    loadAppointmentContext,
+    notes,
+    reason,
+    time,
+  ]);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    void bootstrap();
+  }, [bootstrap]);
+
+  useEffect(() => {
+    if (effectiveMethods.stripe_card && stripePublishableKey) {
+      setSelectedMethod("stripe_card");
+      return;
+    }
+    if (effectiveMethods.paypal) {
+      setSelectedMethod("paypal");
+      return;
+    }
+    setSelectedMethod("paypal");
+  }, [effectiveMethods.paypal, effectiveMethods.stripe_card, stripePublishableKey]);
+
+  useEffect(() => {
+    const deadline =
+      paymentInfo?.appointment?.pay_deadline ??
+      extractPayDeadline(appointmentDetail);
+
+    if (!deadline) {
+      setCountdown(null);
+      return;
+    }
+
+    const update = () => setCountdown(formatCountdown(deadline));
+    update();
+    const timer = setInterval(update, 1000);
+
+    return () => clearInterval(timer);
+  }, [appointmentDetail, paymentInfo]);
+
+  async function handlePayLater() {
+    if (!appointmentId) {
+      setError("Aún estamos preparando tu cita. Intenta de nuevo en unos segundos.");
+      return;
+    }
+
+    goToConfirmation("pending_payment", {
+      appointmentId,
+      fee: summary.fee,
+      date: summary.date,
+      time: summary.time,
+      scheduledAt: summary.scheduledAt,
+    });
+  }
+
+  async function handlePaypalPay() {
+    if (!appointmentId) {
+      setError("Aún no se ha creado la cita para iniciar el pago.");
+      return;
+    }
+
+    setError("");
+    setStep("opening_paypal");
+
+    try {
+      const returnUrl =
+        Platform.OS === "web"
+          ? undefined
+          : Linking.createURL("payment-result", { scheme: "doctorcloud" });
+      const { approve_url } = await api.createAppointmentPayment(
+        appointmentId,
+        returnUrl,
+      );
+
+      if (Platform.OS === "web" || !returnUrl) {
+        await WebBrowser.openBrowserAsync(approve_url);
+      } else {
+        const result = await WebBrowser.openAuthSessionAsync(
+          approve_url,
+          returnUrl,
+        );
+        if (result.type === "success" && result.url) {
+          const callback = Linking.parse(result.url);
+          const callbackStatus =
+            typeof callback.queryParams?.status === "string"
+              ? callback.queryParams.status
+              : "";
+          if (callbackStatus === "cancelled") {
+            setStep("idle");
+            Alert.alert(
+              "Pago cancelado",
+              "PayPal no realizo ningun cargo y la cita sigue pendiente de pago.",
+            );
+            return;
+          }
+          if (callbackStatus === "error") {
+            throw new Error(
+              "PayPal no pudo confirmar el pago. La cita no fue marcada como pagada.",
+            );
+          }
+        }
+      }
+
+      await verifyPaymentOutcome(appointmentId);
+    } catch (err: any) {
+      setError(err.message ?? "No se pudo abrir PayPal.");
+      setStep("idle");
+    }
+  }
+
+  async function verifyPaymentOutcome(idToCheck: number) {
+    setStep("checking_payment");
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      try {
+        const detail = await api.getAppointmentDetail(idToCheck);
+        setAppointmentDetail(detail.data);
+
+        if (detail.data.payment_status === "paid" || detail.data.status === "confirmed") {
+          goToConfirmation("confirmed", {
+            appointmentId: idToCheck,
+            fee: detail.data.fee,
+            scheduledAt: detail.data.scheduled_at,
+          });
+          return;
         }
       } catch {
-        router.replace(
-          `/confirmacion?doctorId=${doctorId}&date=${date}&time=${time}&fee=${fee}&status=pending_payment&appointmentId=${apptId}` as any,
-        );
+        // Ignore transient refresh failures while the backend captures the payment.
       }
-    } catch (e: any) {
-      setError(e.message ?? "Error al procesar el pago.");
-      setStep("idle");
-    } finally {
-      setLoading(false);
+
+      await wait(1500);
     }
-  };
+
+    setStep("idle");
+    Alert.alert(
+      "Pago en revisión",
+      "Si ya completaste el pago, tu cita se confirmará en cuanto el servidor termine de validarlo.",
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
           <Icon name="arrow-left" size={24} color={MC.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Método de pago</Text>
-        <View style={{ width: 36 }} />
+        <Text style={styles.title}>Pago de consulta</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── PayPal Card ───────────────────────────── */}
-        <View style={styles.paypalCard}>
-          <View style={styles.paypalHeader}>
-            <Icon name="credit-card" size={28} color={MC.white} />
-            <Text style={styles.paypalTitle}>Pagar con PayPal</Text>
-          </View>
-          <Text style={styles.paypalAmount}>
-            ${fee.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
+      {step === "booting" ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={MC.primary} />
+          <Text style={styles.loadingTitle}>
+            {createdFromDraft ? "Creando tu cita..." : "Cargando opciones de pago..."}
           </Text>
-          <Text style={styles.paypalDesc}>
-            Serás redirigido a PayPal para completar el pago de forma segura.
+          <Text style={styles.loadingCaption}>
+            Estamos preparando el pago con los mismos datos de la versión web.
           </Text>
         </View>
+      ) : (
+        <>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <View style={styles.heroCard}>
+              <Text style={styles.heroDoctor}>{summary.doctorName}</Text>
+              {summary.specialty ? <Text style={styles.heroSpecialty}>{summary.specialty}</Text> : null}
 
-        {/* ── Summary ────────────────────────── */}
-        <View style={styles.summarySection}>
-          <Text style={styles.summaryTitle}>Resumen de pago</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Consulta</Text>
-            <Text style={styles.summaryAmount}>
-              ${fee.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>
-              ${fee.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Warning ───────────────────────── */}
-        <View style={styles.warningBox}>
-          <Icon name="warning" size={18} color="#D97706" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.warningTitle}>Plazo de pago: 2 horas</Text>
-            <Text style={styles.warningText}>
-              Si eliges pagar después, la cita quedará pendiente. Tienes 2 horas
-              para completar el pago, si no se cancelará automáticamente.
-            </Text>
-          </View>
-        </View>
-
-        {error ? (
-          <View style={styles.errorBox}>
-            <Icon name="warning" size={18} color="#B91C1C" />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        {step !== "idle" && (
-          <View style={styles.statusBox}>
-            <ActivityIndicator color={MC.primary} size="small" />
-            <Text style={styles.statusText}>
-              {step === "creating"
-                ? "Creando tu cita..."
-                : step === "paying"
-                  ? "Abriendo PayPal..."
-                  : "Verificando pago..."}
-            </Text>
-          </View>
-        )}
-
-        <View style={{ height: 60 }} />
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {/* Botón: No pagar ahora */}
-        <Pressable
-          style={[styles.secondaryBtn, loading && { opacity: 0.5 }]}
-          onPress={handleCreateOnly}
-          disabled={loading}
-        >
-          <Icon
-            name="clock"
-            size={18}
-            color={MC.textSecondary}
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.secondaryBtnText}>
-            No pagar ahora — quedará pendiente
-          </Text>
-        </Pressable>
-
-        {/* Botón: Pagar ahora con PayPal */}
-        <Pressable
-          style={[styles.payBtn, loading && { opacity: 0.6 }]}
-          onPress={handlePayNow}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={MC.white} />
-          ) : (
-            <View style={styles.payBtnContent}>
-              <Icon
-                name="credit-card"
-                size={18}
-                color={MC.white}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.payBtnText}>
-                Pagar con PayPal — ${fee.toFixed(2)}
-              </Text>
+              <View style={styles.detailList}>
+                <SummaryRow label="Fecha" value={formatDateLine(summary)} />
+                <SummaryRow
+                  label="Modalidad"
+                  value={formatTypeLabel(summary.type)}
+                  pill
+                />
+                <SummaryRow
+                  label="Total a pagar"
+                  value={`$${summary.fee.toFixed(2)} MXN`}
+                  accent
+                />
+              </View>
             </View>
-          )}
-        </Pressable>
-      </View>
+
+            <View style={styles.deadlineCard}>
+              <View style={styles.deadlineIcon}>
+                <Icon name="clock" size={18} color={MC.primary} />
+              </View>
+              <View style={styles.deadlineTextWrap}>
+                <Text style={styles.deadlineLabel}>Tiempo restante para pagar</Text>
+                <Text style={styles.deadlineValue}>
+                  {countdown ?? "El plazo comienza cuando la cita queda registrada"}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionEyebrow}>Selecciona método de pago</Text>
+
+            <PaymentMethodCard
+              active={selectedMethod === "stripe_card"}
+              disabled={!effectiveMethods.stripe_card}
+              icon={<StripeIcon width={28} height={28} />}
+              title="Tarjeta de crédito / débito"
+              subtitle="Formulario embebido dentro de la app con Stripe."
+              onPress={() => setSelectedMethod("stripe_card")}
+            >
+              {selectedMethod === "stripe_card" ? (
+                effectiveMethods.stripe_card ? (
+                  stripePublishableKey ? (
+                    <StripeProvider
+                      publishableKey={stripePublishableKey}
+                      stripeAccountId={stripeAccountId || undefined}
+                      setReturnUrlSchemeOnAndroid
+                      urlScheme="doctorcloud"
+                    >
+                      <StripeCardSection
+                        appointmentId={appointmentId}
+                        cardholderName={cardholderName}
+                        onPaymentSettled={verifyPaymentOutcome}
+                        onPaymentError={setError}
+                        onPaymentStart={() => {
+                          setError("");
+                          setStep("processing_stripe");
+                        }}
+                        onPaymentEnd={() => setStep("idle")}
+                        value={cardholderName}
+                        onChangeValue={setCardholderName}
+                      />
+                    </StripeProvider>
+                  ) : (
+                    <InfoNotice kind="warning">
+                      Stripe no está disponible para esta cita porque faltan datos de configuración de pago.
+                    </InfoNotice>
+                  )
+                ) : (
+                  <InfoNotice kind="muted">
+                    {paymentInfo?.unavailable_reasons?.stripe_card ||
+                      "Stripe no está habilitado para este contexto según la configuración actual."}
+                  </InfoNotice>
+                )
+              ) : null}
+            </PaymentMethodCard>
+
+            <PaymentMethodCard
+              active={selectedMethod === "paypal"}
+              disabled={!effectiveMethods.paypal}
+              icon={<PayPalIcon width={28} height={28} />}
+              title="PayPal"
+              subtitle="Pago seguro en el navegador, igual al flujo actual de la app."
+              onPress={() => setSelectedMethod("paypal")}
+            >
+              {selectedMethod === "paypal" ? (
+                effectiveMethods.paypal ? (
+                  <View style={styles.paypalPanel}>
+                    <Text style={styles.paypalBody}>
+                      Abriremos PayPal en un navegador seguro para completar la autorización.
+                      Cuando el pago se apruebe volverás a la app para validar la cita.
+                    </Text>
+                    <Pressable
+                      style={[styles.primaryPayButton, step !== "idle" && styles.buttonDisabled]}
+                      onPress={() => void handlePaypalPay()}
+                      disabled={step !== "idle"}
+                    >
+                      {step === "opening_paypal" ? (
+                        <ActivityIndicator color={MC.white} />
+                      ) : (
+                        <>
+                          <PayPalIcon width={20} height={20} />
+                          <Text style={styles.primaryPayButtonText}>Continuar con PayPal</Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : (
+                  <InfoNotice kind="muted">
+                    {paymentInfo?.unavailable_reasons?.paypal ||
+                      "PayPal no está habilitado para esta cita según la configuración actual."}
+                  </InfoNotice>
+                )
+              ) : null}
+            </PaymentMethodCard>
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Icon name="warning" size={18} color={MC.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            {step === "checking_payment" ? (
+              <View style={styles.statusBox}>
+                <ActivityIndicator size="small" color={MC.primary} />
+                <Text style={styles.statusText}>
+                  Verificando el resultado del pago con el servidor...
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Pressable
+              style={styles.secondaryFooterButton}
+              onPress={() => void handlePayLater()}
+            >
+              <Text style={styles.secondaryFooterButtonText}>
+                {createdFromDraft ? "Pagar después" : "Volver"}
+              </Text>
+            </Pressable>
+
+            <View style={styles.footerSecureWrap}>
+              <Icon name="lock" size={14} color={MC.textSecondary} />
+              <Text style={styles.footerSecureText}>Pago encriptado - SSL seguro</Text>
+            </View>
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
 
-// Helper to make authenticated requests
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-  authenticated = true,
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) ?? {}),
+function StripeCardSection(props: {
+  appointmentId: number | null;
+  cardholderName: string;
+  value: string;
+  onChangeValue: (value: string) => void;
+  onPaymentStart: () => void;
+  onPaymentEnd: () => void;
+  onPaymentError: (message: string) => void;
+  onPaymentSettled: (appointmentId: number) => Promise<void>;
+}) {
+  const {
+    appointmentId,
+    value,
+    onChangeValue,
+    cardholderName,
+    onPaymentEnd,
+    onPaymentError,
+    onPaymentSettled,
+    onPaymentStart,
+  } = props;
+  const { confirmPayment, loading } = useConfirmPayment();
+  const [cardComplete, setCardComplete] = useState(false);
+
+  const handleStripeSubmit = async () => {
+    if (!appointmentId) {
+      onPaymentError("La cita aún no está lista para cobrarse con Stripe.");
+      return;
+    }
+
+    if (!cardComplete) {
+      onPaymentError("Completa los datos de la tarjeta para continuar.");
+      return;
+    }
+
+    onPaymentStart();
+
+    try {
+      const intent = await api.createAppointmentStripeIntent(appointmentId);
+      const { error } = await confirmPayment(intent.client_secret, {
+        paymentMethodType: "Card",
+        paymentMethodData: {
+          billingDetails: {
+            name: cardholderName.trim() || "Paciente",
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message ?? "Stripe no pudo confirmar el pago.");
+      }
+
+      const paymentIntentId = intent.client_secret.split("_secret_")[0];
+      if (paymentIntentId) {
+        await api.confirmAppointmentStripePayment(appointmentId, paymentIntentId);
+      }
+
+      await onPaymentSettled(appointmentId);
+    } catch (err: any) {
+      onPaymentError(buildStripeErrorMessage(err));
+    } finally {
+      onPaymentEnd();
+    }
   };
-  if (authenticated) {
-    const { getToken } = await import("@/services/api");
-    const token = await getToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  return (
+    <View style={styles.stripePanel}>
+      <Text style={styles.fieldLabel}>Nombre en la tarjeta</Text>
+      <TextInput
+        autoCapitalize="words"
+        autoCorrect={false}
+        onChangeText={onChangeValue}
+        placeholder="Cómo aparece en la tarjeta"
+        placeholderTextColor={MC.textMuted}
+        style={styles.textField}
+        value={value}
+      />
+
+      <Text style={styles.fieldLabel}>Datos de la tarjeta</Text>
+      <View style={styles.cardFieldWrap}>
+        <CardField
+          autofocus
+          cardStyle={{
+            backgroundColor: MC.surface,
+            borderColor: MC.border,
+            borderWidth: 0,
+            borderRadius: 12,
+            cursorColor: MC.primary,
+            placeholderColor: MC.textMuted,
+            textColor: MC.textPrimary,
+            textErrorColor: MC.error,
+            fontSize: 15,
+          }}
+          countryCode="MX"
+          onCardChange={(details) => setCardComplete(Boolean(details.complete))}
+          postalCodeEnabled={false}
+          placeholders={{
+            number: "1234 1234 1234 1234",
+          }}
+          style={styles.cardField}
+        />
+      </View>
+
+      <Pressable
+        style={[styles.primaryPayButton, (loading || !cardComplete) && styles.buttonDisabled]}
+        onPress={() => void handleStripeSubmit()}
+        disabled={loading || !cardComplete}
+      >
+        {loading ? (
+          <ActivityIndicator color={MC.white} />
+        ) : (
+          <>
+            <StripeIcon width={20} height={20} />
+            <Text style={styles.primaryPayButtonText}>Continuar con Stripe</Text>
+          </>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
+function PaymentMethodCard(props: {
+  active: boolean;
+  disabled?: boolean;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  children?: ReactNode;
+}) {
+  const { active, children, disabled, icon, onPress, subtitle, title } = props;
+
+  return (
+    <View style={[styles.methodCard, active && styles.methodCardActive, disabled && styles.methodCardDisabled]}>
+      <Pressable disabled={disabled} onPress={onPress} style={styles.methodHeader}>
+        <View style={styles.methodHeaderLeft}>
+          <View style={styles.methodIconBox}>{icon}</View>
+          <View style={styles.methodTextWrap}>
+            <Text style={styles.methodTitle}>{title}</Text>
+            <Text style={styles.methodSubtitle}>{subtitle}</Text>
+          </View>
+        </View>
+        <Icon
+          name={active ? "caret-left" : "caret-right"}
+          size={18}
+          color={disabled ? MC.textMuted : MC.textSecondary}
+          style={active ? styles.caretExpanded : styles.caretCollapsed}
+        />
+      </Pressable>
+      {active ? <View style={styles.methodBody}>{children}</View> : null}
+    </View>
+  );
+}
+
+function SummaryRow(props: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  pill?: boolean;
+}) {
+  const { accent, label, pill, value } = props;
+
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      {pill ? (
+        <View style={styles.summaryPill}>
+          <Text style={styles.summaryPillText}>{value}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.summaryValue, accent && styles.summaryValueAccent]}>{value}</Text>
+      )}
+    </View>
+  );
+}
+
+function InfoNotice(props: { kind: "warning" | "muted"; children: ReactNode }) {
+  const isWarning = props.kind === "warning";
+
+  return (
+    <View style={[styles.infoNotice, isWarning ? styles.infoNoticeWarning : styles.infoNoticeMuted]}>
+      <Icon
+        name={isWarning ? "warning" : "info"}
+        size={16}
+        color={isWarning ? MC.star : MC.textSecondary}
+      />
+      <Text style={[styles.infoNoticeText, isWarning && styles.infoNoticeTextWarning]}>
+        {props.children}
+      </Text>
+    </View>
+  );
+}
+
+function buildSummary(input: {
+  paymentInfo: api.AppointmentPaymentInfo | null;
+  appointmentDetail: api.Appointment | null;
+  date: string;
+  time: string;
+  scheduledAt: string;
+  appointmentType: string;
+  fee: number;
+  doctorName: string;
+  specialty: string;
+}) {
+  if (input.paymentInfo?.appointment) {
+    const normalized = normalizeSummaryDateTime("", "", input.paymentInfo.appointment.scheduled_at);
+    return {
+      doctorName: `Dr. ${input.paymentInfo.appointment.doctor_name}`,
+      specialty: input.paymentInfo.appointment.specialty || input.specialty,
+      date: normalized.date,
+      time: normalized.time,
+      type: normalizeAppointmentType(input.paymentInfo.appointment.type),
+      fee: coerceMoney(input.paymentInfo.appointment.amount, input.fee),
+      scheduledAt: input.paymentInfo.appointment.scheduled_at,
+    };
   }
-  const res = await fetch(`https://doctorcloud.digital/app/api/mobile${path}`, {
-    ...options,
-    headers,
+
+  if (input.appointmentDetail) {
+    const normalized = normalizeSummaryDateTime("", "", input.appointmentDetail.scheduled_at);
+    const rawDetail = input.appointmentDetail as api.Appointment & {
+      consultation_fee?: number | string | null;
+    };
+
+    return {
+      doctorName: `Dr. ${input.appointmentDetail.doctor_name}`,
+      specialty: input.appointmentDetail.specialty || input.specialty,
+      date: normalized.date,
+      time: normalized.time,
+      type: normalizeAppointmentType(input.appointmentDetail.type),
+      fee: coerceMoney(rawDetail.fee, coerceMoney(rawDetail.consultation_fee, input.fee)),
+      scheduledAt: input.appointmentDetail.scheduled_at,
+    };
+  }
+
+  const normalized = normalizeSummaryDateTime(input.date, input.time, input.scheduledAt);
+  return {
+    doctorName: input.doctorName ? `Dr. ${input.doctorName}` : "Consulta médica",
+    specialty: input.specialty,
+    date: normalized.date,
+    time: normalized.time,
+    type: input.appointmentType,
+    fee: coerceMoney(input.fee),
+    scheduledAt: input.scheduledAt,
+  };
+}
+
+function coerceMoney(value: unknown, fallback = 0) {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseFloat(value)
+        : Number.NaN;
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeSummaryDateTime(date: string, time: string, scheduledAt: string) {
+  if (scheduledAt) {
+    const parsed = new Date(scheduledAt);
+    if (!Number.isNaN(parsed.getTime())) {
+      const localIso = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+
+      return {
+        date: localIso.slice(0, 10),
+        time: localIso.slice(11, 16),
+      };
+    }
+  }
+
+  return {
+    date,
+    time,
+  };
+}
+
+function normalizeAppointmentType(type?: string | null) {
+  const value = String(type ?? "").toLowerCase();
+  if (value === "videoconsulta" || value === "virtual") return "videoconsulta";
+  if (value === "domicilio" || value === "home_visit") return "domicilio";
+  return "presencial";
+}
+
+function formatTypeLabel(type: string) {
+  if (type === "videoconsulta") return "Videoconsulta";
+  if (type === "domicilio") return "A domicilio";
+  return "Presencial";
+}
+
+function formatDateLine(summary: {
+  date: string;
+  time: string;
+}) {
+  if (!summary.date) return "Pendiente";
+
+  const dateText = new Date(`${summary.date}T12:00:00`).toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-  return json as T;
+  const timeText = summary.time ? formatTime12(summary.time) : "";
+
+  return timeText ? `${dateText}, ${timeText}` : dateText;
+}
+
+function formatTime12(value: string) {
+  const [h, m] = value.split(":");
+  const hour = Number.parseInt(h ?? "0", 10);
+  const suffix = hour >= 12 ? "p.m." : "a.m.";
+  const normalizedHour = hour % 12 || 12;
+  return `${normalizedHour}:${m ?? "00"} ${suffix}`;
+}
+
+function formatCountdown(deadline: string) {
+  const remaining = new Date(deadline).getTime() - Date.now();
+  if (remaining <= 0) return "Tiempo agotado";
+
+  const hours = Math.floor(remaining / 3600000);
+  const minutes = Math.floor((remaining % 3600000) / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function extractPayDeadline(appointment: api.Appointment | null) {
+  if (!appointment) return null;
+  const candidate = (appointment as any).pay_deadline;
+  return typeof candidate === "string" && candidate.trim() ? candidate : null;
+}
+
+function isMissingMobilePaymentInfo(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("/payment-info") ||
+    message.includes("HTTP 404") ||
+    message.includes("Status: 404")
+  );
+}
+
+function buildStripeErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("HTTP 404") || message.includes("Status: 404")) {
+    return "No se pudo iniciar el pago con Stripe para esta cita.";
+  }
+  return message || "No se pudo procesar el pago con Stripe.";
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MC.background },
+  container: {
+    flex: 1,
+    backgroundColor: MC.background,
+  },
   header: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backBtn: {
-    width: 36,
+  backButton: {
+    alignItems: "center",
     height: 36,
     justifyContent: "center",
-    alignItems: "center",
+    width: 36,
   },
   title: {
+    color: MC.textPrimary,
     flex: 1,
-    textAlign: "center",
     fontSize: 18,
     fontWeight: "700",
-    color: MC.textPrimary,
+    textAlign: "center",
   },
-
-  paypalCard: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    backgroundColor: "#003087",
-    borderRadius: 16,
-    padding: 24,
+  headerSpacer: {
+    width: 36,
   },
-  paypalHeader: {
-    flexDirection: "row",
+  loadingState: {
     alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 28,
   },
-  paypalTitle: { color: MC.white, fontSize: 20, fontWeight: "700" },
-  paypalAmount: {
-    color: MC.white,
-    fontSize: 32,
+  loadingTitle: {
+    color: MC.textPrimary,
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  loadingCaption: {
+    color: MC.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  scrollContent: {
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  heroCard: {
+    backgroundColor: MC.surface,
+    borderColor: MC.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+  },
+  heroDoctor: {
+    color: MC.textPrimary,
+    fontSize: 22,
     fontWeight: "800",
     textAlign: "center",
-    marginBottom: 8,
   },
-  paypalDesc: {
-    color: MC.white,
+  heroSpecialty: {
+    color: MC.textSecondary,
     fontSize: 14,
-    opacity: 0.8,
+    marginTop: 6,
     textAlign: "center",
   },
-
-  summarySection: { paddingHorizontal: 20, paddingTop: 24 },
-  summaryTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: MC.textPrimary,
-    marginBottom: 12,
+  detailList: {
+    gap: 12,
+    marginTop: 20,
   },
   summaryRow: {
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
   },
-  summaryLabel: { fontSize: 14, color: MC.textSecondary },
-  summaryAmount: { fontSize: 14, color: MC.textPrimary, fontWeight: "500" },
-  summaryDivider: { height: 1, backgroundColor: MC.border, marginVertical: 8 },
-  totalLabel: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
-  totalAmount: { fontSize: 16, fontWeight: "700", color: MC.primary },
-
-  warningBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginHorizontal: 20,
-    marginTop: 20,
-    backgroundColor: "#FEF3C7",
-    borderRadius: 12,
-    padding: 14,
-    borderLeftWidth: 3,
-    borderLeftColor: "#F59E0B",
+  summaryLabel: {
+    color: MC.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
   },
-  warningTitle: {
+  summaryValue: {
+    color: MC.textPrimary,
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 4,
+    textAlign: "right",
   },
-  warningText: { fontSize: 12, color: "#92400E", lineHeight: 18 },
-
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginTop: 12,
-    backgroundColor: "#FEE2E2",
-    borderRadius: 10,
-    padding: 12,
+  summaryValueAccent: {
+    color: MC.primary,
+    fontSize: 16,
   },
-  errorText: { color: "#B91C1C", fontSize: 14, flex: 1 },
-
-  statusBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginHorizontal: 20,
-    marginTop: 12,
+  summaryPill: {
     backgroundColor: MC.primaryLight,
-    borderRadius: 10,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  summaryPillText: {
+    color: MC.primary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  deadlineCard: {
+    alignItems: "center",
+    backgroundColor: MC.warningSoft,
+    borderColor: MC.warningBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 18,
+    padding: 16,
+  },
+  deadlineIcon: {
+    alignItems: "center",
+    backgroundColor: MC.card,
+    borderRadius: 12,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  deadlineTextWrap: {
+    flex: 1,
+  },
+  deadlineLabel: {
+    color: MC.star,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  deadlineValue: {
+    color: MC.star,
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  sectionEyebrow: {
+    color: MC.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    marginBottom: 10,
+    marginTop: 24,
+    textTransform: "uppercase",
+  },
+  methodCard: {
+    backgroundColor: MC.background,
+    borderColor: MC.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    overflow: "hidden",
+  },
+  methodCardActive: {
+    borderColor: MC.primary,
+    shadowColor: MC.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+  },
+  methodCardDisabled: {
+    opacity: 0.7,
+  },
+  methodHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  methodHeaderLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    flex: 1,
+    gap: 12,
+  },
+  methodIconBox: {
+    alignItems: "center",
+    backgroundColor: MC.surface,
+    borderRadius: 12,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  methodTextWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  methodTitle: {
+    color: MC.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  methodSubtitle: {
+    color: MC.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  caretExpanded: {
+    transform: [{ rotate: "-90deg" }],
+  },
+  caretCollapsed: {
+    transform: [{ rotate: "90deg" }],
+  },
+  methodBody: {
+    borderTopColor: MC.border,
+    borderTopWidth: 1,
+    padding: 16,
+  },
+  stripePanel: {
+    gap: 12,
+  },
+  fieldLabel: {
+    color: MC.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  textField: {
+    backgroundColor: MC.surface,
+    borderColor: MC.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    color: MC.textPrimary,
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  cardFieldWrap: {
+    backgroundColor: MC.surface,
+    borderColor: MC.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 58,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  cardField: {
+    height: 44,
+    width: "100%",
+  },
+  primaryPayButton: {
+    alignItems: "center",
+    backgroundColor: MC.primary,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 4,
+    minHeight: 54,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  primaryPayButtonText: {
+    color: MC.white,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
+  paypalPanel: {
+    gap: 14,
+  },
+  paypalBody: {
+    color: MC.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  infoNotice: {
+    alignItems: "flex-start",
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 10,
     padding: 14,
   },
-  statusText: { color: MC.textPrimary, fontSize: 14, fontWeight: "500" },
-
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: MC.border,
-    backgroundColor: MC.background,
-    gap: 10,
+  infoNoticeWarning: {
+    backgroundColor: MC.warningSoft,
   },
-  secondaryBtn: {
+  infoNoticeMuted: {
+    backgroundColor: MC.surface,
+  },
+  infoNoticeText: {
+    color: MC.textSecondary,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  infoNoticeTextWarning: {
+    color: MC.star,
+  },
+  errorBox: {
+    alignItems: "flex-start",
+    backgroundColor: MC.errorSoft,
     borderRadius: 14,
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+    padding: 14,
+  },
+  errorText: {
+    color: MC.error,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  statusBox: {
+    alignItems: "center",
+    backgroundColor: MC.primaryLight,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+    padding: 14,
+  },
+  statusText: {
+    color: MC.textPrimary,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  footer: {
+    alignItems: "center",
+    borderTopColor: MC.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
     paddingVertical: 14,
+  },
+  secondaryFooterButton: {
+    borderColor: MC.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    minHeight: 44,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  secondaryFooterButtonText: {
+    color: MC.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  footerSecureWrap: {
     alignItems: "center",
     flexDirection: "row",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: MC.border,
+    gap: 6,
   },
-  secondaryBtnText: {
+  footerSecureText: {
     color: MC.textSecondary,
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "600",
   },
-  payBtn: {
-    backgroundColor: "#003087",
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  payBtnContent: { flexDirection: "row", alignItems: "center" },
-  payBtnText: { color: MC.white, fontSize: 17, fontWeight: "600" },
 });

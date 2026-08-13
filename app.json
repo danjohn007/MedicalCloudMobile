@@ -1,27 +1,62 @@
 {
   "expo": {
     "name": "Doctor Cloud",
-    "slug": "DoctorCloud",
+    "slug": "doctorcloud-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "doctorcloud",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon-ios-white.png",
       "bundleIdentifier": "com.doctorcloud.app",
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
+        "NSPhotoLibraryUsageDescription": "Doctor Cloud necesita acceder a tus fotos únicamente cuando decides elegir una imagen de perfil o adjuntar información clínica.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        },
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
+      "package": "com.doctorcloud.app",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyChbsHVh4KcliQm0Wv4qYWwUSmyEYabyt4"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "output": "static",
@@ -32,15 +67,66 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
           "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "imageWidth": 76,
+            "image": "./assets/images/splash-icon.png"
+          },
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "@stripe/stripe-react-native",
+        {}
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "locationWhenInUsePermission": "Permite que Doctor Cloud use tu ubicación para encontrar doctores cercanos, completar direcciones y validar consultorios."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Doctor Cloud necesita acceso a tus fotos para que puedas elegir una imagen de perfil.",
+          "cameraPermission": "Doctor Cloud necesita acceso a la cámara únicamente cuando decides escanear el código QR de una cita o tomar una imagen dentro de la app.",
+          "microphonePermission": false
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBMessaging"
+            ]
           }
         }
       ],
-      "expo-secure-store",
-      "expo-font"
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false,
@@ -49,9 +135,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "50396784-e9c3-4808-a918-2bd9901b4ad3"
+        "projectId": "30ece8c0-b773-4335-ba8d-cca8e572a9b1"
       }
     },
-    "owner": "webmasterid"
+    "owner": "impactos-digitales"
   }
 }

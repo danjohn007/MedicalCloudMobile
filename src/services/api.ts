@@ -1,5 +1,10 @@
 // ── Storage ──────────────────────────────────────────────
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+
 import { getSecure, removeSecure, setSecure } from "@/services/storage";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const TOKEN_KEY = "mc_jwt_token";
 const USER_KEY = "mc_user";
@@ -35,6 +40,38 @@ export interface AuthUser {
   role: string;
 }
 
+export interface PendingGoogleRegistration {
+  pending_token: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  provider?: "google" | "apple";
+}
+
+export type GoogleLoginResult =
+  | {
+      status: "authenticated";
+      token: string;
+      user: AuthUser;
+    }
+  | {
+      status: "pending_profile";
+      pending: PendingGoogleRegistration;
+    };
+
+export interface MedicalSearchTerm {
+  id: number;
+  name: string;
+  slug: string;
+  term_type: string;
+  aliases?: string;
+  description?: string;
+  priority?: string;
+  specialties?: string;
+  is_primary_match?: boolean;
+  is_specialty_match?: boolean;
+}
+
 export interface Doctor {
   id: number;
   name: string;
@@ -50,7 +87,33 @@ export interface Doctor {
   telemedicine_fee?: number;
   home_visit_fee?: number;
   address?: string;
+  state?: string;
   duration_minutes?: number;
+  lat?: number | null;
+  lng?: number | null;
+  distance_meters?: number | null;
+  profile_score?: number | null;
+  avatar_url?: string | null;
+  email?: string;
+  cedula?: string | null;
+  search_terms?: MedicalSearchTerm[];
+  selected_search_terms?: MedicalSearchTerm[];
+  available_search_terms?: MedicalSearchTerm[];
+  public_expertise_text?: string;
+  public_expertise_tags?: string[];
+  search_keywords_text?: string;
+  consultation_payment_method?: "manual_only" | "paypal" | "stripe" | "both" | string;
+  consultation_payments_enabled?: boolean;
+  paypal_email?: string;
+  paypal_merchant_id?: string;
+  stripe_connect_account_id?: string;
+  stripe_connect_account_status?: string;
+  stripe_connect_charges_enabled?: boolean;
+}
+
+export interface ClinicDirectoryScope {
+  kind: "clinic" | "independent";
+  clinic_name: string | null;
 }
 
 export interface Appointment {
@@ -80,7 +143,36 @@ export interface Appointment {
   meeting_url?: string | null;
   jitsi_room?: string | null;
   jitsi_url?: string | null;
+  pay_deadline?: string | null;
 }
+
+export interface MobileRegisterPayload {
+  role: "doctor" | "patient";
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  cedula?: string;
+  specialty?: string;
+  city?: string;
+  state?: string;
+  accepted_terms_privacy: boolean;
+  sensitive_health_data_consent: boolean;
+  adult_or_guardian_confirmation: boolean;
+}
+
+export type MobileRegisterResult =
+  | {
+      ok?: boolean;
+      status: "authenticated";
+      token: string;
+      user: AuthUser;
+    }
+  | {
+      ok?: boolean;
+      status: "pending_approval";
+      message: string;
+    };
 
 export interface AppointmentDetail {
   data: Appointment & {
@@ -89,11 +181,54 @@ export interface AppointmentDetail {
   };
 }
 
+export interface AppointmentPaymentInfo {
+  ok?: boolean;
+  stripe_publishable_key?: string;
+  appointment: {
+    id: number;
+    doctor_name: string;
+    specialty: string;
+    type: string;
+    scheduled_at: string;
+    pay_deadline: string | null;
+    amount: number;
+    reason?: string;
+  };
+  methods: {
+    stripe_card: boolean;
+    paypal: boolean;
+  };
+  unavailable_reasons?: {
+    stripe_card?: string;
+    paypal?: string;
+  };
+  doctor_payment_destination?: {
+    type: string;
+    enabled: boolean;
+    method: string;
+    stripe_account_id?: string;
+  };
+}
+
+export interface AppointmentStripeIntent {
+  ok?: boolean;
+  publishable_key: string;
+  client_secret: string;
+  stripe_account_id?: string;
+  payment_method: string;
+  amount: number;
+  appt_id: number;
+}
+
 export interface Message {
   id: number;
   doctor_id: number;
-  doctor_name: string;
+  doctor_name: string | null;
   doctor_photo: string | null;
+  other_user_id?: number;
+  other_name?: string | null;
+  other_photo?: string | null;
+  other_role?: "doctor" | "patient" | string;
   last_message: string | null;
   unread: number;
   updated_at: string;
@@ -113,6 +248,18 @@ export interface ClinicalNote {
   signed_at: string | null;
 }
 
+export interface PatientProfileCompletionMissingItem {
+  key: string;
+  label: string;
+  link: string;
+}
+
+export interface PatientProfileCompletion {
+  percentage: number;
+  complete: boolean;
+  missing: PatientProfileCompletionMissingItem[];
+}
+
 export interface ProfileData extends AuthUser {
   phone?: string;
   birth_date?: string;
@@ -124,8 +271,12 @@ export interface ProfileData extends AuthUser {
   occupation?: string;
   height_cm?: number;
   weight_kg?: number;
+  lat?: number | null;
+  lng?: number | null;
+  doctor_access_code?: string | null;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
+  profile_completion?: PatientProfileCompletion;
 }
 
 export interface ExpedienteData {
@@ -170,7 +321,555 @@ export interface FinancialHistory {
   payments: FinancialPayment[];
 }
 
+export interface DoctorDashboardStats {
+  total_patients: number;
+  today_appts: number;
+  week_appts: number;
+  month_appts: number;
+  pending_appts: number;
+  completed_total: number;
+  no_show_rate: number;
+  new_patients: number;
+  month_revenue: number;
+  year_revenue: number;
+  avg_rating: number;
+  review_count: number;
+  active_rx: number;
+  unread_chats: number;
+}
+
+export interface DoctorDashboardProfile {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  specialty: string;
+  subspecialty?: string | null;
+}
+
+export interface DoctorAppointmentItem {
+  id: number;
+  patient_id: number;
+  scheduled_at: string;
+  end_at?: string | null;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
+  pay_deadline?: string | null;
+  type: string;
+  status: string;
+  reason?: string | null;
+  fee: number;
+  base_fee?: number;
+  price_adjustment_type?: "none" | "fixed" | "percent_discount" | "percent_increase" | "waived" | string;
+  price_adjustment_value?: number | null;
+  price_adjustment_note?: string | null;
+  manual_paid_total?: number;
+  manual_paid_at?: string | null;
+  payment_status?: string | null;
+  patient_name: string;
+  patient_avatar?: string | null;
+  patient_phone?: string | null;
+  location: string;
+  specialty?: string | null;
+}
+
+export type DoctorAppointmentScope =
+  | "today"
+  | "upcoming"
+  | "completed"
+  | "in_consultation";
+
+export interface DoctorPatientSummary {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  phone?: string | null;
+  birth_date?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  blood_type?: string | null;
+  city?: string | null;
+  address?: string | null;
+  allergies?: string | null;
+  chronic_conditions?: string | null;
+  current_medications?: string | null;
+  last_appointment?: string | null;
+  total_appointments: number;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+}
+
+export interface DoctorSettingsResponse {
+  ok?: boolean;
+  data: Doctor;
+}
+
+export interface DoctorLinkPatientResult {
+  ok?: boolean;
+  message: string;
+  patient?: DoctorPatientSummary;
+}
+
+export interface DoctorRegisterPatientPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  gender?: string;
+  birth_date?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+export interface DoctorProfileCompletionMissingItem {
+  key: string;
+  label: string;
+  link: string;
+}
+
+export interface DoctorProfileCompletion {
+  percentage: number;
+  complete: boolean;
+  missing: DoctorProfileCompletionMissingItem[];
+}
+
+export interface DoctorDashboardData {
+  ok?: boolean;
+  doctor: DoctorDashboardProfile;
+  stats: DoctorDashboardStats;
+  profile_completion: DoctorProfileCompletion;
+  upcoming: DoctorAppointmentItem[];
+  today: DoctorAppointmentItem[];
+  recent_patients: DoctorPatientSummary[];
+}
+
+export interface DoctorAvailabilityScheduleEntry {
+  day_of_week: number;
+  start_time?: string | null;
+  end_time?: string | null;
+  slot_duration_minutes?: number;
+  is_active?: number;
+  break_start?: string | null;
+  break_end?: string | null;
+  home_visit_enabled?: number;
+  home_visit_daily_limit?: number;
+}
+
+export interface DoctorAvailabilityOverrideEntry {
+  override_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  is_off?: number;
+  reason?: string | null;
+}
+
+export interface DoctorAvailabilitySettingsData {
+  ok?: boolean;
+  schedule: DoctorAvailabilityScheduleEntry[];
+  overrides: DoctorAvailabilityOverrideEntry[];
+}
+
+export interface DoctorPatientSnapshot {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  birth_date?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  blood_type?: string | null;
+  phone?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  occupation?: string | null;
+  allergies?: string | null;
+  chronic_conditions?: string | null;
+  current_medications?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+}
+
+export interface DoctorHistoryEntry {
+  id?: number;
+  category?: string | null;
+  description?: string | null;
+  date_recorded?: string | null;
+  created_at?: string | null;
+  doctor_name?: string | null;
+}
+
+export interface DoctorPrescriptionEntry {
+  id: number;
+  patient_id?: number | null;
+  patient_name?: string | null;
+  appointment_id?: number | null;
+  diagnosis?: string | null;
+  medications?: string | null;
+  instructions?: string | null;
+  valid_days?: number | null;
+  issued_date?: string | null;
+  status?: string | null;
+  doctor_name?: string | null;
+  appt_date?: string | null;
+  appt_type?: string | null;
+}
+
+export interface DoctorNoteEntry {
+  id: number;
+  patient_id?: number | null;
+  patient_name?: string | null;
+  patient_avatar_url?: string | null;
+  appointment_id?: number | null;
+  subjective?: string | null;
+  objective?: string | null;
+  assessment?: string | null;
+  plan_text?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  is_signed?: boolean;
+  signed_at?: string | null;
+  scheduled_at?: string | null;
+  appt_type?: string | null;
+  appt_reason?: string | null;
+}
+
+export interface DoctorSoapEntry {
+  id: number;
+  appointment_id?: number | null;
+  subjective?: string | null;
+  objective?: string | null;
+  assessment?: string | null;
+  plan_text?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  is_signed?: boolean;
+  signed_at?: string | null;
+  scheduled_at?: string | null;
+  appt_type?: string | null;
+  appt_reason?: string | null;
+}
+
+export interface DoctorPatientSnapshotData {
+  ok?: boolean;
+  patient: DoctorPatientSnapshot;
+  record: Record<string, any> | null;
+  age?: number | null;
+  updatedAt?: string;
+}
+
+export interface DoctorPatientHistoryData {
+  ok?: boolean;
+  patient: DoctorPatientSnapshot;
+  notes: DoctorSoapEntry[];
+  prescriptions: DoctorPrescriptionEntry[];
+  history: DoctorHistoryEntry[];
+}
+
+export interface DoctorAppointmentDetailData {
+  ok?: boolean;
+  data: DoctorAppointmentItem & {
+    patient_email?: string | null;
+    patient_birth_date?: string | null;
+    patient_age?: number | null;
+    patient_gender?: string | null;
+    patient_blood_type?: string | null;
+    patient_allergies?: string | null;
+    patient_current_medications?: string | null;
+    video_room_id?: string | null;
+    note?: DoctorSoapEntry | null;
+    prescription?: DoctorPrescriptionEntry | null;
+    prior_consultations?: number;
+  };
+}
+
+export type DoctorAppointmentStatusAction =
+  | "confirmed"
+  | "in_consultation"
+  | "cancelled"
+  | "no_show";
+
+export interface DoctorAppointmentSoapData {
+  ok?: boolean;
+  appointment: DoctorAppointmentDetailData["data"];
+  medical_record: Record<string, any> | null;
+  note: DoctorSoapEntry | null;
+  prescription: DoctorPrescriptionEntry | null;
+}
+
+export interface DoctorPrescriptionsData {
+  ok?: boolean;
+  summary: {
+    total: number;
+    active: number;
+    this_month: number;
+    linked_to_appointments: number;
+  };
+  data: DoctorPrescriptionEntry[];
+}
+
+export interface DoctorNotesData {
+  ok?: boolean;
+  data: DoctorNoteEntry[];
+}
+
+export interface DoctorPatientDocumentsData {
+  ok?: boolean;
+  patient?: {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
+  } | null;
+  data: PatientDocument[];
+}
+
+export interface DoctorPatientDocumentUploadInput {
+  uri: string;
+  name: string;
+  type: string;
+  title?: string;
+  document_type?: string;
+  notes?: string;
+}
+
+export interface DoctorConsultationTemplate {
+  id: number;
+  label: string;
+  tone: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  diagnosis: string;
+  usage_notes: string;
+  source: "custom" | "default";
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface DoctorConsultationTemplatesData {
+  ok?: boolean;
+  storage_ready?: boolean;
+  data: DoctorConsultationTemplate[];
+  defaults: DoctorConsultationTemplate[];
+  library: DoctorConsultationTemplate[];
+}
+
+export interface DoctorConsultationTemplatePayload {
+  template_id?: number;
+  name: string;
+  color_hex?: string;
+  usage_notes?: string;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+  diagnosis?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface DoctorFinancialConsultationEntry {
+  id: number;
+  appointment_id?: number | null;
+  patient_name?: string | null;
+  amount: number;
+  currency: string;
+  method?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  scheduled_at?: string | null;
+  appointment_type?: string | null;
+  paypal_order_id?: string | null;
+}
+
+export interface DoctorFinancialSubscriptionEntry {
+  id: number;
+  amount: number;
+  currency: string;
+  method?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  paypal_order_id?: string | null;
+}
+
+export interface DoctorFinancialHistoryData {
+  ok?: boolean;
+  summary: {
+    this_month: number;
+    this_year: number;
+    total_consultations: number;
+  };
+  consultations: DoctorFinancialConsultationEntry[];
+  subscriptions: DoctorFinancialSubscriptionEntry[];
+}
+
+export interface DoctorSoapPayload {
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan_text?: string;
+  rx_diagnosis?: string;
+  rx_medications?: string;
+  rx_instructions?: string;
+  rx_valid_days?: number;
+}
+
+export interface DoctorSoapAutosaveResult {
+  ok?: boolean;
+  message: string;
+  note: DoctorSoapEntry | null;
+  saved_at?: string | null;
+}
+
+export interface DoctorSoapSaveResult {
+  ok?: boolean;
+  message: string;
+  note_id: number;
+  note_saved: boolean;
+  prescription_saved: boolean;
+}
+
+export interface DoctorSignNoteResult {
+  ok?: boolean;
+  message: string;
+  signed_at?: string | null;
+}
+
+export interface DoctorCreateAppointmentPayload {
+  patient_id: number;
+  date: string;
+  time: string;
+  type: "presential" | "virtual";
+  reason: string;
+  notes?: string;
+  waive_payment?: boolean;
+  price_adjustment_type?: "none" | "fixed" | "percent_discount" | "percent_increase";
+  price_adjustment_value?: number;
+  price_adjustment_note?: string;
+}
+
+export interface DoctorCreateAppointmentResult {
+  ok?: boolean;
+  id: number;
+  status: string;
+  payment_status: string;
+  fee: number;
+  message: string;
+}
+
+export interface DoctorAppointmentCheckinResult {
+  ok?: boolean;
+  message: string;
+  in_consultation: boolean;
+}
+
+export interface DoctorAppointmentCompletePayload {
+  checkout_code?: string;
+}
+
+export interface DoctorAppointmentCompleteResult {
+  ok?: boolean;
+  message: string;
+  status: string;
+}
+
+export interface DoctorManualPaymentPayload {
+  amount: number;
+  method?: "cash" | "transfer" | "card" | "other";
+  note?: string;
+}
+
+export interface DoctorManualPaymentResult {
+  ok?: boolean;
+  message: string;
+  manual_paid_total: number;
+  payment_status: string;
+  status: string;
+}
+
+export interface DoctorAvailabilitySavePayload {
+  schedule: {
+    day: number;
+    enabled: boolean;
+    start: string;
+    end: string;
+    duration?: number;
+    break_start?: string | null;
+    break_end?: string | null;
+    home_visit_enabled?: boolean;
+    home_visit_daily_limit?: number;
+  }[];
+}
+
+export interface DoctorAvailabilityOverridePayload {
+  date: string;
+  clear?: boolean;
+  is_off?: boolean;
+  start_time?: string;
+  end_time?: string;
+  reason?: string;
+}
+
+export interface DoctorCreateNotePayload {
+  patient_id: number;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan_text?: string;
+}
+
+export interface DoctorCreatePrescriptionPayload {
+  patient_id: number;
+  diagnosis: string;
+  medications: string;
+  instructions?: string;
+  valid_days?: number;
+}
+
 const API_BASE = "https://doctorcloud.digital/app/api/mobile";
+
+function getWebBaseUrl(): string {
+  return API_BASE.replace(/\/api\/mobile\/?$/, "/");
+}
+
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseFloat(value)
+        : Number.NaN;
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeAppointment(raw: Record<string, any>): Appointment {
+  const locationParts = [raw.address, raw.city, raw.state]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean);
+
+  return {
+    ...raw,
+    id: Number(raw.id),
+    doctor_id: Number(raw.doctor_id),
+    scheduled_at: String(raw.scheduled_at ?? ""),
+    status: String(raw.status ?? ""),
+    type: String(raw.type ?? ""),
+    fee: toNumber(raw.fee ?? raw.consultation_fee),
+    doctor_name: String(raw.doctor_name ?? ""),
+    specialty: String(raw.specialty ?? ""),
+    doctor_photo: raw.doctor_photo ?? null,
+    location:
+      String(raw.location ?? "").trim() ||
+      (locationParts.length ? locationParts.join(", ") : ""),
+  };
+}
 
 // ── Core fetch ────────────────────────────────────────────
 async function request<T>(
@@ -190,8 +889,26 @@ async function request<T>(
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const text = await res.text();
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 15_000);
+
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal ?? abortController.signal,
+    });
+    text = await res.text();
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      throw new Error("El servidor tardó demasiado en responder. Intenta de nuevo.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   let json: any;
   try {
@@ -216,15 +933,136 @@ export async function login(email: string, password: string) {
   );
 }
 
-export async function register(
-  name: string,
-  email: string,
-  password: string,
-  phone?: string,
-) {
-  return request<{ token: string; user: AuthUser }>(
+export async function loginWithGoogle(): Promise<GoogleLoginResult> {
+  const redirectUri = Linking.createURL("login");
+  const startUrl = `${getWebBaseUrl()}auth/firebase/mobile?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri, {
+    preferEphemeralSession: false,
+  });
+
+  if (result.type === "cancel" || result.type === "dismiss") {
+    throw new Error("Inicio de sesión con Google cancelado.");
+  }
+
+  if (result.type !== "success" || !result.url) {
+    throw new Error("No se pudo completar el inicio de sesión con Google.");
+  }
+
+  const parsed = Linking.parse(result.url);
+  const params = parsed.queryParams ?? {};
+  const errorMessage = typeof params.error === "string" ? params.error : "";
+  const isPendingGoogle = params.pending_google === "1";
+
+  if (errorMessage) {
+    throw new Error(errorMessage);
+  }
+
+  if (isPendingGoogle) {
+    const pendingToken =
+      typeof params.pending_token === "string" ? params.pending_token : "";
+    const name = typeof params.name === "string" ? params.name : "";
+    const email = typeof params.email === "string" ? params.email : "";
+    const avatarUrl =
+      typeof params.avatar_url === "string" && params.avatar_url.trim() !== ""
+        ? params.avatar_url
+        : null;
+
+    if (!pendingToken || !name || !email) {
+      throw new Error("Google respondió sin los datos necesarios para completar tu registro.");
+    }
+
+    return {
+      status: "pending_profile",
+      pending: {
+        pending_token: pendingToken,
+        name,
+        email,
+        avatar_url: avatarUrl,
+      },
+    };
+  }
+
+  const token = typeof params.token === "string" ? params.token : "";
+  const idRaw = typeof params.id === "string" ? params.id : "";
+  const name = typeof params.name === "string" ? params.name : "";
+  const email = typeof params.email === "string" ? params.email : "";
+  const role = typeof params.role === "string" ? params.role : "";
+  const avatarUrl =
+    typeof params.avatar_url === "string" && params.avatar_url.trim() !== ""
+      ? params.avatar_url
+      : null;
+
+  if (!token || !idRaw || !name || !email || !role) {
+    throw new Error("Google respondió sin los datos de autenticación completos.");
+  }
+
+  return {
+    status: "authenticated",
+    token,
+    user: {
+      id: Number.parseInt(idRaw, 10),
+      name,
+      email,
+      avatar_url: avatarUrl,
+      role,
+    },
+  };
+}
+
+export async function loginWithNativeSocial(input: {
+  provider: "google" | "apple";
+  id_token: string;
+  authorization_code?: string;
+  name?: string;
+}): Promise<GoogleLoginResult> {
+  return request<GoogleLoginResult>(
+    "/auth/social",
+    { method: "POST", body: JSON.stringify(input) },
+    false,
+  );
+}
+
+export async function completeGoogleRegistration(input: {
+  pending_token: string;
+  role: "doctor" | "patient";
+  name?: string;
+  cedula?: string;
+  specialty?: string;
+  city?: string;
+  state?: string;
+  birth_date?: string;
+  gender?: string;
+  phone?: string;
+  accepted_terms_privacy: boolean;
+  sensitive_health_data_consent: boolean;
+  adult_or_guardian_confirmation: boolean;
+}) {
+  return request<
+    | {
+        ok?: boolean;
+        status: "authenticated";
+        token: string;
+        user: AuthUser;
+      }
+    | {
+        ok?: boolean;
+        status: "pending_approval";
+        message: string;
+      }
+  >(
+    "/auth/google/complete",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    false,
+  );
+}
+
+export async function register(input: MobileRegisterPayload) {
+  return request<MobileRegisterResult>(
     "/auth/register",
-    { method: "POST", body: JSON.stringify({ name, email, password, phone }) },
+    { method: "POST", body: JSON.stringify(input) },
     false,
   );
 }
@@ -232,8 +1070,9 @@ export async function register(
 // ── Especialidades ────────────────────────────────────────
 export async function getSpecialties(): Promise<{
   data: { name: string; icon: string }[];
+  scope?: ClinicDirectoryScope;
 }> {
-  return request("/specialties", {}, false);
+  return request("/specialties");
 }
 
 // ── Doctores ─────────────────────────────────────────────
@@ -241,6 +1080,8 @@ export async function getDoctors(params: {
   specialty?: string;
   search?: string;
   city?: string;
+  lat?: number;
+  lng?: number;
   page?: number;
 }) {
   const qs = new URLSearchParams(
@@ -255,36 +1096,62 @@ export async function getDoctors(params: {
     total: number;
     page: number;
     total_pages: number;
-  }>(`/doctors${qs ? "?" + qs : ""}`, {}, false);
+    scope?: ClinicDirectoryScope;
+  }>(`/doctors${qs ? "?" + qs : ""}`);
 }
 
 export async function getDoctorProfile(id: number) {
-  return request<{ data: Doctor; reviews: any[] }>(`/doctors/${id}`, {}, false);
+  return request<{ data: Doctor; reviews: any[] }>(`/doctors/${id}`);
 }
 
 export async function getDoctorAvailability(id: number, date: string) {
-  return request<{ date: string; slots: string[] }>(
+  return request<{
+    date: string;
+    slots: string[];
+    home_visit?: {
+      enabled: boolean;
+      limit: number;
+      booked: number;
+      remaining: number;
+      scheduled_after?: string | null;
+    };
+  }>(
     `/doctors/${id}/availability?date=${date}`,
-    {},
-    false,
   );
 }
 
 // ── Citas ─────────────────────────────────────────────────
 export async function getAppointments(
   status: "upcoming" | "past" = "upcoming",
+  order: "asc" | "desc" = status === "past" ? "desc" : "asc",
 ) {
-  return request<{ data: Appointment[] }>(`/appointments?status=${status}`);
+  const response = await request<{ data: Record<string, any>[] }>(
+    `/appointments?status=${status}&order=${order}`,
+  );
+
+  return {
+    ...response,
+    data: response.data.map((item) => normalizeAppointment(item)),
+  };
 }
 
 export async function getAppointmentDetail(id: number) {
-  return request<AppointmentDetail>(`/appointments/${id}`);
+  const response = await request<{ data: Record<string, any> }>(`/appointments/${id}`);
+
+  return {
+    ...response,
+    data: normalizeAppointment(response.data),
+  };
+}
+
+export async function getAppointmentPaymentInfo(id: number) {
+  return request<AppointmentPaymentInfo>(`/appointments/${id}/payment-info`);
 }
 
 export async function createAppointment(data: {
   doctor_id: number;
   date: string;
-  time: string;
+  time?: string;
   type: "presencial" | "videoconsulta" | "domicilio";
   reason?: string;
   notes?: string;
@@ -307,7 +1174,12 @@ export async function getMessages() {
 }
 
 export async function getConversation(id: number) {
-  return request<{ data: any[] }>(`/messages/${id}`);
+  return request<{
+    data: any[];
+    meta?: {
+      other_recently_active?: boolean;
+    };
+  }>(`/messages/${id}`);
 }
 
 export async function sendMessage(conversationId: number, message: string) {
@@ -335,6 +1207,8 @@ export async function updateProfile(
     occupation: string;
     height_cm: number;
     weight_kg: number;
+    lat: number | null;
+    lng: number | null;
     emergency_contact_name: string;
     emergency_contact_phone: string;
   }>,
@@ -367,29 +1241,59 @@ export async function removeAvatar() {
   return request<{ success: boolean }>("/avatar/remove", { method: "POST" });
 }
 
-// ── QR / Check-in / Checkout ────────────────────────────
-export async function getAppointmentQr(id: number) {
-  return request<{
-    data: {
-      id: number;
-      checkin_code: string | null;
-      checkin_expires: string | null;
-      checked_in: boolean;
-      checkout_code: string | null;
-      checkout_expires: string | null;
-    };
-  }>(`/appointments/${id}/qr`);
+export interface AccountDeletionStatus {
+  status: "requested" | "cancelled" | "completed";
+  requested_at: string;
+  cancelled_at: string | null;
 }
 
-export async function checkinAppointment(id: number, code: string) {
-  return request<{ message: string; in_consultation: boolean }>(
-    `/appointments/${id}/checkin`,
-    { method: "POST", body: JSON.stringify({ code }) },
-  );
+export async function getAccountDeletionStatus() {
+  return request<{
+    data: AccountDeletionStatus | null;
+    requires_apple_reauth: boolean;
+  }>("/account/deletion");
+}
+
+export async function requestAccountDeletion(
+  reason?: string,
+  appleAuthorizationCode?: string,
+) {
+  return request<{ success: boolean; message: string }>("/account/deletion", {
+    method: "POST",
+    body: JSON.stringify({
+      confirmation: "ELIMINAR",
+      reason: reason?.trim() || undefined,
+      apple_authorization_code: appleAuthorizationCode,
+    }),
+  });
+}
+
+export async function cancelAccountDeletion() {
+  return request<{ success: boolean; message: string }>("/account/deletion/cancel", {
+    method: "POST",
+  });
+}
+
+// ── QR de inicio / cierre de consulta ───────────────────
+export interface AppointmentQrData {
+  id: number;
+  status: "confirmed" | "in_consultation";
+  phase: "start" | "close";
+  checkin_available: boolean;
+  checkin_window: "too_early" | "available" | "expired" | "completed";
+  checkin_code: string | null;
+  checkin_expires: string | null;
+  checked_in: boolean;
+  checkout_code: string | null;
+  checkout_expires: string | null;
+}
+
+export async function getAppointmentQr(id: number) {
+  return request<{ data: AppointmentQrData }>(`/appointments/${id}/qr`);
 }
 
 export async function checkoutAppointment(id: number) {
-  return request<{ data: { checkout_code: string; expires_at: string } }>(
+  return request<{ data: { phase: "close"; checkout_code: string; expires_at: string } }>(
     `/appointments/${id}/checkout`,
     { method: "POST" },
   );
@@ -485,12 +1389,64 @@ export interface SoapNote {
 }
 
 export interface NotificationItem {
-  type: 'message' | 'system' | 'appointment';
+  type: 'message' | 'system' | 'appointment' | 'doctor' | 'warning' | 'info' | string;
+  source?: string;
   id: number;
   message: string;
+  title?: string | null;
+  body?: string | null;
+  link?: string | null;
+  related_type?: string | null;
+  related_id?: number | null;
+  is_read?: boolean;
   created_at: string;
   related_name: string | null;
   thread_id: number | null;
+}
+
+export type SupportTicketStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "closed";
+
+export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
+
+export interface SupportTicket {
+  id: number;
+  subject: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  role: string;
+  created_at: string | null;
+  updated_at: string | null;
+  message_count: number;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  is_closed: boolean;
+}
+
+export interface SupportTicketMessage {
+  id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_avatar: string | null;
+  body: string;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  created_at: string | null;
+  is_me: boolean;
+}
+
+export interface SupportTicketDetail {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+}
+
+export interface SupportAttachmentInput {
+  uri: string;
+  name: string;
+  type: string;
 }
 
 export async function getPrescriptions() {
@@ -505,10 +1461,565 @@ export async function getNotifications() {
   return request<{ data: NotificationItem[] }>("/notifications");
 }
 
+export async function markNotificationRead(input: { source?: string; id: number }) {
+  return request<{ success: boolean }>("/notifications/read", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function markAllNotificationsRead() {
+  return request<{ success: boolean }>("/notifications/read-all", {
+    method: "POST",
+  });
+}
+
+export async function registerPushToken(input: {
+  token: string;
+  platform: "ios" | "android" | "web" | "unknown" | string;
+  device_id?: string | null;
+  app_version?: string | null;
+}) {
+  return request<{ success: boolean }>("/push/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function unregisterPushToken(token: string) {
+  return request<{ success: boolean }>("/push/unregister", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export async function testPushNotification() {
+  return request<{
+    success: boolean;
+    token_count?: number;
+    sent?: number;
+    error_count?: number;
+    errors?: string[];
+    message?: string;
+  }>("/push/test", {
+    method: "POST",
+  });
+}
+
+export interface AiChatResponse {
+  success: boolean;
+  session_id: string;
+  reply: string;
+  provider?: string;
+}
+
+export async function sendAiChatMessage(input: {
+  message: string;
+  session_id?: string;
+  consultation_context?: string;
+}) {
+  return request<AiChatResponse>("/ai/chat", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function acceptAiClinicalDataConsent(documentVersion: string) {
+  return request<{ ok: boolean; document_version: string }>("/legal/ai-consent", {
+    method: "POST",
+    body: JSON.stringify({
+      accepted: true,
+      document_version: documentVersion,
+    }),
+  });
+}
+
+export async function getAiBriefing(appointmentId: number) {
+  return request<{
+    success: boolean;
+    briefing: string;
+    appointment_id: number;
+    provider?: string;
+  }>("/ai/briefing", {
+    method: "POST",
+    body: JSON.stringify({ appointment_id: appointmentId }),
+  });
+}
+
+export async function getSupportTickets() {
+  return request<{ data: SupportTicket[] }>("/support");
+}
+
+export async function getSupportTicket(id: number) {
+  return request<SupportTicketDetail>(`/support/${id}`);
+}
+
+export async function createSupportTicket(input: {
+  subject: string;
+  body: string;
+  priority?: SupportTicketPriority;
+  attachment?: SupportAttachmentInput | null;
+}) {
+  if (input.attachment) {
+    const form = new FormData();
+    form.append("subject", input.subject);
+    form.append("body", input.body);
+    form.append("priority", input.priority ?? "normal");
+    form.append("attachment", {
+      uri: input.attachment.uri,
+      name: input.attachment.name,
+      type: input.attachment.type,
+    } as any);
+
+    return request<{ message: string; ticket_id: number }>("/support", {
+      method: "POST",
+      body: form,
+    });
+  }
+
+  return request<{ message: string; ticket_id: number }>("/support", {
+    method: "POST",
+    body: JSON.stringify({
+      subject: input.subject,
+      body: input.body,
+      priority: input.priority ?? "normal",
+    }),
+  });
+}
+
+export async function replySupportTicket(
+  id: number,
+  input: {
+    body: string;
+    attachment?: SupportAttachmentInput | null;
+  },
+) {
+  if (input.attachment) {
+    const form = new FormData();
+    form.append("body", input.body);
+    form.append("attachment", {
+      uri: input.attachment.uri,
+      name: input.attachment.name,
+      type: input.attachment.type,
+    } as any);
+
+    return request<{ message: string }>(`/support/${id}/reply`, {
+      method: "POST",
+      body: form,
+    });
+  }
+
+  return request<{ message: string }>(`/support/${id}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ body: input.body }),
+  });
+}
+
+export async function closeSupportTicket(id: number) {
+  return request<{ message: string }>(`/support/${id}/close`, {
+    method: "POST",
+  });
+}
+
 // ── PayPal Appointment Payment ────────────────────────────
-export async function createAppointmentPayment(appointmentId: number) {
+export async function getDoctorDashboard() {
+  return request<DoctorDashboardData>("/doctor/dashboard");
+}
+
+export interface DoctorMobileAccess {
+  can_access_mobile: boolean;
+  reason:
+    | "subscription_required"
+    | "mobile_app_required"
+    | "subscription_unavailable"
+    | "clinic_license_inactive"
+    | null;
+  message: string | null;
+  plan_name: string | null;
+  features: Record<"soap_notes" | "prescriptions" | "ai_assistant" | "video_consult" | "analytics" | "mobile_app", boolean>;
+  upgrade_url: string;
+}
+
+export async function getDoctorMobileAccess() {
+  return request<{ data: DoctorMobileAccess }>("/doctor/access");
+}
+
+export async function getDoctorAppointments(
+  scope: DoctorAppointmentScope = "upcoming",
+) {
+  return request<{
+    ok?: boolean;
+    scope: DoctorAppointmentScope;
+    data: DoctorAppointmentItem[];
+  }>(`/doctor/appointments?scope=${scope}`);
+}
+
+export async function getDoctorPatients() {
+  return request<{
+    ok?: boolean;
+    scope?: ClinicDirectoryScope;
+    data: DoctorPatientSummary[];
+  }>(
+    "/doctor/patients",
+  );
+}
+
+export async function linkDoctorPatient(accessCode: string) {
+  return request<DoctorLinkPatientResult>("/doctor/patients/link", {
+    method: "POST",
+    body: JSON.stringify({ access_code: accessCode }),
+  });
+}
+
+export async function registerDoctorPatient(
+  payload: DoctorRegisterPatientPayload,
+) {
+  return request<{ ok?: boolean; message: string; patient_id?: number }>("/doctor/patients/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getDoctorSettings() {
+  return request<DoctorSettingsResponse>("/doctor/profile");
+}
+
+export async function updateDoctorProfile(
+  data: Partial<{
+    name: string;
+    specialty: string;
+    subspecialty: string;
+    bio: string;
+    consultation_fee: number;
+    telemedicine_fee: number;
+    home_visit_fee: number;
+    duration_minutes: number;
+    address: string;
+    city: string;
+    state: string;
+    lat: number | null;
+    lng: number | null;
+    search_term_ids: number[];
+    public_expertise_text: string;
+    search_keywords_text: string;
+    consultation_payment_method: "manual_only" | "paypal" | "stripe" | "both";
+    consultation_payments_enabled: boolean;
+    paypal_email: string;
+    paypal_merchant_id: string;
+  }>,
+) {
+  return request<{ ok?: boolean; message: string }>("/doctor/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function suggestDoctorSearchTerm(data: { name: string; notes?: string }) {
+  return request<{ ok?: boolean; message: string }>("/doctor/search-terms/suggest", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getDoctorSearchSuggestions(q: string) {
+  return request<{ ok?: boolean; data: string[]; scope?: ClinicDirectoryScope }>(
+    `/search-suggestions?q=${encodeURIComponent(q)}`,
+  );
+}
+
+export async function connectDoctorStripe() {
+  return request<{
+    ok?: boolean;
+    url: string;
+    account_id: string;
+    status: string;
+    charges_enabled: boolean;
+  }>("/doctor/stripe/connect", {
+    method: "POST",
+  });
+}
+
+export async function syncDoctorStripe() {
+  return request<{
+    ok?: boolean;
+    account_id: string;
+    status: string;
+    charges_enabled: boolean;
+    message: string;
+  }>("/doctor/stripe/sync", {
+    method: "POST",
+  });
+}
+
+export async function getDoctorAvailabilitySettings(month: string) {
+  return request<DoctorAvailabilitySettingsData>(
+    `/doctor/availability?month=${encodeURIComponent(month)}`,
+  );
+}
+
+export async function updateDoctorAvailability(
+  payload: DoctorAvailabilitySavePayload,
+) {
+  return request<{ ok?: boolean; message: string }>("/doctor/availability", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveDoctorAvailabilityOverride(
+  payload: DoctorAvailabilityOverridePayload,
+) {
+  return request<{ ok?: boolean; message: string }>(
+    "/doctor/availability/override",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getDoctorPatientSnapshot(patientId: number) {
+  return request<DoctorPatientSnapshotData>(
+    `/doctor/patients/${patientId}/snapshot`,
+  );
+}
+
+export async function getDoctorPatientHistory(patientId: number) {
+  return request<DoctorPatientHistoryData>(
+    `/doctor/patients/${patientId}/history`,
+  );
+}
+
+export async function getDoctorPatientDocuments(patientId: number) {
+  return request<DoctorPatientDocumentsData>(
+    `/doctor/patients/${patientId}/documents`,
+  );
+}
+
+export async function uploadDoctorPatientDocument(
+  patientId: number,
+  input: DoctorPatientDocumentUploadInput,
+) {
+  const form = new FormData();
+  form.append("document_file", {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as any);
+  if (input.title) form.append("title", input.title);
+  if (input.document_type) form.append("document_type", input.document_type);
+  if (input.notes) form.append("notes", input.notes);
+
+  return request<{ id: number; document: PatientDocument; message?: string }>(
+    `/doctor/patients/${patientId}/documents/upload`,
+    { method: "POST", body: form },
+  );
+}
+
+export async function getDoctorConsultationTemplates() {
+  return request<DoctorConsultationTemplatesData>(
+    "/doctor/consultation-templates",
+  );
+}
+
+export async function saveDoctorConsultationTemplate(
+  payload: DoctorConsultationTemplatePayload,
+) {
+  return request<{
+    ok?: boolean;
+    message: string;
+    template?: DoctorConsultationTemplate | null;
+  }>("/doctor/consultation-templates", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteDoctorConsultationTemplate(templateId: number) {
+  return request<{ ok?: boolean; message: string }>(
+    `/doctor/consultation-templates/${templateId}/delete`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function getDoctorNotes() {
+  return request<DoctorNotesData>("/doctor/notes");
+}
+
+export async function createDoctorNote(payload: DoctorCreateNotePayload) {
+  return request<{ ok?: boolean; message: string; id?: number }>(
+    "/doctor/notes",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getDoctorAppointmentDetail(appointmentId: number) {
+  return request<DoctorAppointmentDetailData>(
+    `/doctor/appointments/${appointmentId}`,
+  );
+}
+
+export async function updateDoctorAppointmentStatus(
+  appointmentId: number,
+  action: DoctorAppointmentStatusAction,
+) {
+  return request<{ ok?: boolean; status: string; message: string }>(
+    `/doctor/appointments/${appointmentId}/status`,
+    {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    },
+  );
+}
+
+export async function getDoctorAppointmentSoap(appointmentId: number) {
+  return request<DoctorAppointmentSoapData>(
+    `/doctor/appointments/${appointmentId}/soap`,
+  );
+}
+
+export async function saveDoctorAppointmentSoap(
+  appointmentId: number,
+  payload: DoctorSoapPayload,
+) {
+  return request<DoctorSoapSaveResult>(
+    `/doctor/appointments/${appointmentId}/soap`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function autosaveDoctorAppointmentSoap(
+  appointmentId: number,
+  payload: Pick<
+    DoctorSoapPayload,
+    "subjective" | "objective" | "assessment" | "plan_text"
+  >,
+) {
+  return request<DoctorSoapAutosaveResult>(
+    `/doctor/appointments/${appointmentId}/soap/autosave`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function signDoctorNote(noteId: number) {
+  return request<DoctorSignNoteResult>(`/doctor/notes/${noteId}/sign`, {
+    method: "POST",
+  });
+}
+
+export async function createDoctorAppointment(
+  payload: DoctorCreateAppointmentPayload,
+) {
+  return request<DoctorCreateAppointmentResult>("/doctor/appointments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function recordDoctorAppointmentManualPayment(
+  appointmentId: number,
+  payload: DoctorManualPaymentPayload,
+) {
+  return request<DoctorManualPaymentResult>(
+    `/doctor/appointments/${appointmentId}/manual-payment`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function doctorCheckinAppointment(
+  appointmentId: number,
+  code: string,
+) {
+  return request<DoctorAppointmentCheckinResult>(
+    `/doctor/appointments/${appointmentId}/checkin`,
+    {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    },
+  );
+}
+
+export async function completeDoctorAppointment(
+  appointmentId: number,
+  payload: DoctorAppointmentCompletePayload = {},
+) {
+  return request<DoctorAppointmentCompleteResult>(
+    `/doctor/appointments/${appointmentId}/complete`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getDoctorPrescriptions() {
+  return request<DoctorPrescriptionsData>("/doctor/prescriptions");
+}
+
+export async function createDoctorPrescription(
+  payload: DoctorCreatePrescriptionPayload,
+) {
+  return request<{ ok?: boolean; message: string; id?: number }>(
+    "/doctor/prescriptions",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getDoctorFinancialHistory() {
+  return request<DoctorFinancialHistoryData>("/doctor/financial-history");
+}
+
+export async function createAppointmentPayment(
+  appointmentId: number,
+  returnUrl?: string,
+) {
   return request<{ approve_url: string; order_id: string }>(
     `/appointments/${appointmentId}/pay`,
-    { method: "POST" },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        return_url: returnUrl?.trim() || undefined,
+      }),
+    },
+  );
+}
+
+export async function createAppointmentStripeIntent(appointmentId: number) {
+  return request<AppointmentStripeIntent>(
+    `/appointments/${appointmentId}/stripe/create-intent`,
+    {
+      method: "POST",
+      body: JSON.stringify({ payment_method: "card" }),
+    },
+  );
+}
+
+export async function confirmAppointmentStripePayment(
+  appointmentId: number,
+  paymentIntentId: string,
+) {
+  return request<{ ok?: boolean; message: string; confirmed?: boolean }>(
+    `/appointments/${appointmentId}/stripe/confirm`,
+    {
+      method: "POST",
+      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    },
   );
 }

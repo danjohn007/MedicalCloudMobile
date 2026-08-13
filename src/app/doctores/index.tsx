@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, IconName } from "@/components/Icon";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { resolvePatientSearchLocation, type PatientSearchLocation } from "@/services/patient-search-location";
 
 type SpecialtyItem = { name: string; icon: IconName };
 
@@ -25,7 +26,7 @@ const FALLBACK_SPECIALTIES: SpecialtyItem[] = [
   { name: "Dermatología", icon: "first-aid" },
   { name: "Medicina General", icon: "stethoscope" },
   { name: "Neurología", icon: "pulse" },
-  { name: "Pediatria", icon: "baby" },
+  { name: "Pediatría", icon: "baby" },
   { name: "Ginecología", icon: "gender-female" },
   { name: "Oftalmología", icon: "eye" },
   { name: "Odontología", icon: "tooth" },
@@ -75,6 +76,12 @@ function FeeChip({ label, value }: { label: string; value: string }) {
 
 function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => void }) {
   const photoUri = doctor.photo?.trim();
+  const distanceLabel =
+    typeof doctor.distance_meters === "number" && doctor.distance_meters >= 0
+      ? doctor.distance_meters < 1000
+        ? `${Math.round(doctor.distance_meters)} m`
+        : `${(doctor.distance_meters / 1000).toFixed(1)} km`
+      : null;
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -124,6 +131,7 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
           <View style={styles.metaRow}>
             <Icon name="map-pin" size={12} color={MC.textMuted} />
             <Text style={styles.metaText} numberOfLines={1}>
+              {distanceLabel ? `${distanceLabel} · ` : ""}
               {doctor.city}
               {doctor.address ? ` · ${doctor.address}` : ""}
             </Text>
@@ -135,6 +143,21 @@ function DoctorCard({ doctor, onPress }: { doctor: api.Doctor; onPress: () => vo
         <Text style={styles.bio} numberOfLines={2}>
           {doctor.bio}
         </Text>
+      ) : null}
+
+      {doctor.public_expertise_tags?.length ? (
+        <View style={styles.termRow}>
+          {doctor.public_expertise_tags.slice(0, 4).map((term) => (
+            <View key={term} style={styles.termBadge}>
+              <Text style={styles.termBadgeText}>{term}</Text>
+            </View>
+          ))}
+          {doctor.public_expertise_tags.length > 4 ? (
+            <View style={styles.termBadgeMuted}>
+              <Text style={styles.termBadgeMutedText}>+{doctor.public_expertise_tags.length - 4}</Text>
+            </View>
+          ) : null}
+        </View>
       ) : null}
 
       <View style={styles.feeRow}>
@@ -177,10 +200,19 @@ export default function DoctoresScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [directoryScope, setDirectoryScope] =
+    useState<api.ClinicDirectoryScope | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [searchLocation, setSearchLocation] = useState<PatientSearchLocation>({ source: "none" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoaded = useRef(false);
 
-  const fetchDoctors = async (p = 1, searchText = search, spec = selSpec) => {
+  const fetchDoctors = async (
+    p = 1,
+    searchText = search,
+    spec = selSpec,
+    location = searchLocation,
+  ) => {
     try {
       setLoading(true);
       setErrorMsg("");
@@ -188,9 +220,12 @@ export default function DoctoresScreen() {
         page: p,
         search: searchText.trim() || undefined,
         specialty: spec === "Todos" ? undefined : spec,
+        lat: location.lat,
+        lng: location.lng,
       });
 
       const data = res.data ?? [];
+      setDirectoryScope(res.scope ?? null);
       setDoctors((prev) => (p === 1 ? data : [...prev, ...data]));
       setHasMore(p < (res.total_pages ?? 1));
       setPage(p);
@@ -210,6 +245,17 @@ export default function DoctoresScreen() {
   useEffect(() => {
     let mounted = true;
 
+    void resolvePatientSearchLocation({
+      requestPermission: true,
+      includeProfileFallback: true,
+    }).then((location) => {
+      if (!mounted) return;
+      setSearchLocation(location);
+      if (initialLoaded.current) {
+        void fetchDoctors(1, search, selSpec, location);
+      }
+    });
+
     api
       .getSpecialties()
       .then((res) => {
@@ -227,6 +273,8 @@ export default function DoctoresScreen() {
     return () => {
       mounted = false;
     };
+    // Resolve initial location once; search changes are handled by the debounce effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -255,6 +303,15 @@ export default function DoctoresScreen() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchDoctors(1, search, selSpec);
+      const q = search.trim();
+      if (q.length >= 2) {
+        void api
+          .getDoctorSearchSuggestions(q)
+          .then((res) => setSuggestions(res.data ?? []))
+          .catch(() => setSuggestions([]));
+      } else {
+        setSuggestions([]);
+      }
     }, 420);
 
     return () => {
@@ -289,7 +346,9 @@ export default function DoctoresScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Encuentra tu médico</Text>
           <Text style={styles.headerSubtitle}>
-            Filtra por nombre, especialidad o ciudad
+            {directoryScope?.kind === "clinic"
+              ? `Solo médicos de ${directoryScope.clinic_name || "tu clínica"}`
+              : "Médicos independientes disponibles"}
           </Text>
         </View>
         {(search.trim() || selSpec !== "Todos") && (
@@ -328,11 +387,36 @@ export default function DoctoresScreen() {
             <Icon name="magnifying-glass" size={16} color={MC.white} />
           </Pressable>
         </View>
+        {suggestions.length > 0 ? (
+          <View style={styles.suggestionRail}>
+            {suggestions.slice(0, 6).map((item) => (
+              <Pressable
+                key={item}
+                style={styles.suggestionChip}
+                onPress={() => {
+                  setSearch(item);
+                  setSuggestions([]);
+                  fetchDoctors(1, item, selSpec);
+                }}
+              >
+                <Text style={styles.suggestionChipText}>{item}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.searchMeta}>
           <Text style={styles.searchMetaText}>{resultLabel}</Text>
           <View style={styles.searchMetaDivider} />
           <Text style={styles.searchMetaText}>{activeSpecialtyLabel}</Text>
+          {searchLocation.source !== "none" ? (
+            <>
+              <View style={styles.searchMetaDivider} />
+              <Text style={styles.searchMetaText}>
+                {searchLocation.source === "device" ? "Cerca de ti" : "Usando perfil"}
+              </Text>
+            </>
+          ) : null}
         </View>
       </View>
 
@@ -437,7 +521,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -453,7 +537,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   searchCard: {
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderRadius: 22,
     padding: 14,
     shadowColor: "#0F172A",
@@ -494,6 +578,25 @@ const styles = StyleSheet.create({
     backgroundColor: MC.primary,
     justifyContent: "center",
     alignItems: "center",
+  },
+  suggestionRail: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  suggestionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.input,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  suggestionChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.primaryDark,
   },
   searchMeta: {
     flexDirection: "row",
@@ -584,14 +687,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
   },
   specialtyChipActive: {
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderColor: MC.white,
   },
   specialtyIcon: {
     width: 28,
     height: 28,
     borderRadius: 10,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -637,7 +740,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 28,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -671,7 +774,7 @@ const styles = StyleSheet.create({
 
   card: {
     marginTop: 12,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: MC.border,
@@ -757,12 +860,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#FFF7E6",
+    backgroundColor: MC.warningSoft,
   },
   ratingValue: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#9A5B00",
+    color: MC.star,
   },
   subspecialty: {
     marginTop: 4,
@@ -785,6 +888,38 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     lineHeight: 17,
+    color: MC.textSecondary,
+  },
+  termRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+  termBadge: {
+    borderRadius: 999,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: MC.infoBorder,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  termBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
+  termBadgeMuted: {
+    borderRadius: 999,
+    backgroundColor: MC.surface,
+    borderWidth: 1,
+    borderColor: MC.border,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  termBadgeMutedText: {
+    fontSize: 11,
+    fontWeight: "800",
     color: MC.textSecondary,
   },
   feeRow: {
@@ -842,7 +977,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: "#EEF7F6",
+    backgroundColor: MC.primaryLight,
   },
   openBadgeText: {
     fontSize: 12,

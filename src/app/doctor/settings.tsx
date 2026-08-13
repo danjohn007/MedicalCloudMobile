@@ -1,0 +1,1108 @@
+import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Icon } from "@/components/Icon";
+import { LocationPicker } from "@/components/LocationPicker";
+import { MC } from "@/constants/theme";
+import * as api from "@/services/api";
+
+WebBrowser.maybeCompleteAuthSession();
+
+const DURATION_OPTIONS = [20, 30, 40, 45, 60];
+const money = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 0,
+});
+
+export default function DoctorSettingsScreen() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [name, setName] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [subspecialty, setSubspecialty] = useState("");
+  const [bio, setBio] = useState("");
+  const [consultationFee, setConsultationFee] = useState("");
+  const [telemedicineFee, setTelemedicineFee] = useState("");
+  const [homeVisitFee, setHomeVisitFee] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [stateProv, setStateProv] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [publicExpertiseText, setPublicExpertiseText] = useState("");
+  const [searchKeywordsText, setSearchKeywordsText] = useState("");
+  const [consultationPaymentsEnabled, setConsultationPaymentsEnabled] = useState(false);
+  const [consultationPaymentMethod, setConsultationPaymentMethod] =
+    useState<"manual_only" | "paypal" | "stripe" | "both">("manual_only");
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [paypalMerchantId, setPaypalMerchantId] = useState("");
+  const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState("");
+  const [stripeConnecting, setStripeConnecting] = useState(false);
+
+  useEffect(() => {
+    void loadDoctor();
+  }, []);
+
+  async function loadDoctor() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const profile = await api.getDoctorSettings();
+      const doctor = profile.data;
+      setAvatarUrl(doctor.avatar_url ?? doctor.photo ?? null);
+      setName(doctor.name || "");
+      setSpecialty(doctor.specialty || "");
+      setSubspecialty(doctor?.subspecialty || "");
+      setBio(doctor?.bio || "");
+      setConsultationFee(
+        doctor?.consultation_fee != null ? String(doctor.consultation_fee) : "",
+      );
+      setTelemedicineFee(
+        doctor?.telemedicine_fee != null ? String(doctor.telemedicine_fee) : "",
+      );
+      setHomeVisitFee(
+        doctor?.home_visit_fee != null ? String(doctor.home_visit_fee) : "",
+      );
+      setDurationMinutes(
+        doctor?.duration_minutes != null ? String(doctor.duration_minutes) : "30",
+      );
+      setAddress(doctor?.address || "");
+      setCity(doctor?.city || "");
+      setStateProv(doctor?.state || "");
+      setLat(typeof doctor?.lat === "number" ? doctor.lat : null);
+      setLng(typeof doctor?.lng === "number" ? doctor.lng : null);
+      setPublicExpertiseText(doctor?.public_expertise_text || "");
+      setSearchKeywordsText(doctor?.search_keywords_text || "");
+      setConsultationPaymentsEnabled(Boolean(doctor?.consultation_payments_enabled));
+      setConsultationPaymentMethod(
+        ["manual_only", "paypal", "stripe", "both"].includes(
+          String(doctor?.consultation_payment_method || ""),
+        )
+          ? (doctor.consultation_payment_method as "manual_only" | "paypal" | "stripe" | "both")
+          : "manual_only",
+      );
+      setPaypalEmail(doctor?.paypal_email || "");
+      setPaypalMerchantId(doctor?.paypal_merchant_id || "");
+      setStripeChargesEnabled(Boolean(doctor?.stripe_connect_charges_enabled));
+      setStripeStatus(doctor?.stripe_connect_account_status || "");
+    } catch (e: any) {
+      setError(e?.message || "No se pudo cargar la configuración del doctor.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const pricingPreview = useMemo(() => {
+    const items = [
+      { label: "Consulta", value: Number(consultationFee || 0) },
+      { label: "Virtual", value: Number(telemedicineFee || 0) },
+      { label: "Domicilio", value: Number(homeVisitFee || 0) },
+    ];
+    return items.map((item) => ({
+      ...item,
+      formatted: item.value > 0 ? money.format(item.value) : "Sin definir",
+    }));
+  }, [consultationFee, telemedicineFee, homeVisitFee]);
+
+  async function uploadPickedAvatar(asset: ImagePicker.ImagePickerAsset) {
+    try {
+      setAvatarUploading(true);
+      setError("");
+      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
+      const fileName = `doctor_avatar_${Date.now()}.${ext}`;
+      const type = asset.mimeType || `image/${ext === "jpg" ? "jpeg" : ext}`;
+      const upload = await api.uploadAvatar({ uri: asset.uri, name: fileName, type });
+
+      setAvatarUrl(upload.url);
+      setSuccess("Avatar actualizado.");
+      setTimeout(() => setSuccess(""), 2400);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo actualizar el avatar.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function pickAvatarFromLibrary() {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitas permitir acceso a fotos para cambiar el avatar.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      await uploadPickedAvatar(result.assets[0]);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo actualizar el avatar.");
+    }
+  }
+
+  async function takeAvatarPhoto() {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitas permitir acceso a la cámara para tomar una foto.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      await uploadPickedAvatar(result.assets[0]);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo tomar la foto.");
+    }
+  }
+
+  function openAvatarPicker() {
+    Alert.alert("Foto de perfil", "¿Cómo quieres actualizar tu foto?", [
+      { text: "Tomar foto", onPress: () => { void takeAvatarPhoto(); } },
+      { text: "Elegir de galería", onPress: () => { void pickAvatarFromLibrary(); } },
+      { text: "Cancelar", style: "cancel" },
+    ]);
+  }
+
+  async function handleSave() {
+    if (!name.trim() || !specialty.trim()) {
+      Alert.alert("Faltan datos", "Nombre y especialidad son obligatorios.");
+      return;
+    }
+
+    if (Number(consultationFee || 0) <= 0 || Number(telemedicineFee || 0) <= 0) {
+      Alert.alert(
+        "Tarifas requeridas",
+        "La consulta presencial y la videoconsulta deben ser mayores a 0 para que el doctor aparezca en el listado.",
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+      await api.updateDoctorProfile({
+        name: name.trim(),
+        specialty: specialty.trim(),
+        subspecialty: subspecialty.trim() || undefined,
+        bio: bio.trim() || undefined,
+        consultation_fee: Number(consultationFee || 0),
+        telemedicine_fee: Number(telemedicineFee || 0),
+        home_visit_fee: Number(homeVisitFee || 0),
+        duration_minutes: Number(durationMinutes || 30),
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
+        state: stateProv.trim() || undefined,
+        lat,
+        lng,
+        public_expertise_text: publicExpertiseText.trim(),
+        search_keywords_text: searchKeywordsText.trim(),
+        consultation_payments_enabled: consultationPaymentsEnabled,
+        consultation_payment_method: consultationPaymentMethod,
+        paypal_email: paypalEmail.trim(),
+        paypal_merchant_id: paypalMerchantId.trim(),
+      });
+      setSuccess("Configuración del doctor actualizada.");
+      setTimeout(() => setSuccess(""), 3200);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo guardar la configuración.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleStripeConnect() {
+    try {
+      setStripeConnecting(true);
+      setError("");
+      setSuccess("");
+      const result = await api.connectDoctorStripe();
+      if (!result.url) {
+        throw new Error("Stripe no devolvió una liga de conexión.");
+      }
+      const browserResult = await WebBrowser.openAuthSessionAsync(
+        result.url,
+        Linking.createURL("stripe-connect/success"),
+      );
+      if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
+        return;
+      }
+      const synced = await api.syncDoctorStripe();
+      setStripeChargesEnabled(Boolean(synced.charges_enabled));
+      setStripeStatus(synced.status || result.status || "");
+      setConsultationPaymentsEnabled(true);
+      setConsultationPaymentMethod((current) =>
+        current === "paypal" || current === "both" ? "both" : "stripe",
+      );
+      setSuccess(synced.message || "Stripe Connect sincronizado.");
+      setTimeout(() => setSuccess(""), 3600);
+      router.replace({
+        pathname: "/stripe-connect/success",
+        params: {
+          account_id: synced.account_id,
+          status: synced.status,
+          charges_enabled: String(Boolean(synced.charges_enabled)),
+        },
+      } as any);
+    } catch (e: any) {
+      setError(e?.message || "No se pudo conectar Stripe.");
+    } finally {
+      setStripeConnecting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingWrap} edges={["top"]}>
+        <ActivityIndicator size="large" color={MC.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Volver"
+            >
+              <Icon name="arrow-left" size={22} color={MC.textPrimary} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Configuración general</Text>
+            <View style={{ width: 22 }} />
+          </View>
+
+          <View style={styles.hero}>
+            <View style={styles.heroTop}>
+              <View style={styles.avatarWrap}>
+                <Pressable
+                  style={styles.avatar}
+                  onPress={openAvatarPicker}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar foto de perfil"
+                >
+                  {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {(name || "D").charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </Pressable>
+                <Pressable
+                  style={styles.avatarBadge}
+                  onPress={openAvatarPicker}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar foto de perfil"
+                >
+                  <Icon name="camera" size={13} color="#0F766E" />
+                </Pressable>
+                {avatarUploading ? (
+                  <View style={styles.avatarSpinnerOverlay}>
+                    <ActivityIndicator size="small" color={MC.white} />
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.heroBody}>
+                <Text style={styles.heroEyebrow}>Espacio del doctor</Text>
+                <Text style={styles.heroTitle}>{name || "Doctor"}</Text>
+                <Text style={styles.heroSubtitle}>
+                  {specialty || "Especialidad pendiente"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroPills}>
+              <HeroPill icon="wallet" label={pricingPreview[0]?.formatted || "Sin tarifa"} />
+              <HeroPill icon="clock" label={`${durationMinutes || "30"} min`} />
+              <HeroPill icon="map-pin" label={city || "Ciudad pendiente"} />
+            </View>
+          </View>
+
+          <Banner
+            icon="info"
+            tone="info"
+            text="Las tarifas presenciales y de videoconsulta deben quedar arriba de 0 para que este doctor aparezca en el buscador de pacientes."
+          />
+
+          {error ? (
+            <Banner icon="warning" tone="error" text={error} />
+          ) : null}
+          {success ? (
+            <Banner icon="check-circle" tone="success" text={success} />
+          ) : null}
+
+          <SectionCard
+            icon="user-circle"
+            title="Identidad clínica"
+            subtitle="Lo que ve el paciente y lo que usa tu panel para presentarte."
+          >
+            <Field label="Nombre visible">
+              <Input value={name} onChangeText={setName} placeholder="Tu nombre profesional" />
+            </Field>
+            <Row>
+              <Col>
+                <Field label="Especialidad">
+                  <Input
+                    value={specialty}
+                    onChangeText={setSpecialty}
+                    placeholder="Cardiología"
+                  />
+                </Field>
+              </Col>
+              <Col>
+                <Field label="Subespecialidad">
+                  <Input
+                    value={subspecialty}
+                    onChangeText={setSubspecialty}
+                    placeholder="Ej. ecocardiografia"
+                  />
+                </Field>
+              </Col>
+            </Row>
+            <Field label="Bio profesional">
+              <MultilineInput
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Describe tu enfoque, experiencia y tipo de consulta."
+              />
+            </Field>
+          </SectionCard>
+
+          <SectionCard
+            icon="first-aid"
+            title="Enfermedades y tratamientos"
+            subtitle="Escribe términos separados por coma. Los públicos se muestran al paciente; los privados solo ayudan al buscador."
+          >
+            <Field label="Experto en">
+              <MultilineInput
+                value={publicExpertiseText}
+                onChangeText={setPublicExpertiseText}
+                placeholder="Ej. migrana, epilepsia, temblor, enfermedades desmielinizantes"
+              />
+            </Field>
+
+            <Field label="Palabras privadas para búsqueda">
+              <MultilineInput
+                value={searchKeywordsText}
+                onChangeText={setSearchKeywordsText}
+                placeholder="Ej. cefalea tensional, dolor cronico, EM. No se muestra al paciente."
+              />
+            </Field>
+          </SectionCard>
+
+          <SectionCard
+            icon="wallet"
+            title="Tarifas y duración"
+            subtitle="Precios base del consultorio para cada modalidad de cita."
+          >
+            <Row>
+              <Col>
+                <Field label="Consulta presencial">
+                  <Input
+                    value={consultationFee}
+                    onChangeText={setConsultationFee}
+                    placeholder="500"
+                    keyboardType="numeric"
+                  />
+                </Field>
+              </Col>
+              <Col>
+                <Field label="Videoconsulta">
+                  <Input
+                    value={telemedicineFee}
+                    onChangeText={setTelemedicineFee}
+                    placeholder="600"
+                    keyboardType="numeric"
+                  />
+                </Field>
+              </Col>
+            </Row>
+            <Field label="Visita a domicilio">
+              <Input
+                value={homeVisitFee}
+                onChangeText={setHomeVisitFee}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </Field>
+
+            <Text style={styles.subLabel}>Duración por consulta</Text>
+            <View style={styles.chipRow}>
+              {DURATION_OPTIONS.map((minutes) => {
+                const active = durationMinutes === String(minutes);
+                return (
+                  <Pressable
+                    key={minutes}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setDurationMinutes(String(minutes))}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {minutes} min
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.previewGrid}>
+              {pricingPreview.map((item) => (
+                <View key={item.label} style={styles.previewCard}>
+                  <Text style={styles.previewLabel}>{item.label}</Text>
+                  <Text style={styles.previewValue}>{item.formatted}</Text>
+                </View>
+              ))}
+            </View>
+          </SectionCard>
+
+          <SectionCard
+            icon="credit-card"
+            title="Cobro de consultas"
+            subtitle="Pagos en línea que llegan directo a tu cuenta de PayPal o Stripe."
+          >
+            <Pressable
+              style={[styles.toggleRow, consultationPaymentsEnabled && styles.toggleRowActive]}
+              onPress={() => setConsultationPaymentsEnabled((current) => !current)}
+            >
+              <View>
+                <Text style={styles.toggleTitle}>Recibir pagos directos</Text>
+                <Text style={styles.toggleText}>
+                  {consultationPaymentsEnabled ? "Activo para consultas" : "Desactivado"}
+                </Text>
+              </View>
+              <View style={[styles.toggleKnob, consultationPaymentsEnabled && styles.toggleKnobActive]}>
+                <Icon
+                  name={consultationPaymentsEnabled ? "check" : "x"}
+                  size={16}
+                  color={consultationPaymentsEnabled ? MC.white : MC.textMuted}
+                />
+              </View>
+            </Pressable>
+
+            <Text style={styles.subLabel}>Método de cobro</Text>
+            <View style={styles.chipRow}>
+              {[
+                { value: "manual_only", label: "Manual" },
+                { value: "paypal", label: "PayPal" },
+                { value: "stripe", label: "Stripe" },
+                { value: "both", label: "Ambos" },
+              ].map((option) => {
+                const active = consultationPaymentMethod === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() =>
+                      setConsultationPaymentMethod(
+                        option.value as "manual_only" | "paypal" | "stripe" | "both",
+                      )
+                    }
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Field label="Correo PayPal">
+              <Input
+                value={paypalEmail}
+                onChangeText={setPaypalEmail}
+                placeholder="doctor@paypal.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </Field>
+            <Field label="Merchant ID PayPal">
+              <Input
+                value={paypalMerchantId}
+                onChangeText={setPaypalMerchantId}
+                placeholder="Opcional"
+                autoCapitalize="characters"
+              />
+            </Field>
+
+            <View style={styles.paymentStatusBox}>
+              <Icon
+                name={stripeChargesEnabled ? "check-circle" : "info"}
+                size={18}
+                color={stripeChargesEnabled ? MC.success : MC.textMuted}
+              />
+              <Text style={styles.paymentStatusText}>
+                Stripe Connect: {stripeChargesEnabled ? "listo para tarjeta" : stripeStatus || "sin conectar"}
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.secondaryButton, stripeConnecting && { opacity: 0.7 }]}
+              onPress={handleStripeConnect}
+              disabled={stripeConnecting}
+            >
+              {stripeConnecting ? (
+                <ActivityIndicator color={MC.primaryDark} size="small" />
+              ) : (
+                <>
+                  <Icon name={stripeChargesEnabled ? "arrow-clockwise" : "credit-card"} size={16} color={MC.primaryDark} />
+                  <Text style={styles.secondaryButtonText}>
+                    {stripeChargesEnabled ? "Revisar Stripe Connect" : "Conectar Stripe Connect"}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          </SectionCard>
+
+          <SectionCard
+            icon="map-pin"
+            title="Consultorio"
+            subtitle="Ubicación y contexto general para pacientes y agenda."
+          >
+            <LocationPicker
+              title="Dirección del consultorio"
+              subtitle="Puedes usar tu ubicación actual como sugerencia, escribir la dirección manualmente o fijarla tocando el mapa."
+              value={{ address, city, state: stateProv, lat, lng }}
+              onChange={(next) => {
+                setAddress(next.address);
+                setCity(next.city);
+                setStateProv(next.state);
+                setLat(next.lat);
+                setLng(next.lng);
+              }}
+            />
+            <Pressable
+              style={styles.inlineLink}
+              onPress={() => router.push("/doctor/availability" as any)}
+            >
+              <Icon name="calendar" size={16} color={MC.primaryDark} />
+              <Text style={styles.inlineLinkText}>Abrir horarios y disponibilidad</Text>
+            </Pressable>
+          </SectionCard>
+
+          <SectionCard
+            icon="file"
+            title="Documentos y expediente"
+            subtitle="Atajo rápido al bloque pendiente de documentos desde la app."
+          >
+            <Text style={styles.cardText}>
+              La ficha del doctor ya tiene acceso a pacientes, historial y recetas.
+              El siguiente salto natural es subir estudios y mover documentos del
+              expediente desde móvil.
+            </Text>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={() => router.push("/doctor/documents" as any)}
+            >
+              <Icon name="file" size={16} color={MC.primaryDark} />
+              <Text style={styles.secondaryButtonText}>Abrir hub de documentos</Text>
+            </Pressable>
+          </SectionCard>
+
+          {error ? <ActionStatus tone="error" text={error} /> : null}
+          {success ? <ActionStatus tone="success" text={success} /> : null}
+
+          <View style={styles.actions}>
+            <Pressable style={styles.cancelButton} onPress={() => router.back()}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.saveButton, saving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color={MC.white} size="small" />
+              ) : (
+                <>
+                  <Icon name="check-circle" size={16} color={MC.white} />
+                  <Text style={styles.saveButtonText}>Guardar diseño</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function SectionCard({
+  icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ComponentProps<typeof Icon>["name"];
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionIcon}>
+          <Icon name={icon} size={18} color={MC.primaryDark} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function Banner({
+  icon,
+  tone,
+  text,
+}: {
+  icon: React.ComponentProps<typeof Icon>["name"];
+  tone: "info" | "success" | "error";
+  text: string;
+}) {
+  const palette = {
+    info: { bg: MC.infoSoft, fg: MC.primaryDark, border: MC.infoBorder },
+    success: { bg: MC.successSoft, fg: MC.success, border: MC.successBorder },
+    error: { bg: MC.errorSoft, fg: MC.error, border: MC.errorBorder },
+  }[tone];
+
+  return (
+    <View
+      style={[
+        styles.banner,
+        { backgroundColor: palette.bg, borderColor: palette.border },
+      ]}
+    >
+      <Icon name={icon} size={16} color={palette.fg} />
+      <Text style={[styles.bannerText, { color: palette.fg }]}>{text}</Text>
+    </View>
+  );
+}
+
+function HeroPill({
+  icon,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Icon>["name"];
+  label: string;
+}) {
+  return (
+    <View style={styles.heroPill}>
+      <Icon name={icon} size={14} color={MC.white} />
+      <Text style={styles.heroPillText}>{label}</Text>
+    </View>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+function Row({ children }: { children: React.ReactNode }) {
+  return <View style={styles.row}>{children}</View>;
+}
+
+function Col({ children }: { children: React.ReactNode }) {
+  return <View style={styles.col}>{children}</View>;
+}
+
+function Input({
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  ...rest
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  keyboardType?: TextInputProps["keyboardType"];
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+}) {
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      keyboardType={keyboardType}
+      style={styles.input}
+      placeholderTextColor={MC.textMuted}
+      {...rest}
+    />
+  );
+}
+
+function ActionStatus({
+  tone,
+  text,
+}: {
+  tone: "success" | "error";
+  text: string;
+}) {
+  const success = tone === "success";
+  return (
+    <View style={[styles.actionStatus, success ? styles.actionStatusOk : styles.actionStatusError]}>
+      <Icon name={success ? "check-circle" : "warning"} size={16} color={success ? MC.success : MC.error} />
+      <Text style={[styles.actionStatusText, { color: success ? MC.success : MC.error }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function MultilineInput({
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      style={[styles.input, styles.textArea]}
+      multiline
+      textAlignVertical="top"
+      placeholderTextColor={MC.textMuted}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: MC.background },
+  loadingWrap: {
+    flex: 1,
+    backgroundColor: MC.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: { padding: 16, paddingBottom: 40, gap: 16 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
+  hero: {
+    borderRadius: 28,
+    padding: 20,
+    gap: 14,
+    backgroundColor: "#0F766E",
+  },
+  heroTop: { flexDirection: "row", alignItems: "center", gap: 14 },
+  heroBody: { flex: 1, gap: 4 },
+  heroEyebrow: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#CCFBF1",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  heroTitle: { fontSize: 26, fontWeight: "800", color: MC.white },
+  heroSubtitle: { fontSize: 13, color: "#CCFBF1" },
+  avatarWrap: { position: "relative" },
+  avatar: {
+    width: 74,
+    height: 74,
+    borderRadius: 24,
+    backgroundColor: "#134E4A",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: { width: "100%", height: "100%" },
+  avatarText: { fontSize: 28, fontWeight: "800", color: MC.white },
+  avatarBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: MC.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#0F766E",
+  },
+  avatarSpinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    backgroundColor: "rgba(15, 118, 110, 0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroPills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  heroPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: "#134E4A",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  heroPillText: { fontSize: 12, fontWeight: "700", color: MC.white },
+  banner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  bannerText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  sectionCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.card,
+    padding: 16,
+    gap: 14,
+  },
+  sectionHeader: { flexDirection: "row", gap: 12, alignItems: "center" },
+  sectionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: MC.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: MC.textPrimary },
+  sectionSubtitle: { fontSize: 12, color: MC.textSecondary, lineHeight: 18 },
+  field: { gap: 7 },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: MC.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  subLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.textPrimary,
+    marginTop: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 14,
+    backgroundColor: MC.input,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    color: MC.textPrimary,
+    fontSize: 14,
+  },
+  textArea: { minHeight: 110 },
+  row: { flexDirection: "row", gap: 12 },
+  col: { flex: 1 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: MC.border,
+    backgroundColor: MC.background,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  chipActive: {
+    borderColor: MC.primary,
+    backgroundColor: MC.primaryLight,
+  },
+  chipText: { fontSize: 12, fontWeight: "600", color: MC.textSecondary },
+  chipTextActive: { color: MC.primaryDark },
+  toggleRow: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 18,
+    backgroundColor: MC.surface,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  toggleRowActive: {
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.primaryLight,
+  },
+  toggleTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: MC.textPrimary,
+  },
+  toggleText: {
+    marginTop: 3,
+    fontSize: 12,
+    color: MC.textSecondary,
+  },
+  toggleKnob: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: MC.surface,
+  },
+  toggleKnobActive: {
+    backgroundColor: MC.primary,
+  },
+  paymentStatusBox: {
+    borderWidth: 1,
+    borderColor: MC.border,
+    borderRadius: 16,
+    backgroundColor: MC.input,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  paymentStatusText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.textSecondary,
+  },
+  previewGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  previewCard: {
+    flex: 1,
+    minWidth: 100,
+    borderRadius: 18,
+    backgroundColor: MC.surface,
+    padding: 12,
+    gap: 4,
+  },
+  previewLabel: { fontSize: 11, color: MC.textSecondary },
+  previewValue: { fontSize: 15, fontWeight: "700", color: MC.textPrimary },
+  cardText: { fontSize: 13, lineHeight: 20, color: MC.textSecondary },
+  inlineLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  inlineLinkText: { fontSize: 13, fontWeight: "700", color: MC.primaryDark },
+  secondaryButton: {
+    marginTop: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: MC.infoBorder,
+    backgroundColor: MC.primaryLight,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  secondaryButtonText: { fontSize: 13, fontWeight: "700", color: MC.primaryDark },
+  actionStatus: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionStatusOk: {
+    backgroundColor: MC.successSoft,
+    borderColor: MC.successBorder,
+  },
+  actionStatusError: {
+    backgroundColor: MC.errorSoft,
+    borderColor: MC.errorBorder,
+  },
+  actionStatusText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  actions: { flexDirection: "row", gap: 12 },
+  cancelButton: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: MC.border,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 15,
+  },
+  cancelButtonText: { fontSize: 14, fontWeight: "700", color: MC.textSecondary },
+  saveButton: {
+    flex: 1.4,
+    borderRadius: 16,
+    backgroundColor: MC.primary,
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  saveButtonText: { fontSize: 14, fontWeight: "800", color: MC.white },
+});

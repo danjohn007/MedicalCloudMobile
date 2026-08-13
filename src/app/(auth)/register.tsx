@@ -1,175 +1,196 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from "expo-router";
+import { useState, type ComponentProps } from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Icon } from '@/components/Icon';
-import { Logo } from '@/components/Logo';
-import { MC } from '@/constants/theme';
-import { useAuthStore } from '@/stores/authStore';
+import { GoogleLogo } from "@/components/GoogleLogo";
+import { Icon } from "@/components/Icon";
+import { Logo } from "@/components/Logo";
+import { MC } from "@/constants/theme";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAuthStore();
+  const { loginWithGoogle, loginWithApple } = useAuthStore();
 
-  const [name,     setName]     = useState('');
-  const [email,    setEmail]    = useState('');
-  const [phone,    setPhone]    = useState('');
-  const [password, setPassword] = useState('');
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [role, setRole] = useState<"doctor" | "patient" | null>(null);
+  const [loadingMode, setLoadingMode] = useState<"email" | "google" | "apple" | null>(null);
+  const [error, setError] = useState("");
 
-  const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      setError('Nombre, correo y contraseña son requeridos.');
+  const handleContinueWithEmail = () => {
+    if (!role) {
+      setError("Selecciona si deseas registrarte como doctor o paciente.");
       return;
     }
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
-      return;
-    }
-    setLoading(true);
-    setError('');
+
+    setError("");
+    router.push({
+      pathname: "/(auth)/register-details",
+      params: { role },
+    });
+  };
+
+  const handleGoogleRegister = async () => {
+    setLoadingMode("google");
+    setError("");
     try {
-      await register(name.trim(), email.trim().toLowerCase(), password, phone.trim() || undefined);
-      router.replace('/(tabs)');
+      const result = await loginWithGoogle();
+      if (result === "pending_profile") {
+        router.replace("/(auth)/google-register");
+        return;
+      }
     } catch (e: any) {
-      setError(e.message ?? 'Error al crear tu cuenta.');
+      setError(e.message ?? "Error al registrarte con Google.");
     } finally {
-      setLoading(false);
+      setLoadingMode(null);
+    }
+  };
+
+  const handleAppleRegister = async () => {
+    setLoadingMode("apple");
+    setError("");
+    try {
+      const result = await loginWithApple();
+      if (result === "pending_profile") {
+        router.replace("/(auth)/google-register");
+      }
+    } catch (e: any) {
+      if (e?.code !== "ERR_REQUEST_CANCELED") setError(e.message ?? "Error al registrarte con Apple.");
+    } finally {
+      setLoadingMode(null);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
             <Icon name="arrow-left" size={24} color={MC.textPrimary} />
           </Pressable>
 
-          {/* Brand */}
+          {Platform.OS === "ios" ? (
+            <View style={[styles.appleWrap, loadingMode !== null && { opacity: 0.6 }]} pointerEvents={loadingMode === null ? "auto" : "none"}>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={14}
+                style={styles.appleButton}
+                onPress={handleAppleRegister}
+              />
+              {loadingMode === "apple" ? <ActivityIndicator color={MC.white} style={styles.appleLoader} /> : null}
+            </View>
+          ) : null}
+
           <View style={styles.brandRow}>
             <Logo variant="icon-color" width={48} />
             <View style={{ marginLeft: 12 }}>
               <Text style={styles.appName}>
                 <Text style={styles.appNameBold}>Doctor</Text> Cloud
               </Text>
-              <Text style={styles.brandSub}>Tu salud, nuestra prioridad</Text>
+              <Text style={styles.brandSub}>Elige cómo quieres usar tu cuenta</Text>
             </View>
           </View>
 
           <Text style={styles.title}>Crear cuenta</Text>
-          <Text style={styles.subtitle}>Regístrate para agendar tus citas</Text>
+          <Text style={styles.subtitle}>
+            Primero elige tu perfil y después te llevamos al formulario correcto.
+          </Text>
 
-          {!!error && (
+          {!!error ? (
             <View style={styles.errorBox}>
-              <Icon name="warning" size={18} color="#B91C1C" />
+              <Icon name="warning" size={18} color={MC.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          )}
+          ) : null}
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nombre completo</Text>
-              <View style={styles.inputWrap}>
-                <Icon name="user" size={18} color={MC.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Tu nombre"
-                  placeholderTextColor={MC.textMuted}
-                  autoCapitalize="words"
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Correo electrónico</Text>
-              <View style={styles.inputWrap}>
-                <Icon name="envelope" size={18} color={MC.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="correo@ejemplo.com"
-                  placeholderTextColor={MC.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Teléfono (opcional)</Text>
-              <View style={styles.inputWrap}>
-                <Icon name="phone" size={18} color={MC.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="10 dígitos"
-                  placeholderTextColor={MC.textMuted}
-                  keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={setPhone}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Contraseña</Text>
-              <View style={styles.inputWrap}>
-                <Icon name="lock" size={18} color={MC.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Mínimo 8 caracteres"
-                  placeholderTextColor={MC.textMuted}
-                  secureTextEntry={!showPwd}
-                  value={password}
-                  onChangeText={setPassword}
-                  onSubmitEditing={handleRegister}
-                />
-                <Pressable onPress={() => setShowPwd(!showPwd)} hitSlop={8} style={styles.eyeBtn}>
-                  <Icon name="eye" size={20} color={MC.textMuted} />
-                </Pressable>
-              </View>
-            </View>
+          <View style={styles.roleGrid}>
+            <RoleCard
+              title="Soy Paciente"
+              description="Agenda citas, comparte tu código y guarda tu historial clínico."
+              icon="heart"
+              active={role === "patient"}
+              onPress={() => setRole("patient")}
+            />
+            <RoleCard
+              title="Soy Doctor"
+              description="Administra pacientes, consultas, notas SOAP y tu agenda."
+              icon="stethoscope"
+              active={role === "doctor"}
+              onPress={() => setRole("doctor")}
+            />
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}
-            onPress={handleRegister}
-            disabled={loading}
+            style={({ pressed }) => [
+              styles.btnPrimary,
+              pressed && { opacity: 0.88 },
+              (!role || loadingMode !== null) && { opacity: 0.7 },
+            ]}
+            onPress={handleContinueWithEmail}
+            disabled={!role || loadingMode !== null}
           >
-            {loading
-              ? <ActivityIndicator color={MC.white} />
-              : <Text style={styles.btnText}>Crear cuenta</Text>
-            }
+            {loadingMode === "email" ? (
+              <ActivityIndicator color={MC.white} />
+            ) : (
+              <Text style={styles.btnText}>Continuar con correo</Text>
+            )}
+          </Pressable>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>o</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnGoogle, pressed && { opacity: 0.88 }]}
+            onPress={handleGoogleRegister}
+            disabled={loadingMode !== null}
+          >
+            {loadingMode === "google" ? (
+              <ActivityIndicator color={MC.textPrimary} />
+            ) : (
+              <>
+                <View style={styles.googleBadge}>
+                  <GoogleLogo size={21} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.btnGoogleText}>Continuar con Google</Text>
+                  <Text style={styles.btnGoogleHint}>
+                    Primero verificamos tu cuenta y después eliges el perfil final.
+                  </Text>
+                </View>
+              </>
+            )}
           </Pressable>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
-            <Pressable onPress={() => router.replace('/(auth)/login')}>
+            <Text style={styles.footerText}>Ya tienes cuenta? </Text>
+            <Pressable onPress={() => router.replace("/(auth)/login")}>
               <Text style={styles.footerLink}>Inicia sesión</Text>
             </Pressable>
+          </View>
+          <View style={styles.legalRow}>
+            <Text style={styles.legalText}>En el formulario final podrás revisar y aceptar expresamente los </Text>
+            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/terminos")}><Text style={styles.legalLink}>términos</Text></Pressable>
+            <Text style={styles.legalText}> y el </Text>
+            <Pressable onPress={() => void Linking.openURL("https://doctorcloud.digital/app/privacidad")}><Text style={styles.legalLink}>aviso de privacidad</Text></Pressable>
+            <Text style={styles.legalText}>.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -177,28 +198,123 @@ export default function RegisterScreen() {
   );
 }
 
+function RoleCard({
+  title,
+  description,
+  icon,
+  active,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  icon: ComponentProps<typeof Icon>["name"];
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.roleCard, active && styles.roleCardActive]}
+    >
+      <View style={[styles.roleIcon, active && styles.roleIconActive]}>
+        <Icon name={icon} size={20} color={active ? MC.primaryDark : MC.textMuted} />
+      </View>
+      <Text style={[styles.roleTitle, active && styles.roleTitleActive]}>{title}</Text>
+      <Text style={styles.roleDescription}>{description}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MC.background },
   scroll: { flexGrow: 1, padding: 24 },
-  backBtn: { marginBottom: 16, alignSelf: 'flex-start' },
-  brandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  backBtn: { marginBottom: 18, alignSelf: "flex-start" },
+  brandRow: { flexDirection: "row", alignItems: "center", marginBottom: 26 },
   appName: { fontSize: 20, color: MC.textPrimary },
-  appNameBold: { fontWeight: '700', color: MC.primary },
+  appNameBold: { fontWeight: "700", color: MC.primary },
   brandSub: { fontSize: 12, color: MC.textSecondary },
-  title: { fontSize: 28, fontWeight: '700', color: MC.textPrimary, marginBottom: 6 },
-  subtitle: { fontSize: 15, color: MC.textSecondary, marginBottom: 28 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', borderRadius: 10, padding: 12, marginBottom: 20 },
-  errorText: { color: '#B91C1C', fontSize: 14, flex: 1 },
-  form: { gap: 16, marginBottom: 28 },
-  inputGroup: { gap: 6 },
-  label: { fontSize: 14, fontWeight: '500', color: MC.textPrimary },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: MC.surface, borderRadius: 12, borderWidth: 1, borderColor: MC.border },
-  inputIcon: { marginLeft: 14 },
-  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 16, color: MC.textPrimary },
-  eyeBtn: { paddingHorizontal: 14 },
-  btnPrimary: { backgroundColor: MC.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 20 },
-  btnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
+  title: { fontSize: 28, fontWeight: "700", color: MC.textPrimary, marginBottom: 6 },
+  subtitle: { fontSize: 15, color: MC.textSecondary, marginBottom: 24, lineHeight: 22 },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: MC.errorSoft,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 18,
+  },
+  errorText: { color: MC.error, fontSize: 14, flex: 1 },
+  roleGrid: { gap: 14, marginBottom: 22 },
+  roleCard: {
+    backgroundColor: MC.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: MC.border,
+    padding: 18,
+    gap: 10,
+  },
+  roleCardActive: {
+    borderColor: MC.primary,
+    backgroundColor: MC.infoSoft,
+  },
+  roleIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: MC.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  roleIconActive: { backgroundColor: MC.primaryLight },
+  roleTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
+  roleTitleActive: { color: MC.primaryDark },
+  roleDescription: { fontSize: 14, color: MC.textSecondary, lineHeight: 21 },
+  btnPrimary: {
+    backgroundColor: MC.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  btnText: { color: MC.white, fontSize: 16, fontWeight: "700" },
+  separatorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+  },
+  separatorLine: { flex: 1, height: 1, backgroundColor: MC.border },
+  separatorText: { color: MC.textMuted, fontSize: 14 },
+  btnGoogle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: MC.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: MC.border,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  appleWrap: { height: 56, marginBottom: 20, justifyContent: "center" },
+  appleButton: { width: "100%", height: 56 },
+  appleLoader: { position: "absolute", alignSelf: "center" },
+  googleBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: MC.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnGoogleText: { color: MC.textPrimary, fontSize: 16, fontWeight: "700" },
+  btnGoogleHint: { color: MC.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 22 },
   footerText: { color: MC.textSecondary, fontSize: 15 },
-  footerLink: { color: MC.primary, fontSize: 15, fontWeight: '600' },
+  footerLink: { color: MC.primary, fontSize: 15, fontWeight: "700" },
+  legalRow: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap", marginTop: 18, paddingHorizontal: 8 },
+  legalText: { color: MC.textMuted, fontSize: 12, lineHeight: 18 },
+  legalLink: { color: MC.primary, fontSize: 12, fontWeight: "700", lineHeight: 18 },
 });

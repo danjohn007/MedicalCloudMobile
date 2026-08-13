@@ -1,6 +1,14 @@
 import { Icon } from "@/components/Icon";
+import { DatePickerField } from "@/components/DatePickerField";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
+import { LocationPicker } from "@/components/LocationPicker";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import {
+  normalizePatientGender,
+  PATIENT_GENDER_OPTIONS,
+  type PatientGender,
+} from "@/utils/patient-gender";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -20,7 +28,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const GENDERS = ["Masculino", "Femenino", "Otro"];
 
 export default function PatientProfileScreen() {
   const router = useRouter();
@@ -32,7 +39,7 @@ export default function PatientProfileScreen() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<PatientGender | "">("");
   const [bloodType, setBloodType] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -40,6 +47,9 @@ export default function PatientProfileScreen() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [stateProv, setStateProv] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [accessCode, setAccessCode] = useState("");
   const [emergencyName, setEmergencyName] = useState("");
   const [emergencyPhone, setEmergencyPhone] = useState("");
 
@@ -55,7 +65,7 @@ export default function PatientProfileScreen() {
       setAvatarUrl(p.avatar_url ?? null);
       setPhone(p.phone ?? "");
       setBirthDate(p.birth_date ?? "");
-      setGender(p.gender ?? "");
+      setGender(normalizePatientGender(p.gender));
       setBloodType(p.blood_type ?? "");
       setHeightCm(p.height_cm ? String(p.height_cm) : "");
       setWeightKg(p.weight_kg ? String(p.weight_kg) : "");
@@ -63,6 +73,9 @@ export default function PatientProfileScreen() {
       setAddress(p.address ?? "");
       setCity(p.city ?? "");
       setStateProv(p.state ?? "");
+      setLat(typeof p.lat === "number" ? p.lat : null);
+      setLng(typeof p.lng === "number" ? p.lng : null);
+      setAccessCode((p as any).doctor_access_code ?? "");
       setEmergencyName((p as any).emergency_contact_name ?? "");
       setEmergencyPhone((p as any).emergency_contact_phone ?? "");
     } catch (e: any) {
@@ -93,6 +106,8 @@ export default function PatientProfileScreen() {
         address: address || undefined,
         city: city || undefined,
         state: stateProv || undefined,
+        lat,
+        lng,
         emergency_contact_name: emergencyName || undefined,
         emergency_contact_phone: emergencyPhone || undefined,
       });
@@ -245,24 +260,25 @@ export default function PatientProfileScreen() {
             <Row>
               <Col>
                 <Lbl t="FECHA DE NACIMIENTO" />
-                <Input
-                  v={birthDate}
-                  onChangeText={setBirthDate}
-                  ph="YYYY-MM-DD"
-                />
+                <DatePickerField value={birthDate} onChange={setBirthDate} />
                 <Hint t="Necesaria para calcular tu edad." />
               </Col>
               <Col>
                 <Lbl t="GÉNERO" />
                 <View style={s.chipRow}>
-                  {GENDERS.map((g) => (
+                  {PATIENT_GENDER_OPTIONS.map((option) => (
                     <Pressable
-                      key={g}
-                      style={[s.chip, gender === g && s.chipAct]}
-                      onPress={() => setGender(g)}
+                      key={option.value}
+                      style={[s.chip, gender === option.value && s.chipAct]}
+                      onPress={() => setGender(option.value)}
                     >
-                      <Text style={[s.chipTxt, gender === g && s.chipTxtAct]}>
-                        {g}
+                      <Text
+                        style={[
+                          s.chipTxt,
+                          gender === option.value && s.chipTxtAct,
+                        ]}
+                      >
+                        {option.label}
                       </Text>
                     </Pressable>
                   ))}
@@ -351,31 +367,29 @@ export default function PatientProfileScreen() {
             ) : null}
           </Card>
 
+          <PatientAccessCodeCard
+            code={accessCode}
+            hint="Los doctores independientes necesitan este código o una cita contigo para ver tu expediente completo."
+          />
+
           <Card
             icon="map-pin"
             title="Dirección"
-            sub="Tu ubicación para visitas y referencias"
+            sub="Tu ubicación para visitas, referencias y búsqueda cercana"
           >
-            <Lbl t="CALLE Y NÚMERO" />
-            <Input
-              v={address}
-              onChangeText={setAddress}
-              ph="Av. Insurgentes Sur 1234"
+            <LocationPicker
+              title="Ubicación guardada"
+              subtitle="Busca tu dirección, usa tu ubicación actual o toca el mapa para guardarla."
+              distanceWarningContinuation="Puedes continuar si esta será tu ubicación predeterminada."
+              value={{ address, city, state: stateProv, lat, lng }}
+              onChange={(next) => {
+                setAddress(next.address);
+                setCity(next.city);
+                setStateProv(next.state);
+                setLat(next.lat);
+                setLng(next.lng);
+              }}
             />
-            <Row>
-              <Col>
-                <Lbl t="CIUDAD" />
-                <Input v={city} onChangeText={setCity} ph="Querétaro" />
-              </Col>
-              <Col>
-                <Lbl t="ESTADO / PROVINCIA" />
-                <Input
-                  v={stateProv}
-                  onChangeText={setStateProv}
-                  ph="Querétaro"
-                />
-              </Col>
-            </Row>
           </Card>
 
           <Card
@@ -404,6 +418,9 @@ export default function PatientProfileScreen() {
               </Col>
             </Row>
           </Card>
+
+          {error ? <ActionStatus tone="error" text={error} /> : null}
+          {success ? <ActionStatus tone="success" text={success} /> : null}
 
           <View style={s.actions}>
             <Pressable style={s.cancelBtn} onPress={() => router.back()}>
@@ -494,21 +511,39 @@ function Banner({
   text: string;
   type?: "info" | "warning";
 }) {
-  const bg = type === "warning" ? "#FEF3C7" : MC.primaryLight;
+  const bg = type === "warning" ? MC.warningSoft : MC.primaryLight;
   const ic: "warning" | "info" = type === "warning" ? "warning" : "info";
-  const icc = type === "warning" ? "#D97706" : MC.primary;
+  const icc = type === "warning" ? MC.star : MC.primary;
   return (
     <View
       style={[
         s.banner,
         {
           backgroundColor: bg,
-          borderLeftColor: type === "warning" ? "#F59E0B" : MC.primary,
+          borderLeftColor: type === "warning" ? MC.warningBorder : MC.primary,
         },
       ]}
     >
       <Icon name={ic} size={16} color={icc} />
       <Text style={s.bannerTxt}>{text}</Text>
+    </View>
+  );
+}
+
+function ActionStatus({
+  tone,
+  text,
+}: {
+  tone: "success" | "error";
+  text: string;
+}) {
+  const success = tone === "success";
+  return (
+    <View style={[s.actionStatus, success ? s.actionStatusOk : s.actionStatusError]}>
+      <Icon name={success ? "check-circle" : "warning"} size={16} color={success ? MC.success : MC.error} />
+      <Text style={[s.actionStatusTxt, { color: success ? MC.success : MC.error }]}>
+        {text}
+      </Text>
     </View>
   );
 }
@@ -560,19 +595,19 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: MC.errorBorder,
   },
   avatarDelTxt: { color: MC.error, fontSize: 12, fontWeight: "700" },
   errBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: MC.errorSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -582,12 +617,30 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#D1FAE5",
+    backgroundColor: MC.successSoft,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
   },
   okTxt: { color: MC.success, fontSize: 13, flex: 1 },
+  actionStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  actionStatusOk: {
+    backgroundColor: MC.successSoft,
+    borderColor: MC.successBorder,
+  },
+  actionStatusError: {
+    backgroundColor: MC.errorSoft,
+    borderColor: MC.errorBorder,
+  },
+  actionStatusTxt: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "600" },
   sec: {
     backgroundColor: MC.background,
     borderRadius: 16,
@@ -612,6 +665,27 @@ const s = StyleSheet.create({
   },
   secTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary },
   secSub: { fontSize: 12, color: MC.textSecondary, marginTop: 2 },
+  codeCard: {
+    borderRadius: 16,
+    backgroundColor: MC.surface,
+    borderWidth: 1,
+    borderColor: MC.border,
+    padding: 16,
+    gap: 8,
+  },
+  codeLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: MC.textMuted,
+    letterSpacing: 0.8,
+  },
+  codeValue: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: MC.textPrimary,
+    letterSpacing: 2,
+  },
+  codeHint: { fontSize: 12, lineHeight: 18, color: MC.textSecondary },
   lbl: {
     fontSize: 11,
     fontWeight: "700",

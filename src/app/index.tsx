@@ -13,20 +13,21 @@ import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { MC } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveAppHome } from '@/utils/role-routing';
 
 export default function SplashScreen() {
   const router   = useRouter();
-  const { isLoading, isAuthenticated, loadSaved } = useAuthStore();
+  const { isLoading, isAuthenticated, loadSaved, user } = useAuthStore();
 
   useEffect(() => {
     loadSaved();
-  }, []);
+  }, [loadSaved]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace(resolveAppHome(user?.role));
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, router, user?.role]);
 
   if (isLoading) {
     return (
@@ -58,17 +59,24 @@ export default function SplashScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <Pressable
-          style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
-          onPress={() => router.push('/(auth)/register')}
+          style={({ pressed }) => [styles.btnPublic, pressed && styles.btnPressed]}
+          onPress={() => router.push('/doctores')}
         >
-          <Text style={styles.btnPrimaryText}>Comenzar</Text>
+          <Text style={styles.btnPublicText}>Explorar doctores</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
+          onPress={() => router.push('/(auth)/login')}
+        >
+          <Text style={styles.btnPrimaryText}>Iniciar sesi{"\u00f3"}n</Text>
         </Pressable>
 
         <Pressable
           style={styles.btnLink}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push('/(auth)/register')}
         >
-          <Text style={styles.btnLinkText}>Iniciar sesión</Text>
+          <Text style={styles.btnLinkText}>Registrarse</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -134,11 +142,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
+  btnPublic: {
+    backgroundColor: MC.surface,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: MC.primary,
+  },
   btnPressed: {
     backgroundColor: MC.primaryDark,
   },
   btnPrimaryText: {
     color: MC.white,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  btnPublicText: {
+    color: MC.primary,
     fontSize: 17,
     fontWeight: '600',
   },

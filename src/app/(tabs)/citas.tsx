@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     Linking,
     Modal,
+    Platform,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
-import { MC } from "@/constants/theme";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
+import { MC, themed } from "@/constants/theme";
 import * as api from "@/services/api";
 
 type StatusKey =
@@ -34,51 +35,51 @@ const STATUS_META: Record<
 > = {
   pending: {
     label: "Pendiente",
-    bg: "rgba(245,158,11,0.10)",
-    fg: "#92400E",
-    dot: "#F59E0B",
+    bg: MC.warningSoft,
+    fg: MC.star,
+    dot: MC.star,
   },
   pending_payment: {
     label: "Pago pendiente",
-    bg: "rgba(245,158,11,0.12)",
-    fg: "#92400E",
-    dot: "#F59E0B",
+    bg: MC.warningSoft,
+    fg: MC.star,
+    dot: MC.star,
   },
   confirmed: {
     label: "Confirmada",
-    bg: "rgba(16,185,129,0.10)",
-    fg: "#065F46",
-    dot: "#10B981",
+    bg: MC.successSoft,
+    fg: MC.success,
+    dot: MC.success,
   },
   in_consultation: {
     label: "En consulta",
-    bg: "rgba(14,165,233,0.10)",
-    fg: "#075985",
-    dot: "#0EA5E9",
+    bg: MC.infoSoft,
+    fg: themed("#075985", "#38BDF8"),
+    dot: themed("#0EA5E9", "#38BDF8"),
   },
   completed: {
     label: "Completada",
-    bg: "rgba(99,102,241,0.10)",
-    fg: "#3730A3",
-    dot: "#6366F1",
+    bg: MC.purpleSoft,
+    fg: themed("#4338CA", "#A78BFA"),
+    dot: themed("#6366F1", "#A78BFA"),
   },
   cancelled: {
     label: "Cancelada",
-    bg: "rgba(239,68,68,0.10)",
-    fg: "#991B1B",
-    dot: "#EF4444",
+    bg: MC.errorSoft,
+    fg: MC.error,
+    dot: MC.error,
   },
   no_show: {
-    label: "No asistio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
-    dot: "#F97316",
+    label: "No asistió",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
+    dot: themed("#F97316", "#FB923C"),
   },
   missed: {
-    label: "No atendida",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
-    dot: "#F97316",
+    label: "No asistió",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
+    dot: themed("#F97316", "#FB923C"),
   },
 };
 const TYPE_META: Record<
@@ -87,38 +88,38 @@ const TYPE_META: Record<
 > = {
   presencial: {
     label: "Presencial",
-    bg: "rgba(27,168,160,0.10)",
-    fg: "#0E7C75",
+    bg: MC.primaryLight,
+    fg: MC.primary,
     icon: "buildings",
   },
   videoconsulta: {
     label: "Videoconsulta",
-    bg: "rgba(139,92,246,0.10)",
-    fg: "#5B21B6",
+    bg: MC.purpleSoft,
+    fg: themed("#6D28D9", "#A78BFA"),
     icon: "video-camera",
   },
   domicilio: {
     label: "A domicilio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
     icon: "house",
   },
   presential: {
     label: "Presencial",
-    bg: "rgba(27,168,160,0.10)",
-    fg: "#0E7C75",
+    bg: MC.primaryLight,
+    fg: MC.primary,
     icon: "buildings",
   },
   virtual: {
     label: "Videoconsulta",
-    bg: "rgba(139,92,246,0.10)",
-    fg: "#5B21B6",
+    bg: MC.purpleSoft,
+    fg: themed("#6D28D9", "#A78BFA"),
     icon: "video-camera",
   },
   home_visit: {
     label: "A domicilio",
-    bg: "rgba(249,115,22,0.10)",
-    fg: "#9A3412",
+    bg: MC.orangeSoft,
+    fg: themed("#C2410C", "#FB923C"),
     icon: "house",
   },
 };
@@ -145,8 +146,7 @@ type FilterKey =
   | "in_consultation"
   | "completed"
   | "cancelled"
-  | "no_show"
-  | "missed";
+  | "no_show";
 const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: "all", label: "Todas", color: MC.primary },
   { key: "pending", label: "Pendiente", color: "#F59E0B" },
@@ -154,8 +154,7 @@ const FILTERS: { key: FilterKey; label: string; color: string }[] = [
   { key: "in_consultation", label: "En consulta", color: "#0EA5E9" },
   { key: "completed", label: "Completada", color: "#6366F1" },
   { key: "cancelled", label: "Cancelada", color: "#EF4444" },
-  { key: "no_show", label: "No asistio", color: "#F97316" },
-  { key: "missed", label: "No atendida", color: "#F97316" },
+  { key: "no_show", label: "No asistió", color: "#F97316" },
 ];
 
 const fmtDayHeader = (dayKey: string) => {
@@ -184,18 +183,26 @@ const extractReason = (appt: api.Appointment) => {
   return note || "—";
 };
 
-const groupByDay = (items: api.Appointment[]) => {
+const groupByDay = (items: api.Appointment[], order: "asc" | "desc") => {
   const map: Record<string, api.Appointment[]> = {};
-  items.forEach((a) => {
-    const key = new Date(a.scheduled_at).toISOString().slice(0, 10);
-    (map[key] = map[key] || []).push(a);
-  });
-  return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  const direction = order === "asc" ? 1 : -1;
+  [...items]
+    .sort(
+      (a, b) =>
+        (new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()) *
+        direction,
+    )
+    .forEach((a) => {
+      const key = new Date(a.scheduled_at).toISOString().slice(0, 10);
+      (map[key] = map[key] || []).push(a);
+    });
+  return Object.entries(map).sort(([a], [b]) => a.localeCompare(b) * direction);
 };
 
 export default function CitasScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [items, setItems] = useState<api.Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,12 +210,29 @@ export default function CitasScreen() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<api.Appointment | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
+  const pendingDetailActionRef = useRef<(() => void) | null>(null);
+
+  const flushPendingDetailAction = useCallback(() => {
+    const action = pendingDetailActionRef.current;
+    pendingDetailActionRef.current = null;
+    action?.();
+  }, []);
+
+  const dismissDetailThen = useCallback(
+    (action: () => void) => {
+      pendingDetailActionRef.current = action;
+      setSelected(null);
+      if (Platform.OS !== "ios") {
+        setTimeout(flushPendingDetailAction, 0);
+      }
+    },
+    [flushPendingDetailAction],
+  );
 
   const load = useCallback(async () => {
     try {
       setError("");
-      const res = await api.getAppointments(tab);
+      const res = await api.getAppointments(tab, order);
       setItems(res.data);
     } catch (e: any) {
       setError(e.message ?? "Error al cargar citas");
@@ -216,7 +240,7 @@ export default function CitasScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [tab]);
+  }, [order, tab]);
   useEffect(() => {
     load();
   }, [load]);
@@ -235,7 +259,6 @@ export default function CitasScreen() {
     no_show: items.filter((a) =>
       ["no_show", "missed"].includes(normStatus(a.status)),
     ).length,
-    missed: items.filter((a) => normStatus(a.status) === "missed").length,
   };
 
   const filtered = items.filter((a) => {
@@ -252,6 +275,14 @@ export default function CitasScreen() {
     load();
   };
 
+  const changeTab = (nextTab: "upcoming" | "past") => {
+    setItems([]);
+    setLoading(true);
+    setTab(nextTab);
+    setFilter("all");
+    setOrder(nextTab === "upcoming" ? "asc" : "desc");
+  };
+
   const handleCancel = (a: api.Appointment) => {
     const ms = new Date(a.scheduled_at).getTime() - Date.now();
     const within24h = ms >= 0 && ms < 24 * 3600 * 1000;
@@ -259,14 +290,14 @@ export default function CitasScreen() {
     if (within24h && !isUnpaid) {
       Alert.alert(
         "No se puede cancelar",
-        "Solo puedes cancelar con menos de 24 h de anticipacion si aun no has pagado.",
+        "Solo puedes cancelar con menos de 24 h de anticipación si aún no has pagado.",
       );
       return;
     }
     Alert.alert("Cancelar cita", `Cancelar cita con ${a.doctor_name}?`, [
       { text: "No", style: "cancel" },
       {
-        text: "Si, cancelar",
+        text: "Sí, cancelar",
         style: "destructive",
         onPress: async () => {
           try {
@@ -285,26 +316,29 @@ export default function CitasScreen() {
     ]);
   };
 
-  const handlePay = async (a: api.Appointment) => {
-    try {
-      setBusy(true);
-      const { approve_url } = await api.createAppointmentPayment(a.id);
-      await WebBrowser.openBrowserAsync(approve_url);
-      load();
-      Alert.alert(
-        "Verificando pago",
-        "Si el pago se proceso correctamente, tu cita se confirmara.",
-      );
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "No se pudo iniciar el pago.");
-    } finally {
-      setBusy(false);
-    }
+  const handlePay = (a: api.Appointment) => {
+    dismissDetailThen(() => {
+      router.push({
+        pathname: "/doctores/[id]/pago",
+        params: {
+          id: String(a.doctor_id),
+          appointmentId: String(a.id),
+          doctorName: a.doctor_name,
+          specialty: a.specialty,
+          scheduledAt: a.scheduled_at,
+          type: a.type,
+          fee: String(a.fee),
+        },
+      } as any);
+    });
   };
 
-  const handleCheckin = (a: api.Appointment) =>
-    router.push(`/patient/checkin?id=${a.id}`);
-  const handleMessage = () => router.push("/(tabs)/mensajes" as any);
+  const handleCheckin = (a: api.Appointment) => {
+    dismissDetailThen(() => router.push(`/patient/checkin?id=${a.id}`));
+  };
+  const handleMessage = () => {
+    dismissDetailThen(() => router.push("/(tabs)/mensajes" as any));
+  };
   const handleVideo = (appt: api.Appointment) => {
     const qs = new URLSearchParams({
       scheduled_at: appt.scheduled_at,
@@ -312,36 +346,39 @@ export default function CitasScreen() {
       doctor_name: appt.doctor_name ?? "",
       duration: String(appt.duration_minutes ?? ""),
     }).toString();
-    router.push(`/videoconsulta/${appt.id}?${qs}` as any);
+    dismissDetailThen(() => router.push(`/videoconsulta/${appt.id}?${qs}` as any));
   };
 
   return (
     <SafeAreaView style={s.ct} edges={["top"]}>
       <View style={s.hdr}>
         <Text style={s.hdrTitle}>Mis Citas</Text>
-        <Pressable
-          onPress={() => router.push("/doctores" as any)}
-          style={s.hdrAdd}
-        >
-          <Icon name="plus" size={18} color={MC.white} />
-          <Text style={s.hdrAddText}>Nueva</Text>
-        </Pressable>
+        <View style={s.hdrActions}>
+          <NotificationBellButton />
+          <Pressable
+            onPress={() => router.push("/doctores" as any)}
+            style={s.hdrAdd}
+          >
+            <Icon name="plus" size={18} color={MC.white} />
+            <Text style={s.hdrAddText}>Nueva</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Tabs */}
       <View style={s.tabRow}>
         <Pressable
           style={[s.tabBtn, tab === "upcoming" && s.tabActive]}
-          onPress={() => setTab("upcoming")}
+          onPress={() => changeTab("upcoming")}
         >
           <Text style={[s.tabText, tab === "upcoming" && s.tabTextActive]}>
-            Proximas
+            Próximas y en curso
           </Text>
           {tab === "upcoming" && <View style={s.tabLine} />}
         </Pressable>
         <Pressable
           style={[s.tabBtn, tab === "past" && s.tabActive]}
-          onPress={() => setTab("past")}
+          onPress={() => changeTab("past")}
         >
           <Text style={[s.tabText, tab === "past" && s.tabTextActive]}>
             Pasadas
@@ -358,7 +395,7 @@ export default function CitasScreen() {
           contentContainerStyle={s.statRow}
         >
           <StatChip
-            label={tab === "upcoming" ? "Proximas" : "Total"}
+            label={tab === "upcoming" ? "Activas" : "Total"}
             value={counts.all}
             color={MC.primary}
             icon="calendar"
@@ -405,7 +442,7 @@ export default function CitasScreen() {
           )}
           {tab === "past" && counts.no_show > 0 && (
             <StatChip
-              label="No asistio"
+              label="No asistió"
               value={counts.no_show}
               color="#F97316"
               icon="warning"
@@ -448,6 +485,28 @@ export default function CitasScreen() {
             );
           })}
         </ScrollView>
+        {filtered.length > 1 ? (
+          <View style={s.orderRow}>
+            <Text style={s.orderCaption}>Orden</Text>
+            <Pressable
+              style={s.orderButton}
+              onPress={() => setOrder((current) => (current === "asc" ? "desc" : "asc"))}
+              accessibilityRole="button"
+              accessibilityLabel="Invertir el orden de las citas"
+            >
+              <Icon name="arrow-clockwise" size={15} color={MC.primary} />
+              <Text style={s.orderButtonText}>
+                {tab === "upcoming"
+                  ? order === "asc"
+                    ? "Más cercanas"
+                    : "Más lejanas"
+                  : order === "desc"
+                    ? "Más recientes"
+                    : "Más antiguas"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       {/* Scrollable list */}
@@ -473,12 +532,16 @@ export default function CitasScreen() {
           </View>
           <Text style={s.emptyTitle}>
             {filter === "all"
-              ? "No tienes citas proximas"
-              : "Sin citas en esta categoria"}
+              ? tab === "upcoming"
+                ? "No tienes citas próximas o en curso"
+                : "No tienes citas pasadas"
+              : "Sin citas en esta categoría"}
           </Text>
           <Text style={s.emptySub}>
             {filter === "all"
-              ? "Agenda tu primera consulta"
+              ? tab === "upcoming"
+                ? "Agenda tu primera consulta"
+                : "Tu historial aparecerá aquí"
               : "Cambia el filtro"}
           </Text>
           {filter === "all" && tab === "upcoming" && (
@@ -503,7 +566,7 @@ export default function CitasScreen() {
             />
           }
         >
-          {groupByDay(filtered).map(([day, appts]) => (
+          {groupByDay(filtered, order).map(([day, appts]) => (
             <View key={day}>
               <View style={s.dayHeader}>
                 <Text style={s.dayHeaderText}>{fmtDayHeader(day)}</Text>
@@ -525,6 +588,7 @@ export default function CitasScreen() {
         appt={selected}
         visible={!!selected}
         onClose={() => setSelected(null)}
+        onDismiss={flushPendingDetailAction}
         onCancel={handleCancel}
         onPay={handlePay}
         onCheckin={handleCheckin}
@@ -592,8 +656,8 @@ function AppointmentCard({
           </View>
           {isUnpaid && (
             <View style={[s.badge, s.badgePay]}>
-              <Icon name="warning" size={10} color="#92400E" />
-              <Text style={[s.badgeText, { color: "#92400E" }]}>Por pagar</Text>
+              <Icon name="warning" size={10} color={MC.star} />
+              <Text style={[s.badgeText, { color: MC.star }]}>Por pagar</Text>
             </View>
           )}
         </View>
@@ -628,6 +692,7 @@ function AppointmentDetail(props: {
   appt: api.Appointment | null;
   visible: boolean;
   onClose: () => void;
+  onDismiss: () => void;
   onCancel: (a: api.Appointment) => void;
   onPay: (a: api.Appointment) => void;
   onCheckin: (a: api.Appointment) => void;
@@ -639,6 +704,7 @@ function AppointmentDetail(props: {
     appt,
     visible,
     onClose,
+    onDismiss,
     onCancel,
     onPay,
     onCheckin,
@@ -681,6 +747,7 @@ function AppointmentDetail(props: {
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      onDismiss={onDismiss}
     >
       <Pressable style={s.modalBackdrop} onPress={onClose} />
       <View style={s.modalSheet}>
@@ -721,7 +788,7 @@ function AppointmentDetail(props: {
           <InfoRow
             icon="user"
             iconColor="#8B5CF6"
-            iconBg="rgba(139,92,246,0.10)"
+            iconBg={MC.purpleSoft}
             label="Doctor"
             value={`Dr. ${appt.doctor_name}`}
             subtitle={appt.specialty}
@@ -729,7 +796,7 @@ function AppointmentDetail(props: {
           <InfoRow
             icon="clipboard-text"
             iconColor="#10B981"
-            iconBg="rgba(16,185,129,0.10)"
+            iconBg={MC.successSoft}
             label="Motivo"
             value={reason}
           />
@@ -738,8 +805,8 @@ function AppointmentDetail(props: {
               <InfoRow
                 icon="map-pin"
                 iconColor="#F97316"
-                iconBg="rgba(249,115,22,0.10)"
-                label="Ubicacion"
+                iconBg={MC.orangeSoft}
+                label="Ubicación"
                 value={appt.location}
                 actionLabel="Ver en Google Maps"
               />
@@ -749,7 +816,7 @@ function AppointmentDetail(props: {
             <InfoRow
               icon="currency-dollar"
               iconColor="#059669"
-              iconBg="rgba(16,185,129,0.10)"
+              iconBg={MC.successSoft}
               label="Costo de consulta"
               value={`$${appt.fee.toFixed(2)} MXN`}
               valueColor={isUnpaid ? "#F59E0B" : MC.textPrimary}
@@ -760,7 +827,7 @@ function AppointmentDetail(props: {
             <InfoRow
               icon="check-circle"
               iconColor={MC.success}
-              iconBg="rgba(16,185,129,0.10)"
+              iconBg={MC.successSoft}
               label="Costo de consulta"
               value="Sin costo"
             />
@@ -775,9 +842,7 @@ function AppointmentDetail(props: {
               disabled={busy}
             >
               <Icon name="credit-card" size={18} color={MC.white} />
-              <Text style={s.payBtnText}>
-                Pagar ${appt.fee.toFixed(2)} con PayPal
-              </Text>
+              <Text style={s.payBtnText}>Elegir método de pago</Text>
             </Pressable>
           )}
           <View style={s.modalActionRow}>
@@ -785,13 +850,15 @@ function AppointmentDetail(props: {
               <Icon name="chat-circle" size={18} color={MC.primary} />
               <Text style={s.actionSecondaryText}>Mensaje</Text>
             </Pressable>
-            {isPresential && status === "confirmed" && (
+            {isPresential && ["confirmed", "in_consultation"].includes(status) && (
               <Pressable
                 style={s.actionSecondary}
                 onPress={() => onCheckin(appt)}
               >
                 <Icon name="share-network" size={18} color={MC.primary} />
-                <Text style={s.actionSecondaryText}>QR Check-in</Text>
+                <Text style={s.actionSecondaryText}>
+                  {status === "in_consultation" ? "QR de cierre" : "QR de inicio"}
+                </Text>
               </Pressable>
             )}
             {isVirtual && ["confirmed", "in_consultation"].includes(status) && (
@@ -876,6 +943,11 @@ const s = StyleSheet.create({
     color: MC.textPrimary,
     letterSpacing: -0.5,
   },
+  hdrActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   hdrAdd: {
     flexDirection: "row",
     alignItems: "center",
@@ -939,6 +1011,27 @@ const s = StyleSheet.create({
   },
   filterDot: { width: 8, height: 8, borderRadius: 4 },
   filterText: { fontSize: 12, fontWeight: "600", color: MC.textSecondary },
+  orderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  orderCaption: { fontSize: 12, color: MC.textMuted },
+  orderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: MC.primary,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: MC.primaryLight,
+  },
+  orderButtonText: { fontSize: 12, fontWeight: "700", color: MC.primary },
 
   center: {
     flex: 1,
@@ -1037,7 +1130,7 @@ const s = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
-  badgePay: { backgroundColor: "#FEF3C7" },
+  badgePay: { backgroundColor: MC.warningSoft },
   badgeDot: { width: 6, height: 6, borderRadius: 3 },
   badgeText: { fontSize: 10, fontWeight: "700" },
   cardDoctor: {
@@ -1181,7 +1274,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "rgba(239,68,68,0.10)",
+    backgroundColor: MC.errorSoft,
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: 12,

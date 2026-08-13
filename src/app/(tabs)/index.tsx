@@ -1,15 +1,17 @@
 import { Icon, IconName } from "@/components/Icon";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
+import { resolvePatientSearchLocation } from "@/services/patient-search-location";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,11 +19,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_GAP = 10;
 const GRID_PADDING = 14;
-const HALF_CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const MONEY_FORMAT = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -44,46 +45,59 @@ const QUICK_ACTIONS: {
     icon: "user-circle",
     route: "/patient/profile",
     color: "#2563EB",
-    bg: "#EFF6FF",
+    bg: MC.infoSoft,
   },
   {
     label: "Expediente",
     icon: "clipboard-text",
     route: "/patient/expediente",
     color: "#059669",
-    bg: "#ECFDF5",
+    bg: MC.successSoft,
   },
   {
     label: "Citas",
     icon: "calendar",
     route: "/citas",
     color: "#D97706",
-    bg: "#FFFBEB",
+    bg: MC.warningSoft,
   },
   {
     label: "Mensajes",
     icon: "chat-circle-dots",
     route: "/mensajes",
     color: "#7C3AED",
-    bg: "#F5F3FF",
+    bg: MC.purpleSoft,
+  },
+  {
+    label: "Asistente IA",
+    icon: "brain",
+    route: "/ai/chat",
+    color: "#0F766E",
+    bg: MC.primaryLight,
   },
   {
     label: "Recetas",
     icon: "pill",
     route: "/patient/recetas",
     color: "#059669",
-    bg: "#ECFDF5",
+    bg: MC.successSoft,
   },
   {
     label: "Notificaciones",
     icon: "bell",
     route: "/notificaciones",
     color: "#D97706",
-    bg: "#FFFBEB",
+    bg: MC.warningSoft,
+  },
+  {
+    label: "Soporte",
+    icon: "info",
+    route: "/soporte",
+    color: "#0F766E",
+    bg: MC.primaryLight,
   },
 ];
 
-// ── Animated counter hook ──────────────────────────────────
 function useAnimatedCounter(target: number, duration = 600) {
   const animValue = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(0);
@@ -101,12 +115,11 @@ function useAnimatedCounter(target: number, duration = 600) {
     });
 
     return () => animValue.removeListener(listener);
-  }, [target]);
+  }, [animValue, duration, target]);
 
   return display;
 }
 
-// ── Fade-in slide-up animation ────────────────────────────
 function FadeSlideIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(24)).current;
@@ -116,7 +129,7 @@ function FadeSlideIn({ children, delay = 0 }: { children: React.ReactNode; delay
       Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [delay, opacity, translateY]);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
@@ -134,6 +147,7 @@ export default function HomeScreen() {
   >([]);
   const [doctors, setDoctors] = useState<api.Doctor[]>([]);
   const [doctorCount, setDoctorCount] = useState(0);
+  const [profile, setProfile] = useState<api.ProfileData | null>(null);
   const [kpis, setKpis] = useState({
     upcoming: 0,
     pendingPayment: 0,
@@ -141,59 +155,97 @@ export default function HomeScreen() {
     unreadMessages: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const loadingRef = useRef(false);
 
   const firstName = user?.name?.split(" ")[0] ?? "Paciente";
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
+  const loadDashboard = useCallback(async (isRefresh = false) => {
+    if (loadingRef.current) return;
 
-        // Use dedicated dashboard stats endpoint + specialties + doctors
-        const [specRes, docRes, statsRes] = await Promise.all([
-          api.getSpecialties(),
-          api.getDoctors({ page: 1 }),
-          api.getDashboardStats(),
-        ]);
+    loadingRef.current = true;
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setLoadError("");
 
+    try {
+      // The home screen intentionally does not trigger a location permission
+      // prompt or wait for a fresh GPS reading before showing useful data.
+      const location = await resolvePatientSearchLocation();
+      const [specialtiesResult, doctorsResult, statsResult, profileResult] = await Promise.allSettled([
+        api.getSpecialties(),
+        api.getDoctors({ page: 1, lat: location.lat, lng: location.lng }),
+        api.getDashboardStats(),
+        api.getProfile(),
+      ]);
+
+      let loadedAnyData = false;
+
+      if (specialtiesResult.status === "fulfilled") {
         setSpecialties(
-          specRes.data.map((specialty) => ({
+          specialtiesResult.value.data.map((specialty) => ({
             name: specialty.name,
             icon: (specialty.icon as IconName) || "first-aid",
           })),
         );
-        setDoctorCount(docRes.total ?? docRes.data.length);
-        setDoctors(docRes.data.slice(0, 4));
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard specialties error:", specialtiesResult.reason);
+      }
 
-        if (statsRes?.data) {
-          setKpis({
-            upcoming: statsRes.data.upcoming,
-            pendingPayment: statsRes.data.pendingPayment,
-            completed: statsRes.data.completed,
-            unreadMessages: statsRes.data.unreadMessages,
-          });
+      if (doctorsResult.status === "fulfilled") {
+        setDoctorCount(doctorsResult.value.total ?? doctorsResult.value.data.length);
+        setDoctors(doctorsResult.value.data.slice(0, 4));
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard doctors error:", doctorsResult.reason);
+      }
+
+      if (profileResult.status === "fulfilled") {
+        setProfile(profileResult.value);
+        loadedAnyData = true;
+      } else {
+        console.error("Patient dashboard profile error:", profileResult.reason);
+      }
+
+      if (statsResult.status === "fulfilled" && statsResult.value?.data) {
+        const stats = statsResult.value.data;
+        setKpis({
+          upcoming: stats.upcoming,
+          pendingPayment: stats.pendingPayment,
+          completed: stats.completed,
+          unreadMessages: stats.unreadMessages,
+        });
+        loadedAnyData = true;
+      } else {
+        if (statsResult.status === "rejected") {
+          console.error("Patient dashboard stats error:", statsResult.reason);
         }
-      } catch (error) {
-        console.error("Dashboard load error:", error);
-        // Fallback: load data the old way
-        try {
-          const [upcomingRes, pastRes, msgRes] = await Promise.all([
-            api.getAppointments("upcoming"),
-            api.getAppointments("past"),
-            api.getMessages(),
-          ]);
 
-          const upcoming = upcomingRes.data ?? [];
-          const past = pastRes.data ?? [];
-          const messages = msgRes.data ?? [];
+        // Keep legacy KPI data as a partial fallback. Each request is handled
+        // independently, so one unavailable endpoint cannot block the screen.
+        const [upcomingResult, pastResult, messagesResult] = await Promise.allSettled([
+          api.getAppointments("upcoming"),
+          api.getAppointments("past"),
+          api.getMessages(),
+        ]);
 
+        const upcoming = upcomingResult.status === "fulfilled" ? upcomingResult.value.data ?? [] : [];
+        const past = pastResult.status === "fulfilled" ? pastResult.value.data ?? [] : [];
+        const messages = messagesResult.status === "fulfilled" ? messagesResult.value.data ?? [] : [];
+
+        if (
+          upcomingResult.status === "fulfilled" ||
+          pastResult.status === "fulfilled" ||
+          messagesResult.status === "fulfilled"
+        ) {
           const pendingPayment = upcoming.filter(
             (appointment) =>
               appointment.payment_status &&
               appointment.payment_status !== "paid" &&
               appointment.payment_status !== "not_required",
           ).length;
-
           const unreadMessages = messages.reduce((acc, message) => {
             const count = typeof message.unread === "number" ? message.unread : 0;
             return acc + count;
@@ -203,20 +255,30 @@ export default function HomeScreen() {
             upcoming: upcoming.length,
             pendingPayment,
             completed: past.filter((appointment) =>
-              ["completed", "finished"].includes(
-                (appointment.status ?? "").toLowerCase(),
-              ),
+              ["completed", "finished"].includes((appointment.status ?? "").toLowerCase()),
             ).length,
             unreadMessages,
           });
-        } catch (fallbackError) {
-          console.error("Fallback dashboard load error:", fallbackError);
+          loadedAnyData = true;
         }
-      } finally {
-        setLoading(false);
       }
-    })();
+
+      if (!loadedAnyData) {
+        setLoadError("No pudimos actualizar tu información. Revisa tu conexión e inténtalo de nuevo.");
+      }
+    } catch (error) {
+      console.error("Patient dashboard load error:", error);
+      setLoadError("No pudimos actualizar tu información. Revisa tu conexión e inténtalo de nuevo.");
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
   const handleSearch = () => {
     const query = search.trim();
@@ -263,8 +325,15 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void loadDashboard(true)}
+            tintColor={MC.primary}
+            colors={[MC.primary]}
+          />
+        }
       >
-        {/* ── Hero Section ───────────────────────────────── */}
         <FadeSlideIn delay={0}>
           <View style={s.heroCard}>
             <View style={s.heroGlowOne} />
@@ -297,10 +366,17 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Search & Stats Card ────────────────────────── */}
+        {loadError ? (
+          <View style={s.loadErrorCard}>
+            <Text style={s.loadErrorText}>{loadError}</Text>
+            <Pressable onPress={() => void loadDashboard(true)} hitSlop={8}>
+              <Text style={s.loadErrorAction}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <FadeSlideIn delay={100}>
           <View style={s.searchCard}>
-            {/* Sleeker search bar — no longer intrusive */}
             <View style={s.searchRow}>
               <Icon name="magnifying-glass" size={18} color={MC.textMuted} />
               <TextInput
@@ -328,14 +404,14 @@ export default function HomeScreen() {
               <StatPill
                 label="Especialidades"
                 value={specialties.length}
-                color="#7C3AED"
-                bg="#F5F3FF"
+                color={MC.scheme === "dark" ? "#A78BFA" : "#7C3AED"}
+                bg={MC.purpleSoft}
               />
               <StatPill
                 label="Mensajes"
                 value={kpis.unreadMessages}
-                color="#D97706"
-                bg="#FFFBEB"
+                color={MC.star}
+                bg={MC.warningSoft}
               />
             </View>
 
@@ -361,8 +437,29 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── KPI Grid ───────────────────────────────────── */}
         <FadeSlideIn delay={200}>
+          <View style={s.sectionBlock}>
+            <PatientAccessCodeCard
+              code={profile?.doctor_access_code}
+              hint="Si un doctor todavía no te tiene vinculado, puede usar este código para ver tu expediente sin pedirte de nuevo todos tus datos."
+              onOpenProfile={() => router.push("/patient/profile")}
+              style={s.accessCodeCard}
+            />
+          </View>
+        </FadeSlideIn>
+
+        {profile?.profile_completion ? (
+          <FadeSlideIn delay={230}>
+            <View style={s.sectionBlock}>
+              <ProfileCompletionCard
+                completion={profile.profile_completion}
+                onPress={() => router.push("/patient/profile")}
+              />
+            </View>
+          </FadeSlideIn>
+        ) : null}
+
+        <FadeSlideIn delay={260}>
           <View style={s.sectionHeaderWrap}>
             <Text style={s.sectionTitle}>Tu actividad</Text>
             <Text style={s.sectionSub}>Indicadores en tiempo real</Text>
@@ -399,7 +496,6 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Priority Alerts ────────────────────────────── */}
         {alertCards.length > 0 && (
           <FadeSlideIn delay={300}>
             <View style={s.sectionBlock}>
@@ -420,7 +516,6 @@ export default function HomeScreen() {
           </FadeSlideIn>
         )}
 
-        {/* ── Quick Actions ──────────────────────────────── */}
         <FadeSlideIn delay={400}>
           <View style={s.sectionBlock}>
             <View style={s.sectionHeaderWrap}>
@@ -439,7 +534,6 @@ export default function HomeScreen() {
           </View>
         </FadeSlideIn>
 
-        {/* ── Doctor Cards ───────────────────────────────── */}
         <FadeSlideIn delay={500}>
           <View style={s.sectionBlock}>
             <View style={s.sectionTitleRow}>
@@ -490,7 +584,6 @@ export default function HomeScreen() {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────
 
 function StatPill({
   label,
@@ -530,6 +623,79 @@ function SpecialtyChip({
   );
 }
 
+function ProfileCompletionCard({
+  completion,
+  onPress,
+}: {
+  completion: api.PatientProfileCompletion;
+  onPress: () => void;
+}) {
+  const pct = completion.percentage;
+  const r = 30;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - pct / 100);
+  const ringColor = completion.complete ? "#22C55E" : pct >= 60 ? "#F59E0B" : "#EF4444";
+  const visibleMissing = completion.missing.slice(0, 3);
+  const extraMissing = completion.missing.length - visibleMissing.length;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={s.completionCard}
+      accessibilityRole="button"
+      accessibilityLabel={
+        completion.complete
+          ? "Perfil completo"
+          : `Perfil ${pct} por ciento completo. Toca para completarlo`
+      }
+    >
+      <View style={s.completionRingWrap}>
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle cx={36} cy={36} r={r} stroke={MC.border} strokeWidth={6} fill="none" />
+          <Circle
+            cx={36}
+            cy={36}
+            r={r}
+            stroke={ringColor}
+            strokeWidth={6}
+            fill="none"
+            strokeDasharray={`${circumference}, ${circumference}`}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+          />
+        </Svg>
+        <View style={s.completionRingLabel} pointerEvents="none">
+          <Text style={[s.completionPct, { color: ringColor }]}>{pct}%</Text>
+        </View>
+      </View>
+      <View style={s.completionBody}>
+        <Text style={s.completionTitle}>
+          {completion.complete ? "Perfil completo" : "Completa tu perfil"}
+        </Text>
+        {completion.complete ? (
+          <Text style={s.completionSubtitle}>
+            Tu doctor tiene toda la información necesaria para atenderte.
+          </Text>
+        ) : (
+          <View style={s.completionMissing}>
+            {visibleMissing.map((item) => (
+              <View key={item.key} style={s.completionMissingRow}>
+                <Icon name="warning" size={12} color="#F59E0B" />
+                <Text style={s.completionMissingText}>{item.label}</Text>
+              </View>
+            ))}
+            {extraMissing > 0 ? (
+              <Text style={s.completionMissingMore}>+{extraMissing} más</Text>
+            ) : null}
+          </View>
+        )}
+      </View>
+      <Icon name="caret-right" size={16} color={MC.textMuted} />
+    </Pressable>
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -547,12 +713,12 @@ function KpiCard({
 
   const palette =
     tone === "teal"
-      ? { bg: "#ECFDFB", border: "#C8F1EC", iconBg: "#D8FAF4", icon: MC.primaryDark, shadow: "#1BA8A020" }
+      ? { bg: MC.successSoft, border: MC.infoBorder, iconBg: MC.primaryLight, icon: MC.primaryDark, shadow: "#1BA8A020" }
       : tone === "danger"
-        ? { bg: "#FEF2F2", border: "#FECACA", iconBg: "#FEE2E2", icon: "#B91C1C", shadow: "#EF444420" }
+        ? { bg: MC.errorSoft, border: MC.errorBorder, iconBg: MC.errorSoft, icon: "#B91C1C", shadow: "#EF444420" }
         : tone === "indigo"
-          ? { bg: "#EEF2FF", border: "#C7D2FE", iconBg: "#E0E7FF", icon: "#4338CA", shadow: "#6366F120" }
-          : { bg: "#EFF6FF", border: "#BFDBFE", iconBg: "#DBEAFE", icon: "#0369A1", shadow: "#3B82F620" };
+          ? { bg: MC.purpleSoft, border: MC.purpleBorder, iconBg: MC.purpleSoft, icon: "#4338CA", shadow: "#6366F120" }
+          : { bg: MC.infoSoft, border: MC.infoBorder, iconBg: MC.infoSoft, icon: "#0369A1", shadow: "#3B82F620" };
 
   return (
     <Pressable
@@ -591,10 +757,10 @@ function PriorityCard({
 }) {
   const palette =
     item.tone === "danger"
-      ? { bg: "#FEF2F2", border: "#FECACA", iconBg: "#FEE2E2", icon: "#B91C1C" }
+      ? { bg: MC.errorSoft, border: MC.errorBorder, iconBg: MC.errorSoft, icon: "#B91C1C" }
       : item.tone === "info"
-        ? { bg: "#EFF6FF", border: "#BFDBFE", iconBg: "#DBEAFE", icon: "#0369A1" }
-        : { bg: "#EEF7F6", border: "#C8F1EC", iconBg: MC.primaryLight, icon: MC.primary };
+        ? { bg: MC.infoSoft, border: MC.infoBorder, iconBg: MC.infoSoft, icon: "#0369A1" }
+        : { bg: MC.primaryLight, border: MC.infoBorder, iconBg: MC.primaryLight, icon: MC.primary };
 
   return (
     <Pressable
@@ -743,7 +909,6 @@ const s = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  // ── Hero ───────────────────────────────────────────────
   heroCard: {
     marginTop: 8,
     marginHorizontal: 14,
@@ -823,12 +988,36 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ── Search Card (redesigned — more compact) ────────────
+  loadErrorCard: {
+    marginTop: 12,
+    marginHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: MC.errorBorder,
+    backgroundColor: MC.errorSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadErrorText: {
+    flex: 1,
+    color: MC.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  loadErrorAction: {
+    color: MC.error,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
   searchCard: {
     marginTop: -8,
     marginHorizontal: 14,
     borderRadius: 22,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     shadowColor: "#0F172A",
     shadowOpacity: 0.08,
@@ -913,7 +1102,7 @@ const s = StyleSheet.create({
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
   },
   specialtyChipText: {
     fontSize: 11,
@@ -921,7 +1110,6 @@ const s = StyleSheet.create({
     color: MC.primaryDark,
   },
 
-  // ── Sections ───────────────────────────────────────────
   sectionHeaderWrap: {
     marginTop: 22,
     marginHorizontal: 18,
@@ -948,8 +1136,41 @@ const s = StyleSheet.create({
   sectionBlock: {
     marginTop: 8,
   },
+  accessCodeCard: {
+    marginHorizontal: 14,
+  },
 
-  // ── KPI Grid ───────────────────────────────────────────
+  completionCard: {
+    marginHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: MC.card,
+    borderWidth: 1,
+    borderColor: MC.border,
+    padding: 14,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  completionRingWrap: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionRingLabel: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completionPct: { fontSize: 14, fontWeight: "800" },
+  completionBody: { flex: 1, gap: 4 },
+  completionTitle: { fontSize: 14, fontWeight: "700", color: MC.textPrimary },
+  completionSubtitle: { fontSize: 12, color: MC.textSecondary },
+  completionMissing: { gap: 4 },
+  completionMissingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  completionMissingText: { fontSize: 12, color: MC.textSecondary, fontWeight: "600" },
+  completionMissingMore: { fontSize: 11, color: MC.textMuted, fontWeight: "600", marginLeft: 18 },
+
   kpiGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -957,7 +1178,9 @@ const s = StyleSheet.create({
     paddingHorizontal: GRID_PADDING,
   },
   kpiCard: {
-    width: HALF_CARD_WIDTH,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 142,
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
@@ -985,7 +1208,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // ── Priority Cards ─────────────────────────────────────
   priorityStack: {
     gap: 10,
     paddingHorizontal: 14,
@@ -1019,7 +1241,6 @@ const s = StyleSheet.create({
     color: MC.textSecondary,
   },
 
-  // ── Quick Actions ──────────────────────────────────────
   quickGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1027,12 +1248,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
   },
   quickTile: {
-    width: HALF_CARD_WIDTH,
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 142,
     alignItems: "center",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     paddingVertical: 16,
     shadowColor: "#0F172A",
     shadowOpacity: 0.04,
@@ -1055,7 +1278,6 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ── See All ────────────────────────────────────────────
   seeAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1068,7 +1290,6 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ── Loading & Empty ────────────────────────────────────
   loadingWrap: {
     paddingVertical: 20,
     alignItems: "center",
@@ -1079,7 +1300,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 24,
     alignItems: "center",
     gap: 8,
@@ -1105,14 +1326,13 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // ── Doctor Card ────────────────────────────────────────
   doctorCard: {
     marginHorizontal: 14,
     marginTop: 10,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: MC.border,
-    backgroundColor: MC.white,
+    backgroundColor: MC.card,
     padding: 14,
     shadowColor: "#0F172A",
     shadowOpacity: 0.04,
@@ -1195,7 +1415,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: MC.warningSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

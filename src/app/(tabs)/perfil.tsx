@@ -1,8 +1,10 @@
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -12,6 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, IconName } from "@/components/Icon";
+import { NotificationBellButton } from "@/components/NotificationBellButton";
+import { PatientAccessCodeCard } from "@/components/patient/PatientAccessCodeCard";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 import { useAuthStore } from "@/stores/authStore";
@@ -57,12 +61,50 @@ export default function PerfilScreen() {
       action: () => router.push("/patient/documentos"),
     },
     {
+      icon: "pill",
+      label: "Mis recetas",
+      action: () => router.push("/patient/recetas"),
+    },
+    {
+      icon: "brain",
+      label: "Asistente IA",
+      action: () => router.push("/ai/chat"),
+    },
+    {
       icon: "wallet",
       label: "Historial financiero",
       action: () => router.push("/patient/finanzas"),
     },
-    { icon: "bell", label: "Notificaciones", action: () => {} },
-    { icon: "info", label: "Ayuda y soporte", action: () => {} },
+    {
+      icon: "bell",
+      label: "Notificaciones",
+      action: () => router.push("/notificaciones"),
+    },
+    {
+      icon: "gear",
+      label: "Apariencia",
+      action: () => router.push("/settings/appearance"),
+    },
+    {
+      icon: "info",
+      label: "Ayuda y soporte",
+      action: () => router.push("/soporte"),
+    },
+    {
+      icon: "shield-check",
+      label: "Aviso de privacidad",
+      action: () => void Linking.openURL("https://doctorcloud.digital/app/privacidad"),
+    },
+    {
+      icon: "file",
+      label: "Términos y condiciones",
+      action: () => void Linking.openURL("https://doctorcloud.digital/app/terminos"),
+    },
+    {
+      icon: "trash",
+      label: "Eliminar mi cuenta",
+      action: () => router.push("/account/delete"),
+    },
   ];
 
   const handleLogout = async () => {
@@ -95,9 +137,7 @@ export default function PerfilScreen() {
       <ScrollView>
         {/* Settings button */}
         <View style={styles.header}>
-          <Pressable style={styles.settingsBtn} hitSlop={10}>
-            <Icon name="gear" size={24} color={MC.textPrimary} />
-          </Pressable>
+          <NotificationBellButton />
         </View>
 
         {/* Avatar + Name + info */}
@@ -137,6 +177,12 @@ export default function PerfilScreen() {
           ) : null}
         </View>
 
+        <PatientAccessCodeCard
+          code={profile?.doctor_access_code}
+          onOpenProfile={() => router.push("/patient/profile")}
+          style={styles.linkCodeCard}
+        />
+
         {/* Menu */}
         <View style={styles.menu}>
           {menuItems.map((item, i) =>
@@ -152,14 +198,16 @@ export default function PerfilScreen() {
               <Icon name="sign-out" size={20} color={MC.error} />
             </View>
             <Text style={[styles.menuLabel, styles.menuLabelDanger]}>
-              Cerrar sesion
+              Cerrar sesión
             </Text>
             <Icon name="caret-right" size={18} color={MC.error} />
           </Pressable>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version}>Doctor Cloud v1.0.0</Text>
+          <Text style={styles.version}>
+            Doctor Cloud v{Constants.expoConfig?.version ?? "1.0.0"}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -194,6 +242,45 @@ const styles = StyleSheet.create({
     marginTop: 3,
     textAlign: "center",
   },
+  linkCodeCard: {
+    marginHorizontal: 20,
+    marginBottom: 18,
+    borderRadius: 18,
+    padding: 16,
+    backgroundColor: MC.primaryLight,
+    borderWidth: 1,
+    borderColor: MC.infoBorder,
+    gap: 8,
+  },
+  linkCodeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: MC.primaryDark,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  linkCodeValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: MC.textPrimary,
+  },
+  linkCodeHint: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: MC.textSecondary,
+  },
+  linkCodeButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: MC.card,
+  },
+  linkCodeButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: MC.primaryDark,
+  },
   menu: {
     marginHorizontal: 20,
     borderRadius: 16,
@@ -222,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  menuIconDanger: { backgroundColor: "#FEE2E2" },
+  menuIconDanger: { backgroundColor: MC.errorSoft },
   menuLabel: {
     flex: 1,
     fontSize: 15,

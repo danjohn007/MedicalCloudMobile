@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
+import { DoctorFeatureAccessGate } from "@/components/DoctorFeatureAccessGate";
 import { MC } from "@/constants/theme";
 import * as api from "@/services/api";
 
@@ -159,7 +160,8 @@ export default function VideoconsultaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <DoctorFeatureAccessGate feature="video_consult">
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable
           style={styles.backBtn}
@@ -186,7 +188,7 @@ export default function VideoconsultaScreen() {
         <Text style={styles.subtitle}>
           {startAt && endAt
             ? formatDateRange(startAt, endAt)
-            : "Horario pendiente de confirmacion"}
+            : "Horario pendiente de confirmación"}
         </Text>
 
         {loading ? (
@@ -200,14 +202,14 @@ export default function VideoconsultaScreen() {
           </View>
         ) : canJoin ? (
           <View style={styles.infoBoxReady}>
-            <Text style={styles.infoTitleReady}>La sala esta disponible</Text>
+            <Text style={styles.infoTitleReady}>La sala está disponible</Text>
             <Text style={styles.infoTextReady}>
               Tiempo restante estimado: {formatClock(remainingToEnd)}
             </Text>
           </View>
         ) : (
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Sala aun no disponible</Text>
+            <Text style={styles.infoTitle}>Sala aún no disponible</Text>
             <Text style={styles.infoText}>
               Se habilita {EARLY_JOIN_MINUTES} minutos antes, o antes si el
               doctor inicia la consulta.
@@ -236,11 +238,12 @@ export default function VideoconsultaScreen() {
         </Pressable>
 
         <Text style={styles.helperText}>
-          Si el doctor adelanta la cita y cambia a "En consulta", podras unirte
+          Si el doctor adelanta la cita y cambia a &quot;En consulta&quot;, podrás unirte
           incluso antes de la ventana normal.
         </Text>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DoctorFeatureAccessGate>
   );
 }
 

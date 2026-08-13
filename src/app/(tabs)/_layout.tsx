@@ -2,12 +2,16 @@ import { Tabs } from 'expo-router';
 
 import { Icon, IconName } from '@/components/Icon';
 import { MC } from '@/constants/theme';
+import { useRootBackExit } from '@/hooks/useRootBackExit';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface TabIconProps {
   name: IconName;
   focused: boolean;
   badge?: number;
 }
+
+const PATIENT_ROOT_SCREENS = ["index", "citas", "mensajes", "perfil"];
 
 function TabIcon({ name, focused, badge }: TabIconProps) {
   const color = focused ? MC.primary : MC.textMuted;
@@ -22,6 +26,12 @@ function TabIcon({ name, focused, badge }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  useRootBackExit("(tabs)", PATIENT_ROOT_SCREENS);
+  // Suscribirse fuerza un re-render (y por tanto screenOptions frescos) cuando
+  // el usuario cambia el modo de apariencia dentro de la app, sin depender solo
+  // del reload que dispara settings/appearance.tsx al salir de esa pantalla.
+  useThemeStore((state) => state.resolved);
+
   return (
     <Tabs
       screenOptions={{

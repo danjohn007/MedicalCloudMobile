@@ -1,8 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -13,35 +15,84 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GoogleLogo } from '@/components/GoogleLogo';
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
-import { MC } from '@/constants/theme';
+import { MC, themed } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { resolveAppHome } from '@/utils/role-routing';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuthStore();
+  const { isAuthenticated, login, loginWithGoogle, loginWithApple, user } = useAuthStore();
 
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [loadingMode, setLoadingMode] = useState<'email' | 'google' | 'apple' | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(resolveAppHome(user?.role));
+    }
+  }, [isAuthenticated, router, user?.role]);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      void AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
+    }
+  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
       setError('Por favor ingresa tu correo y contraseña.');
       return;
     }
-    setLoading(true);
+    setLoadingMode('email');
     setError('');
     try {
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)');
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
     } catch (e: any) {
       setError(e.message ?? 'Error al iniciar sesión.');
     } finally {
-      setLoading(false);
+      setLoadingMode(null);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoadingMode('google');
+    setError('');
+    try {
+      const result = await loginWithGoogle();
+      if (result === 'pending_profile') {
+        router.replace('/(auth)/google-register');
+        return;
+      }
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
+    } catch (e: any) {
+      setError(e.message ?? 'Error al iniciar sesión con Google.');
+    } finally {
+      setLoadingMode(null);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setLoadingMode('apple');
+    setError('');
+    try {
+      const result = await loginWithApple();
+      if (result === 'pending_profile') {
+        router.replace('/(auth)/google-register');
+        return;
+      }
+      router.replace(resolveAppHome(useAuthStore.getState().user?.role));
+    } catch (e: any) {
+      if (e?.code !== 'ERR_REQUEST_CANCELED') setError(e.message ?? 'Error al iniciar sesión con Apple.');
+    } finally {
+      setLoadingMode(null);
     }
   };
 
@@ -77,7 +128,7 @@ export default function LoginScreen() {
           {/* Error */}
           {!!error && (
             <View style={styles.errorBox}>
-              <Icon name="warning" size={18} color="#B91C1C" />
+              <Icon name="warning" size={18} color={MC.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
@@ -126,13 +177,49 @@ export default function LoginScreen() {
           <Pressable
             style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loadingMode !== null}
           >
-            {loading
+            {loadingMode === 'email'
               ? <ActivityIndicator color={MC.white} />
               : <Text style={styles.btnText}>Iniciar sesión</Text>
             }
           </Pressable>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>o</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnGoogle, pressed && { opacity: 0.85 }]}
+            onPress={handleGoogleLogin}
+            disabled={loadingMode !== null}
+          >
+            {loadingMode === 'google' ? (
+              <ActivityIndicator color={MC.textPrimary} />
+            ) : (
+              <>
+                <View style={styles.googleBadge}>
+                  <GoogleLogo size={18} />
+                </View>
+                <Text style={styles.btnGoogleText}>Iniciar sesi{"\u00f3"}n con Google</Text>
+              </>
+            )}
+          </Pressable>
+
+          {appleAvailable ? (
+            <View style={[styles.appleWrap, loadingMode !== null && { opacity: 0.6 }]} pointerEvents={loadingMode === null ? 'auto' : 'none'}>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={14}
+                style={styles.appleButton}
+                onPress={handleAppleLogin}
+              />
+              {loadingMode === 'apple' ? <ActivityIndicator color={MC.white} style={styles.appleLoader} /> : null}
+            </View>
+          ) : null}
 
           {/* Register link */}
           <View style={styles.footer}>
@@ -140,6 +227,11 @@ export default function LoginScreen() {
             <Pressable onPress={() => router.replace('/(auth)/register')}>
               <Text style={styles.footerLink}>Regístrate</Text>
             </Pressable>
+          </View>
+          <View style={styles.legalRow}>
+            <Pressable onPress={() => void Linking.openURL('https://doctorcloud.digital/app/privacidad')}><Text style={styles.legalLink}>Privacidad</Text></Pressable>
+            <Text style={styles.legalText}> · </Text>
+            <Pressable onPress={() => void Linking.openURL('https://doctorcloud.digital/app/terminos')}><Text style={styles.legalLink}>Términos</Text></Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -159,10 +251,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: MC.textSecondary, marginBottom: 28 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEE2E2', borderRadius: 10,
+    backgroundColor: MC.errorSoft, borderRadius: 10,
     padding: 12, marginBottom: 20,
   },
-  errorText: { color: '#B91C1C', fontSize: 14, flex: 1 },
+  errorText: { color: MC.error, fontSize: 14, flex: 1 },
   form: { gap: 16, marginBottom: 28 },
   inputGroup: { gap: 6 },
   label: { fontSize: 14, fontWeight: '500', color: MC.textPrimary },
@@ -185,7 +277,50 @@ const styles = StyleSheet.create({
     paddingVertical: 16, alignItems: 'center', marginBottom: 20,
   },
   btnText: { color: MC.white, fontSize: 17, fontWeight: '600' },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: MC.border,
+  },
+  separatorText: { color: MC.textMuted, fontSize: 14 },
+  btnGoogle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: MC.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: MC.border,
+    paddingVertical: 16,
+    marginBottom: 20,
+  },
+  appleWrap: { height: 52, marginBottom: 20, justifyContent: 'center' },
+  appleButton: { width: '100%', height: 52 },
+  appleLoader: { position: 'absolute', alignSelf: 'center' },
+  googleBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: themed('#F3F4F6', '#0F1C26'),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnGoogleText: {
+    color: MC.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { color: MC.textSecondary, fontSize: 15 },
   footerLink: { color: MC.primary, fontSize: 15, fontWeight: '600' },
+  legalRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
+  legalText: { color: MC.textMuted, fontSize: 13 },
+  legalLink: { color: MC.primary, fontSize: 13, fontWeight: '600' },
 });

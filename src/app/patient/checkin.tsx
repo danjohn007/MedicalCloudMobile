@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import { Icon } from "@/components/Icon";
@@ -12,44 +12,40 @@ export default function CheckinScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [qrData, setQrData] = useState<api.ExpedienteData | null>(null);
-  const [manualCode, setManualCode] = useState("");
-  const [checkingIn, setCheckingIn] = useState(false);
+  const [qrData, setQrData] = useState<api.AppointmentQrData | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
   const [checkoutCode, setCheckoutCode] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) loadQr();
-  }, [id]);
-
-  const loadQr = async () => {
+  const loadQr = useCallback(async (showLoader = true) => {
     try {
-      setLoading(true);
-      setError("");
+      if (showLoader) {
+        setLoading(true);
+        setError("");
+      }
       const result = await api.getAppointmentQr(Number(id));
-      setQrData(result as any);
+      setQrData(result.data);
       setCheckedIn(result.data.checked_in);
       setCheckoutCode(result.data.checkout_code);
     } catch (e: any) {
-      setError(e.message ?? "Error al cargar QR");
-    } finally { setLoading(false); }
-  };
-
-  const handleManualCheckin = async () => {
-    const code = manualCode.trim().toUpperCase();
-    if (!code || code.length < 4) {
-      Alert.alert("Error", "Ingresa el código de check-in de 6 caracteres.");
-      return;
+      if (showLoader) {
+        setError(e.message ?? "Error al cargar los códigos de la consulta");
+      }
+    } finally {
+      if (showLoader) setLoading(false);
     }
-    try {
-      setCheckingIn(true);
-      const result = await api.checkinAppointment(Number(id), code);
-      setCheckedIn(true);
-      Alert.alert("¡Check-in exitoso!", result.message);
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Error al hacer check-in");
-    } finally { setCheckingIn(false); }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) void loadQr();
+  }, [id, loadQr]);
+
+  useEffect(() => {
+    if (!id || checkedIn) return;
+    const timer = setInterval(() => {
+      void loadQr(false);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [checkedIn, id, loadQr]);
 
   const handleRequestCheckout = async () => {
     try {
@@ -67,7 +63,7 @@ export default function CheckinScreen() {
     </SafeAreaView>
   );
 
-  const code = (qrData as any)?.data?.checkin_code;
+  const code = qrData?.checkin_code;
 
   return (
     <SafeAreaView style={s.ct} edges={["top"]}>
@@ -75,7 +71,7 @@ export default function CheckinScreen() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Icon name="arrow-left" size={22} color={MC.textPrimary} />
         </Pressable>
-        <Text style={s.hdrTitle}>Check-in</Text>
+        <Text style={s.hdrTitle}>{checkedIn ? "Cierre de consulta" : "Inicio de consulta"}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -88,65 +84,57 @@ export default function CheckinScreen() {
           <>
             <View style={s.checkinDone}>
               <Icon name="check-circle" size={60} color={MC.success} />
-              <Text style={s.checkinDoneTitle}>¡Check-in completado!</Text>
-              <Text style={s.checkinDoneText}>Ya estás registrado en consulta.</Text>
+              <Text style={s.checkinDoneTitle}>Consulta iniciada</Text>
+              <Text style={s.checkinDoneText}>El doctor ya validó tu código de inicio.</Text>
             </View>
 
             {checkoutCode ? (
               <View style={s.codeCard}>
                 <Text style={s.codeTitle}>Código de cierre</Text>
+                <View style={s.checkoutQrWrap}>
+                  <QRCode value={checkoutCode} size={220} color={MC.primary} />
+                </View>
                 <Text style={s.codeBig}>{checkoutCode}</Text>
-                <Text style={s.codeHint}>Comparte este código con tu doctor para finalizar la consulta.</Text>
+                <Text style={s.codeHint}>
+                  El doctor puede escanear este QR o ingresar los 6 caracteres para finalizar la
+                  consulta.
+                </Text>
               </View>
             ) : (
               <Pressable style={s.checkoutBtn} onPress={handleRequestCheckout}>
                 <Icon name="check" size={20} color={MC.white} />
-                <Text style={s.checkoutBtnText}>Solicitar cierre de consulta</Text>
+                <Text style={s.checkoutBtnText}>Generar código de cierre</Text>
               </Pressable>
             )}
           </>
         ) : (
           <>
-          {/* QR-style code display */}
-          <View style={s.qrCard}>
-            {code ? (
-              <View style={s.qrCodeWrap}>
-                <QRCode value={code} size={220} color={MC.primary} />
-              </View>
-            ) : (
-              <View style={s.qrBox}>
-                <Text style={s.qrCodeDisplay}>------</Text>
-              </View>
-            )}
-            <Text style={s.qrTitle}>Tu código de check-in</Text>
-            {code ? (
-              <>
-              <Text style={s.qrSubtitle}>Escanea este código QR o ingresa manualmente: {code}</Text>
-              </>
-            ) : (
-              <Text style={s.qrSubtitle}>El código estará disponible 2 horas antes de tu cita.</Text>
-            )}
-          </View>
-
-            {/* Manual entry */}
-            <View style={s.manualCard}>
-              <Text style={s.manualTitle}>¿No puedes mostrar el código?</Text>
-              <Text style={s.manualHint}>Ingresa manualmente el código que te proporcionó el doctor.</Text>
-              <TextInput
-                style={s.manualInput}
-                value={manualCode}
-                onChangeText={setManualCode}
-                placeholder="Ej: ABC123"
-                autoCapitalize="characters"
-                maxLength={6}
-              />
-              <Pressable style={[s.manualBtn, checkingIn && { opacity: 0.6 }]} onPress={handleManualCheckin} disabled={checkingIn}>
-                {checkingIn ? (
-                  <ActivityIndicator color={MC.white} size="small" />
-                ) : (
-                  <Text style={s.manualBtnText}>Check-in manual</Text>
-                )}
-              </Pressable>
+            <View style={s.qrCard}>
+              {code ? (
+                <View style={s.qrCodeWrap}>
+                  <QRCode value={code} size={220} color={MC.primary} />
+                </View>
+              ) : (
+                <View style={s.qrBox}>
+                  <Text style={s.qrCodeDisplay}>------</Text>
+                </View>
+              )}
+              <Text style={s.qrTitle}>Tu QR de inicio</Text>
+              {code ? (
+                <>
+                  <Text style={s.codeBig}>{code}</Text>
+                  <Text style={s.qrSubtitle}>
+                    Muestra este QR o los 6 caracteres al doctor. Solo él o su asistente pueden
+                    validarlos para iniciar la consulta.
+                  </Text>
+                </>
+              ) : (
+                <Text style={s.qrSubtitle}>
+                  {qrData?.checkin_window === "expired"
+                    ? "La ventana para iniciar esta consulta ya terminó."
+                    : "El QR de inicio estará disponible 2 horas antes de tu cita."}
+                </Text>
+              )}
             </View>
           </>
         )}
@@ -163,7 +151,7 @@ const s = StyleSheet.create({
   hdr: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MC.border },
   hdrTitle: { fontSize: 18, fontWeight: "700", color: MC.textPrimary },
   scroll: { flex: 1 }, scrollCt: { padding: 16 },
-  errBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEE2E2", padding: 12, borderRadius: 10, marginBottom: 12 },
+  errBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: MC.errorSoft, padding: 12, borderRadius: 10, marginBottom: 12 },
   errTxt: { color: MC.error, fontSize: 13, flex: 1 },
 
   // QR Card
@@ -173,16 +161,6 @@ const s = StyleSheet.create({
   qrCodeDisplay: { fontSize: 42, fontWeight: "900", color: MC.primary, letterSpacing: 12, textAlign: 'center' },
   qrTitle: { fontSize: 16, fontWeight: "700", color: MC.textPrimary, marginTop: 16, marginBottom: 8 },
   qrSubtitle: { fontSize: 13, color: MC.textSecondary, textAlign: "center", marginBottom: 8 },
-  qrCode: { fontSize: 18, fontWeight: "600", color: MC.textMuted, letterSpacing: 4, marginBottom: 8 },
-  qrHint: { fontSize: 13, color: MC.textSecondary, textAlign: "center" },
-
-  // Manual entry
-  manualCard: { backgroundColor: MC.background, borderRadius: 16, borderWidth: 1, borderColor: MC.border, padding: 20, marginBottom: 16 },
-  manualTitle: { fontSize: 15, fontWeight: "700", color: MC.textPrimary, marginBottom: 4 },
-  manualHint: { fontSize: 12, color: MC.textSecondary, marginBottom: 12 },
-  manualInput: { borderWidth: 1, borderColor: MC.border, borderRadius: 12, padding: 14, fontSize: 20, textAlign: "center", letterSpacing: 4, fontWeight: "700", textTransform: "uppercase", marginBottom: 12 },
-  manualBtn: { backgroundColor: MC.primary, paddingVertical: 14, borderRadius: 12, alignItems: "center" },
-  manualBtnText: { fontSize: 15, fontWeight: "700", color: MC.white },
 
   // Checked in
   checkinDone: { alignItems: "center", padding: 32, marginBottom: 16 },
@@ -194,6 +172,7 @@ const s = StyleSheet.create({
   checkoutBtnText: { fontSize: 16, fontWeight: "700", color: MC.white },
   codeCard: { backgroundColor: MC.primaryLight, borderRadius: 16, padding: 20, alignItems: "center", marginBottom: 16 },
   codeTitle: { fontSize: 14, fontWeight: "700", color: MC.textSecondary, marginBottom: 8 },
+  checkoutQrWrap: { backgroundColor: MC.white, borderRadius: 12, borderWidth: 1, borderColor: MC.border, marginBottom: 16, padding: 12 },
   codeBig: { fontSize: 32, fontWeight: "800", color: MC.primary, letterSpacing: 6, marginBottom: 8 },
   codeHint: { fontSize: 12, color: MC.textSecondary, textAlign: "center" },
 });
