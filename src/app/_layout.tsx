@@ -217,6 +217,7 @@ export default function RootLayout() {
         <Stack.Screen name="videoconsulta/[id]" />
         <Stack.Screen name="patient" />
         <Stack.Screen name="subscription-required" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="subscription" />
       </Stack>
       {validationOverlay}
     </>

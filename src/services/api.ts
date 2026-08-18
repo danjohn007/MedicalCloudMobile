@@ -139,10 +139,8 @@ export interface Appointment {
   reason?: string | null;
   notes?: string | null;
   duration_minutes?: number;
-  room_name?: string | null;
-  meeting_url?: string | null;
-  jitsi_room?: string | null;
-  jitsi_url?: string | null;
+  /** Sala de Jitsi que genera el backend al crear una videoconsulta. */
+  video_room_id?: string | null;
   pay_deadline?: string | null;
 }
 
@@ -1239,6 +1237,56 @@ export async function uploadAvatar(input: {
 
 export async function removeAvatar() {
   return request<{ success: boolean }>("/avatar/remove", { method: "POST" });
+}
+
+// ── Suscripciones dentro de la app (App Store / Google Play) ──
+export interface StoreSubscriptionPlan {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  reference_price: number;
+  is_popular: boolean;
+  features: Record<string, boolean>;
+  products: { period: "monthly" | "annual"; product_id: string }[];
+}
+
+export interface StoreSubscriptionState {
+  plan_name: string;
+  plan_slug: string;
+  status: string;
+  end_date: string | null;
+  billing_cycle: string;
+  /** "apple" | "google" cuando la cobra una tienda; null si es web/manual. */
+  managed_by: string | null;
+  auto_renew: boolean;
+  expires_at: string | null;
+}
+
+export async function getStoreSubscriptionPlans(platform: "apple" | "google") {
+  return request<{ data: StoreSubscriptionPlan[] }>(
+    `/subscriptions/plans?platform=${platform}`,
+  );
+}
+
+export async function getStoreSubscriptionStatus() {
+  return request<{
+    data: {
+      subscription: StoreSubscriptionState | null;
+      access: DoctorMobileAccess;
+    };
+  }>("/subscriptions/status");
+}
+
+export async function verifyStoreSubscription(input: {
+  platform: "apple" | "google";
+  product_id: string;
+  token: string;
+}) {
+  return request<{ success: boolean; message: string; data: DoctorMobileAccess }>(
+    "/subscriptions/verify",
+    { method: "POST", body: JSON.stringify(input) },
+  );
 }
 
 export interface AccountDeletionStatus {

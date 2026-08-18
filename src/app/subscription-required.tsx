@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/Icon";
@@ -64,7 +64,9 @@ export default function SubscriptionRequiredScreen() {
   const message = feature && featureLabel[feature]
     ? `Tu plan actual no incluye ${featureLabel[feature]}. Actualiza tu suscripción para continuar.`
     : validationError || access?.message || "Necesitas una suscripción activa con acceso a la app móvil para usar el workspace del doctor.";
-  const plansUrl = access?.upgrade_url || "https://doctorcloud.digital/app/billing/plans";
+  // Apple rechazo la 7.0.0 (28) por Guideline 3.1.1: esta pantalla enlazaba a
+  // la web para comprar. Ahora la contratacion ocurre dentro de la app y el
+  // `upgrade_url` que manda la API se ignora a proposito en movil.
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -74,8 +76,11 @@ export default function SubscriptionRequiredScreen() {
         <Text style={styles.description}>{message}</Text>
         <Text style={styles.detail}>Para entrar al workspace del doctor, elige o actualiza un plan con acceso a la app móvil.</Text>
 
-        <Pressable style={styles.primary} onPress={() => void Linking.openURL(plansUrl)}>
-          <Text style={styles.primaryText}>Ver planes y suscripciones</Text>
+        <Pressable
+          style={styles.primary}
+          onPress={() => router.push("/subscription/planes" as any)}
+        >
+          <Text style={styles.primaryText}>Ver planes y suscribirme</Text>
           <Icon name="arrow-right" size={18} color={MC.white} />
         </Pressable>
         {validationError ? (
