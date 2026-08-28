@@ -2,7 +2,7 @@
   "expo": {
     "name": "Doctor Cloud",
     "slug": "doctorcloud-app",
-    "version": "8.0.0",
+    "version": "9.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "doctorcloud",
