@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -143,7 +143,9 @@ export default function DoctorAppointmentDetailScreen() {
 
     try {
       setBusyAction("video");
-      await WebBrowser.openBrowserAsync(`https://meet.jit.si/${roomId}`);
+      // Navegador del sistema, no el incrustado: en iOS SFSafariViewController
+      // no entrega camara/microfono a getUserMedia de forma confiable.
+      await Linking.openURL(`https://meet.jit.si/${encodeURIComponent(roomId)}`);
     } catch (e: any) {
       Alert.alert("No se pudo abrir la videollamada", e?.message || "Intenta de nuevo.");
     } finally {

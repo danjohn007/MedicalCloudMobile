@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Linking,
     Pressable,
     StyleSheet,
     Text,
@@ -44,12 +44,20 @@ function formatDateRange(startAt: Date, endAt: Date) {
   return `${day} ${start} - ${end}`;
 }
 
-function resolveMeetingUrl(apptId: number, detail: api.Appointment | null) {
-  const directUrl = detail?.meeting_url || detail?.jitsi_url;
-  if (directUrl) return directUrl;
-  const room =
-    detail?.room_name || detail?.jitsi_room || `medicalcloud-cita-${apptId}`;
-  return `https://meet.jit.si/${room}`;
+/**
+ * La sala solo puede venir del backend. No se deriva del id de la cita: la sala
+ * de Jitsi es publica, asi que un nombre deducible dejaria entrar a cualquiera
+ * que probara ids consecutivos, y ademas no coincidiria con la sala que abre la
+ * web para el mismo paciente.
+ */
+function resolveMeetingUrl(detail: api.Appointment | null) {
+  const room = detail?.video_room_id;
+  if (typeof room !== "string") return null;
+
+  const trimmed = room.trim();
+  if (trimmed === "") return null;
+
+  return `https://meet.jit.si/${encodeURIComponent(trimmed)}`;
 }
 
 export default function VideoconsultaScreen() {
@@ -120,7 +128,7 @@ export default function VideoconsultaScreen() {
 
   const appointmentStatus = appt?.status ?? status ?? "confirmed";
   const isInConsultation = appointmentStatus === "in_consultation";
-  const meetingUrl = resolveMeetingUrl(appointmentId, appt);
+  const meetingUrl = resolveMeetingUrl(appt);
   const doctorName = appt?.doctor_name || doctor_name || "Doctor/a";
 
   const canJoinByTime = useMemo(() => {
@@ -151,7 +159,11 @@ export default function VideoconsultaScreen() {
     if (!canJoin || !meetingUrl) return;
     try {
       setBusy(true);
-      await WebBrowser.openBrowserAsync(meetingUrl);
+      // Se abre en el navegador del sistema, no en el navegador incrustado.
+      // En iOS el navegador incrustado es SFSafariViewController, que no
+      // entrega camara ni microfono a getUserMedia de forma confiable y ademas
+      // obligaria a declarar permisos de microfono en la propia app.
+      await Linking.openURL(meetingUrl);
     } catch (e: any) {
       Alert.alert("No se pudo abrir Jitsi", e.message ?? "Intenta de nuevo.");
     } finally {
@@ -198,6 +210,14 @@ export default function VideoconsultaScreen() {
             <Text style={styles.infoTitle}>La consulta ya finalizo</Text>
             <Text style={styles.infoText}>
               La sala se desactiva al terminar el horario de la cita.
+            </Text>
+          </View>
+        ) : !meetingUrl ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>Sala no disponible</Text>
+            <Text style={styles.infoText}>
+              Esta cita todavía no tiene una sala de video asignada. Actualiza en
+              unos momentos o escribe a soporte para que la generen.
             </Text>
           </View>
         ) : canJoin ? (

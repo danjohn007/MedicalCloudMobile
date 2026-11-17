@@ -1,5 +1,12 @@
 # Checklist maestro de lanzamiento de DoctorCloud
 
+> ⚠️ **Documento historico.** La lista viva de pendientes es
+> [`PENDIENTES_LANZAMIENTO_2026_08_14.md`](PENDIENTES_LANZAMIENTO_2026_08_14.md).
+> Este checklist no refleja el rechazo por Guideline 3.1.1 del 14/08/2026, ni el
+> bug de videoconsulta, ni el estado real de las pasarelas verificado contra la
+> base de datos. Varias filas marcadas aqui como pendientes ya estan resueltas y
+> otras marcadas como resueltas no lo estan. Consultalo solo como contexto.
+
 Fecha de auditoria inicial: 22 de julio de 2026  
 Ultima actualizacion tecnica: 3 de agosto de 2026
 Repositorios revisados:
